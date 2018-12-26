@@ -16,8 +16,7 @@ int ClientHandler::handle_message(const char *message, uint_t len)
 
 int main(int argc, char* argv[])
 {
-    if (argc < 5)
-    {
+    if (argc < 5) {
         printf("please use the format: server_ip port connect_count send_count (e.g.: 127.0.0.1 7711 100 50000)\n");
         return 0;
     }
