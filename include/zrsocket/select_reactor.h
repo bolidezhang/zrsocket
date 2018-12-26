@@ -279,63 +279,63 @@ public:
         return 0;
     }
 
-	int set_event(EventHandler *handler, int event_mask)
-	{
-		mutex_.lock();
-		if (!handler->in_reactor_) {
-			mutex_.unlock();
-			return -1;
-		}
+    int set_event(EventHandler *handler, int event_mask)
+    {
+        mutex_.lock();
+        if (!handler->in_reactor_) {
+            mutex_.unlock();
+            return -1;
+        }
 
-		int set_event_mask = EventHandler::NULL_EVENT_MASK;
-		if (event_mask & EventHandler::READ_EVENT_MASK) {
-			if (!(handler->event_mask_ & EventHandler::READ_EVENT_MASK)) {
-				FD_SET(handler->socket_, &fd_set_in_.read);
-				set_event_mask |= EventHandler::READ_EVENT_MASK;
-				++read_size_;
-			}
-		}
-		else {
-			if (handler->event_mask_ & EventHandler::READ_EVENT_MASK) {
-				FD_CLR(handler->socket_, &fd_set_in_.read);
-				--read_size_;
-			}
-		}
+        int set_event_mask = EventHandler::NULL_EVENT_MASK;
+        if (event_mask & EventHandler::READ_EVENT_MASK) {
+            if (!(handler->event_mask_ & EventHandler::READ_EVENT_MASK)) {
+                FD_SET(handler->socket_, &fd_set_in_.read);
+                set_event_mask |= EventHandler::READ_EVENT_MASK;
+                ++read_size_;
+            }
+        }
+        else {
+            if (handler->event_mask_ & EventHandler::READ_EVENT_MASK) {
+                FD_CLR(handler->socket_, &fd_set_in_.read);
+                --read_size_;
+            }
+        }
 
-		if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-			if (!(handler->event_mask_ & EventHandler::WRITE_EVENT_MASK)) {
-				FD_SET(handler->socket_, &fd_set_in_.write);
-				set_event_mask |= EventHandler::WRITE_EVENT_MASK;
-				++write_size_;
-			}
-		}
-		else {
-			if (handler->event_mask_ & EventHandler::WRITE_EVENT_MASK) {
-				FD_CLR(handler->socket_, &fd_set_in_.write);
-				--write_size_;
-			}
-		}
+        if (event_mask & EventHandler::WRITE_EVENT_MASK) {
+            if (!(handler->event_mask_ & EventHandler::WRITE_EVENT_MASK)) {
+                FD_SET(handler->socket_, &fd_set_in_.write);
+                set_event_mask |= EventHandler::WRITE_EVENT_MASK;
+                ++write_size_;
+            }
+        }
+        else {
+            if (handler->event_mask_ & EventHandler::WRITE_EVENT_MASK) {
+                FD_CLR(handler->socket_, &fd_set_in_.write);
+                --write_size_;
+            }
+        }
 
 #ifdef ZRSOCKET_OS_WINDOWS
-		if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
-			if (!(handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK)) {
-				FD_SET(handler->socket_, &fd_set_in_.except);
-				set_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
-				++except_size_;
-			}
-		}
-		else {
-			if (handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK) {
-				FD_CLR(handler->socket_, &fd_set_in_.except);
-				--except_size_;
-			}
-		}
+        if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
+            if (!(handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK)) {
+                FD_SET(handler->socket_, &fd_set_in_.except);
+                set_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
+                ++except_size_;
+            }
+        }
+        else {
+            if (handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK) {
+                FD_CLR(handler->socket_, &fd_set_in_.except);
+                --except_size_;
+            }
+        }
 #endif
-		handler->event_mask_ = set_event_mask;
-		mutex_.unlock();
+        handler->event_mask_ = set_event_mask;
+        mutex_.unlock();
 
-		return 0;
-	}
+        return 0;
+    }
     inline size_t get_handler_size()
     {
         mutex_.lock();

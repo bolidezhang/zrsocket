@@ -151,13 +151,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\znet.h" />
     <ClInclude Include="include\znet\base_type.h" />
-    <ClInclude Include="include\znet\config.h" />
-    <ClInclude Include="include\znet\config\linux.h" />
-    <ClInclude Include="include\znet\config\windows.h" />
-    <ClInclude Include="include\znet\version.h" />
-    <ClInclude Include="include\znet\znet.h" />
     <ClInclude Include="include\zrsocket\atomic.h" />
     <ClInclude Include="include\zrsocket\base_type.h" />
     <ClInclude Include="include\zrsocket\byte_buffer.h" />
@@ -184,6 +178,9 @@
     <ClInclude Include="include\zrsocket\thread.h" />
     <ClInclude Include="include\zrsocket\version.h" />
     <ClInclude Include="include\zrsocket\zrsocket.h" />
+    <ClInclude Include="test\client\client.h" />
+    <ClInclude Include="test\message.h" />
+    <ClInclude Include="test\server\server.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\data_convert.cpp">
@@ -198,6 +195,8 @@
     <ClCompile Include="src\system_api.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="test\client\client.cpp" />
+    <ClCompile Include="test\server\server.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

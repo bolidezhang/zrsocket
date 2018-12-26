@@ -79,9 +79,9 @@ public:
             max_events_ = max_size;
         }
 
-        max_size_       = max_size;
+        max_size_ = max_size;
         max_timeout_ms_ = max_timeout_ms;
-        iovec_count_    = iovec_count;
+        iovec_count_ = iovec_count;
 
         events_ = new epoll_event[max_events_];
         if (NULL == events_) {
@@ -105,11 +105,11 @@ public:
         thread_.join();
         current_handle_size_ = 0;
         if (NULL != events_) {
-            delete []events_;
+            delete[]events_;
             events_ = NULL;
         }
         if (NULL != iovec_) {
-            delete []iovec_;
+            delete[]iovec_;
             iovec_ = NULL;
         }
         ::close(epoll_fd_);
@@ -182,12 +182,12 @@ public:
             return -1;
         }
 
-        struct epoll_event ee = { 0 };		
-        ee.data.ptr = handler;		
+        struct epoll_event ee = { 0 };
+        ee.data.ptr = handler;
         if (epoll_mode_ == ET_MODE) {
             ee.events = EPOLLET;
         }
-		
+
         int add_event_mask = EventHandler::NULL_EVENT_MASK;
         if ((event_mask & EventHandler::READ_EVENT_MASK) &&
             !(handler->event_mask_ & EventHandler::READ_EVENT_MASK)) {
@@ -197,21 +197,21 @@ public:
             !(handler->event_mask_ & EventHandler::WRITE_EVENT_MASK)) {
             add_event_mask |= EventHandler::WRITE_EVENT_MASK;
         }
-		
-		if (add_event_mask != EventHandler::NULL_EVENT_MASK) {
-			event_mask = handler->event_mask_ | add_event_mask;
-			if (event_mask & EventHandler::READ_EVENT_MASK) {
-				ee.events |= EPOLLIN;
-			}
-			if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-				ee.events |= EPOLLOUT;
-			}
-			if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-				return -1;
-			}
-			handler->event_mask_ = event_mask;
-		}
-		
+
+        if (add_event_mask != EventHandler::NULL_EVENT_MASK) {
+            event_mask = handler->event_mask_ | add_event_mask;
+            if (event_mask & EventHandler::READ_EVENT_MASK) {
+                ee.events |= EPOLLIN;
+            }
+            if (event_mask & EventHandler::WRITE_EVENT_MASK) {
+                ee.events |= EPOLLOUT;
+            }
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
+                return -1;
+            }
+            handler->event_mask_ = event_mask;
+        }
+
         return 0;
     }
 
@@ -220,13 +220,13 @@ public:
         if (!handler->in_reactor_) {
             return -1;
         }
-		
+
         struct epoll_event ee = { 0 };
-        ee.data.ptr = handler;	
+        ee.data.ptr = handler;
         if (epoll_mode_ == ET_MODE) {
             ee.events = EPOLLET;
         }
-		
+
         int del_event_mask = EventHandler::NULL_EVENT_MASK;
         if (handler->event_mask_ & event_mask & EventHandler::READ_EVENT_MASK) {
             del_event_mask |= EventHandler::READ_EVENT_MASK;
@@ -235,58 +235,58 @@ public:
             del_event_mask |= EventHandler::WRITE_EVENT_MASK;
         }
 
-		if (del_event_mask != EventHandler::NULL_EVENT_MASK) {
-			event_mask = handler->event_mask_ & ~del_event_mask;
-			if (event_mask & EventHandler::READ_EVENT_MASK) {
-				ee.events |= EPOLLIN;
-			}
-			if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-				ee.events |= EPOLLOUT;
-			}
-			if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-				return -1;
-			}
-			handler->event_mask_ = event_mask;
-		}
-		
+        if (del_event_mask != EventHandler::NULL_EVENT_MASK) {
+            event_mask = handler->event_mask_ & ~del_event_mask;
+            if (event_mask & EventHandler::READ_EVENT_MASK) {
+                ee.events |= EPOLLIN;
+            }
+            if (event_mask & EventHandler::WRITE_EVENT_MASK) {
+                ee.events |= EPOLLOUT;
+            }
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
+                return -1;
+            }
+            handler->event_mask_ = event_mask;
+        }
+
         return 0;
     }
 
-	int set_event(EventHandler *handler, int event_mask)
-	{
-		if (!handler->in_reactor_) {
-			return -1;
-		}
+    int set_event(EventHandler *handler, int event_mask)
+    {
+        if (!handler->in_reactor_) {
+            return -1;
+        }
 
-		struct epoll_event ee = { 0 };
-		ee.data.ptr = handler;
-		if (epoll_mode_ == ET_MODE) {
-			ee.events = EPOLLET;
-		}
+        struct epoll_event ee = { 0 };
+        ee.data.ptr = handler;
+        if (epoll_mode_ == ET_MODE) {
+            ee.events = EPOLLET;
+        }
 
-		int set_event_mask = EventHandler::NULL_EVENT_MASK;
-		if (event_mask & EventHandler::READ_EVENT_MASK) {
-			set_event_mask |= EventHandler::READ_EVENT_MASK;
-		}
-		if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-			set_event_mask |= EventHandler::WRITE_EVENT_MASK;
-		}
+        int set_event_mask = EventHandler::NULL_EVENT_MASK;
+        if (event_mask & EventHandler::READ_EVENT_MASK) {
+            set_event_mask |= EventHandler::READ_EVENT_MASK;
+        }
+        if (event_mask & EventHandler::WRITE_EVENT_MASK) {
+            set_event_mask |= EventHandler::WRITE_EVENT_MASK;
+        }
 
-		if (set_event_mask != EventHandler::NULL_EVENT_MASK) {
-			if (set_event_mask & EventHandler::READ_EVENT_MASK) {
-				ee.events |= EPOLLIN;
-			}
-			if (set_event_mask & EventHandler::WRITE_EVENT_MASK) {
-				ee.events |= EPOLLOUT;
-			}
-			if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-				return -1;
-			}
-			handler->event_mask_ = set_event_mask;
-		}
+        if (set_event_mask != EventHandler::NULL_EVENT_MASK) {
+            if (set_event_mask & EventHandler::READ_EVENT_MASK) {
+                ee.events |= EPOLLIN;
+            }
+            if (set_event_mask & EventHandler::WRITE_EVENT_MASK) {
+                ee.events |= EPOLLOUT;
+            }
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
+                return -1;
+            }
+            handler->event_mask_ = set_event_mask;
+        }
 
-		return 0;
-	}
+        return 0;
+    }
 
     inline size_t get_handler_size() const
     {
@@ -298,31 +298,31 @@ public:
         int ret = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
         if (ret > 0) {
             EventHandler *handler;
-			EventSource  *source;
+            EventSource  *source;
             for (int i = 0; i < ret; ++i) {
                 handler = (EventHandler *)events_[i].data.ptr;
-				if (handler) {					
-					if (events_[i].events & EPOLLIN) {
-						if (handler->handle_read() < 0) {
-							del_handler(handler);
-						}
-					}
-					if (events_[i].events & EPOLLOUT) {
-						source = handler->source_;
-						if (source->source_state() != EventSource::STATE_CONNECTING) {
-							if (handler->handle_write() < 0) {
-								handler->reactor_->del_handler(handler, 0);
-							}
-						}
-						else { 
-							//nonblock connect: tcpclient connect success
-							set_event(handler, EventHandler::READ_EVENT_MASK);
-							source->source_state(EventSource::STATE_CONNECTED);
-							handler->state_ = EventHandler::STATE_CONNECTED;
-							handler->handle_connect();
-						}
-					}
-				}
+                if (handler) {
+                    if (events_[i].events & EPOLLIN) {
+                        if (handler->handle_read() < 0) {
+                            del_handler(handler);
+                        }
+                    }
+                    if (events_[i].events & EPOLLOUT) {
+                        source = handler->source_;
+                        if (source->source_state() != EventSource::STATE_CONNECTING) {
+                            if (handler->handle_write() < 0) {
+                                handler->reactor_->del_handler(handler, 0);
+                            }
+                        }
+                        else {
+                            //nonblock connect: tcpclient connect success
+                            set_event(handler, EventHandler::READ_EVENT_MASK);
+                            source->source_state(EventSource::STATE_CONNECTED);
+                            handler->state_ = EventHandler::STATE_CONNECTED;
+                            handler->handle_connect();
+                        }
+                    }
+                }
             }
         }
         return ret;
