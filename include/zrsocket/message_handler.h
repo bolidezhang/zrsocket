@@ -331,6 +331,8 @@ protected:
                 mutex_.unlock();
             }
             else {
+                queue_standby_->shrink_to_fit();
+                queue_active_->shrink_to_fit();
                 mutex_.unlock();
                 reactor_->del_event(this, EventHandler::WRITE_EVENT_MASK);
                 return WRITE_RETURN_NOT_DATA;

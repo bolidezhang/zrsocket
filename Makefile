@@ -113,7 +113,7 @@ OBJS := $(addsuffix .o,$(basename ${SRCS}))
 ${OUTPUT}: ${OBJS}
 #	${LD} -o $@ ${LDFLAGS} ${OBJS} ${LIBS} ${EXTRA_LIBS}
 	$(AR) $@ $(OBJS)
-	mkdir ./lib
+	mkdir lib -p
 	cp ${OUTPUT} ./lib
 #****************************************************************************
 # common rules

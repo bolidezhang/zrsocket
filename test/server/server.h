@@ -4,7 +4,7 @@
 #include "zrsocket/zrsocket.h"
 
 using namespace zrsocket;
-class ClientHandler : public MessageHandler<ByteBuffer, ThreadMutex>
+class ClientHandler : public MessageHandler<ByteBuffer, SpinMutex>
 {
 public:
     int handle_open()
