@@ -99,7 +99,8 @@ all: ${OUTPUT}
 SRCS := ./src/data_convert.cpp \
 ./src/inet_addr.cpp \
 ./src/memory.cpp \
-./src/system_api.cpp
+./src/os_api.cpp \
+./src/seda_timer_queue.cpp
 
 # Add on the sources for libraries
 SRCS := ${SRCS}
@@ -114,7 +115,7 @@ ${OUTPUT}: ${OBJS}
 #	${LD} -o $@ ${LDFLAGS} ${OBJS} ${LIBS} ${EXTRA_LIBS}
 	$(AR) $@ $(OBJS)
 	mkdir lib -p
-	cp ${OUTPUT} ./lib
+	cp ${OUTPUT} ./lib -rf
 #****************************************************************************
 # common rules
 #****************************************************************************

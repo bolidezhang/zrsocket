@@ -1,12 +1,12 @@
-#include "zrsocket/inet_addr.h"
+ï»¿#include "zrsocket/inet_addr.h"
 #include "zrsocket/memory.h"
 #include <stdio.h>
 #include <cstdio>
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 InetAddr::InetAddr()
-    : addr_type_(IPV4)
+    : addr_type_(AddrType::IPV4)
 {
     reset();
 }
@@ -17,97 +17,156 @@ InetAddr::InetAddr(bool ipv6)
     reset();
 }
 
+InetAddr::InetAddr(const InetAddr &addr)
+{
+    addr_type_ = addr.addr_type_;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+        case AddrType::IPV6:
+            memcpy(&(addr_.ipv6), &(addr.addr_.ipv6), sizeof(addr.addr_.ipv6));
+            break;
+        default:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+    };
+}
+
+InetAddr::InetAddr(InetAddr &&addr) noexcept
+{
+    addr_type_ = addr.addr_type_;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+        case AddrType::IPV6:
+            memcpy(&(addr_.ipv6), &(addr.addr_.ipv6), sizeof(addr.addr_.ipv6));
+            break;
+        default:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+    };
+}
+
 InetAddr::~InetAddr()
 {
 }
 
+InetAddr & InetAddr::operator= (const InetAddr &addr)
+{
+    addr_type_ = addr.addr_type_;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+        case AddrType::IPV6:
+            memcpy(&(addr_.ipv6), &(addr.addr_.ipv6), sizeof(addr.addr_.ipv6));
+            break;
+        default:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+    };
+
+    return *this;
+}
+
+InetAddr & InetAddr::operator= (InetAddr &&addr) noexcept
+{
+    addr_type_ = addr.addr_type_;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+        case AddrType::IPV6:
+            memcpy(&(addr_.ipv6), &(addr.addr_.ipv6), sizeof(addr.addr_.ipv6));
+            break;
+        default:
+            memcpy(&(addr_.ipv4), &(addr.addr_.ipv4), sizeof(addr.addr_.ipv4));
+            break;
+    };
+
+    return *this;
+}
+
 void InetAddr::reset()
 {
-    if (addr_type_ == IPV4) {
-        inet_addr_.in4.sin_family = AF_INET;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            addr_.ipv4.sin_family = AF_INET;
+            break;
+        case AddrType::IPV6:
+            addr_.ipv6.sin6_family = AF_INET6;
+            break;
+        default:
+            addr_.ipv4.sin_family = AF_INET;
+            break;
     }
-#ifdef ZRSOCKET_IPV6
-    else if (addr_type_ == IPV6) {
-        inet_addr_.in6.sin6_family = AF_INET6;
-    }
-#endif
 }
 
-InetAddr::operator sockaddr* ()
+InetAddr::operator sockaddr * ()
 {
-#ifdef ZRSOCKET_IPV6
-    if (addr_type_ == IPV4) {
-        return (sockaddr *)&inet_addr_.in4;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            return (sockaddr *)&addr_.ipv4;
+        case AddrType::IPV6:
+            return (sockaddr *)&addr_.ipv6;
+        default:
+            return (sockaddr *)&addr_.ipv4;
     }
-    else {
-        return (sockaddr *)&inet_addr_.in6;
-    }
-#else
-    return (sockaddr *)&inet_addr_.in4;
-#endif
 }
 
-sockaddr* InetAddr::get_addr() const
+sockaddr * InetAddr::get_addr() const
 {
-#ifdef ZRSOCKET_IPV6
-    if (addr_type_ == IPV4) {
-        return (sockaddr *)&inet_addr_.in4;
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            return (sockaddr *)&addr_.ipv4;
+        case AddrType::IPV6:
+            return (sockaddr *)&addr_.ipv6;
+        default:
+            return (sockaddr *)&addr_.ipv4;
     }
-    else {
-        return (sockaddr *)&inet_addr_.in6;
-    }
-#else
-    return (sockaddr *)&inet_addr_.in4;
-#endif
 }
 
 int InetAddr::get_addr_size() const
 {
-#ifdef ZRSOCKET_IPV6
-    if (addr_type_ == IPV4) {
-        return sizeof(inet_addr_.in4);
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            return sizeof(addr_.ipv4);
+        case AddrType::IPV6:
+            return sizeof(addr_.ipv6);
+        default:
+            return sizeof(addr_.ipv4);
     }
-    else {
-        return sizeof(inet_addr_.in6);
-    }
-#else
-    return sizeof(inet_addr_.in4);
-#endif
 }
 
-//ÊµÏÖ·½Ê½:
+//å®žçŽ°æ–¹å¼:
 // 1)WSAAddressToString(windows)
 // 2)inet_ntoa(ipv4) 
 // 3)inet_ntop(linux)
 // 4)getnameinfo
 int InetAddr::get_ip_addr(char *ip_addr, int len) const
 {
-    int ret = 0;
-#ifdef ZRSOCKET_IPV6
-    if (addr_type_ == IPV4) {
-        ret = getnameinfo((sockaddr *)&inet_addr_.in4, sizeof(inet_addr_.in4), ip_addr, len, 0, 0, NI_NUMERICHOST);
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            return getnameinfo((sockaddr*)&addr_.ipv4, sizeof(addr_.ipv4), ip_addr, len, 0, 0, NI_NUMERICHOST);
+        case AddrType::IPV6:
+            return getnameinfo((sockaddr*)&addr_.ipv6, sizeof(addr_.ipv6), ip_addr, len, 0, 0, NI_NUMERICHOST);
+        default:
+            return getnameinfo((sockaddr*)&addr_.ipv4, sizeof(addr_.ipv4), ip_addr, len, 0, 0, NI_NUMERICHOST);
     }
-    else {
-        ret = getnameinfo((sockaddr *)&inet_addr_.in6, sizeof(inet_addr_.in6), ip_addr, len, 0, 0, NI_NUMERICHOST);
-    }
-#else
-    ret = getnameinfo((sockaddr *)&inet_addr_.in4, sizeof(inet_addr_.in4), ip_addr, len, 0, 0, NI_NUMERICHOST);
-#endif
-    return ret;
 }
 
 ushort_t InetAddr::get_port_number() const
 {
-#ifdef ZRSOCKET_IPV6
-    if (addr_type_ == IPV4) {
-        return ntohs(inet_addr_.in4.sin_port);
+    switch (addr_type_) {
+        case AddrType::IPV4:
+            return ntohs(addr_.ipv4.sin_port);
+        case AddrType::IPV6:
+            return ntohs(addr_.ipv6.sin6_port);
+        default:
+            return ntohs(addr_.ipv4.sin_port);
     }
-    else {
-        return ntohs(inet_addr_.in6.sin6_port);
-    }
-#else
-    return ntohs(inet_addr_.in4.sin_port);
-#endif
 }
 
 bool InetAddr::is_ipv4() const
@@ -120,105 +179,68 @@ bool InetAddr::is_ipv6() const
     return addr_type_ == IPV6;
 }
 
-//ÊµÏÖ·½Ê½£º
+//å®žçŽ°æ–¹å¼ï¼š
 // 1)getaddrinfo
-// 2)gethostbyname(½¨ÒéÊ¹ÓÃgetaddrinfo, ´Ëº¯ÊýÒÑ±»ÆúÓÃdeprecated)
+// 2)gethostbyname(å»ºè®®ä½¿ç”¨getaddrinfo, æ­¤å‡½æ•°å·²è¢«å¼ƒç”¨deprecated)
 int InetAddr::set(const char *hostname, ushort_t port, bool is_ipv6)
 {
     char str_port[7] = {0};
     snprintf(str_port, sizeof(str_port), "%d", port);
-#ifdef ZRSOCKET_IPV6    
-    struct addrinfo hints = {0};
-    struct addrinfo *ret = NULL;
+    struct addrinfo hints = { 0 };
+    struct addrinfo *res = nullptr;
 
+    hints.ai_flags = AI_PASSIVE;
     if (!is_ipv6) {
-        addr_type_ = IPV4;
-        hints.ai_flags  = AI_PASSIVE;
         hints.ai_family = AF_INET;
-        inet_addr_.in4.sin_family = AF_INET;
-        inet_addr_.in4.sin_port = htons(port);
     }
     else {
-        addr_type_ = IPV6;
-        hints.ai_flags  = AI_PASSIVE;
         hints.ai_family = AF_INET6;
-        inet_addr_.in6.sin6_family = AF_INET6;
-        inet_addr_.in6.sin6_port = htons(port);
     }
-    int error = getaddrinfo(hostname, str_port, &hints, &ret);
-    if (error != 0) {
-        if (ret != NULL) {
-            freeaddrinfo(ret);
+
+    if (!getaddrinfo(hostname, str_port, &hints, &res)) {
+        if (res->ai_family == AF_INET) {
+            addr_type_ = IPV4;
+            zrsocket_memcpy(&addr_.ipv4, res->ai_addr, res->ai_addrlen);
         }
-        return -1;
-    }    
-    if (ret->ai_family == AF_INET) {
-        zrsocket_memcpy(&inet_addr_.in4, ret->ai_addr, ret->ai_addrlen);
-        inet_addr_.in4.sin_port = htons(port);
-    }
-    else {
-        zrsocket_memcpy(&inet_addr_.in6, ret->ai_addr, ret->ai_addrlen);
-        inet_addr_.in6.sin6_port = htons(port);
-    }
-    freeaddrinfo(ret);
-#else
-    struct addrinfo hints = {0};
-    struct addrinfo *ret = NULL;
-    addr_type_ = IPV4;
-    hints.ai_flags  = AI_PASSIVE;
-    hints.ai_family = AF_INET;
-    inet_addr_.in4.sin_family = AF_INET;
-    inet_addr_.in4.sin_port = htons(port);
-    int error = getaddrinfo(hostname, str_port, &hints, &ret);
-    if (error != 0) {
-        if (ret != NULL) {
-            freeaddrinfo(ret);
+        else {
+            addr_type_ = IPV6;
+            zrsocket_memcpy(&addr_.ipv6, res->ai_addr, res->ai_addrlen);
         }
-        return -1;
-    }    
-    zrsocket_memcpy(&inet_addr_.in4, ret->ai_addr, ret->ai_addrlen);
-    inet_addr_.in4.sin_port = htons(port);
-#endif
-    return 0;
+    }
+
+    if (res != nullptr) {
+        freeaddrinfo(res);
+        return 0;
+    }
+    return -1;
 }
 
 int InetAddr::set(const struct sockaddr *addr, int addrlen)
 {
-#ifdef ZRSOCKET_IPV6
     if (addr->sa_family == AF_INET) {
         addr_type_ = IPV4;
-        zrsocket_memcpy(&inet_addr_.in4, addr, addrlen);
+        zrsocket_memcpy(&addr_.ipv4, addr, addrlen);
     }
     else {
         addr_type_ = IPV6;
-        zrsocket_memcpy(&inet_addr_.in6, addr, addrlen);
+        zrsocket_memcpy(&addr_.ipv6, addr, addrlen);
     }
-#else
-    addr_type_ = IPV4;
-    zrsocket_memcpy(&inet_addr_.in4, addr, addrlen);
-#endif
     return 0;
 }
 
 int InetAddr::set(ZRSOCKET_SOCKET fd, bool ipv6)
 {
     int addrlen;
-#ifdef ZRSOCKET_IPV6
     if (!ipv6) {
         addr_type_ = IPV4;
-        addrlen = sizeof(inet_addr_.in4);
-        return getpeername(fd, (sockaddr *)&inet_addr_.in4, (socklen_t *)&addrlen);
+        addrlen = sizeof(addr_.ipv4);
+        return getpeername(fd, (sockaddr *)&addr_.ipv4, (socklen_t *)&addrlen);
     }
     else {
         addr_type_= IPV6;
-        addrlen = sizeof(inet_addr_.in6);
-        return getpeername(fd, (sockaddr *)&inet_addr_.in6, (socklen_t *)&addrlen);
+        addrlen = sizeof(addr_.ipv6);
+        return getpeername(fd, (sockaddr *)&addr_.ipv6, (socklen_t *)&addrlen);
     }
-#else
-    addr_type_ = IPV4;
-    addrlen = sizeof(inet_addr_.in4);
-    return getpeername(fd, (sockaddr *)&inet_addr_.in4, (socklen_t *)&addrlen);
-#endif
 }
 
 int InetAddr::set(ZRSOCKET_SOCKET fd)
@@ -230,19 +252,14 @@ int InetAddr::set(ZRSOCKET_SOCKET fd)
         return ret;
     }
 
-#ifdef ZRSOCKET_IPV6
     if (ss.ss_family == AF_INET) { //IPV4
         addr_type_ = IPV4;
-        zrsocket_memcpy(&inet_addr_.in4, &ss, sizeof(inet_addr_.in4));
+        zrsocket_memcpy(&addr_.ipv4, &ss, sizeof(addr_.ipv4));
     }
     else { //IPV6
         addr_type_ = IPV6;
-        zrsocket_memcpy(&inet_addr_.in6, &ss, sizeof(inet_addr_.in6));
+        zrsocket_memcpy(&addr_.ipv6, &ss, sizeof(addr_.ipv6));
     }            
-#else
-    addr_type_ = IPV4;
-    zrsocket_memcpy(&inet_addr_.in4, &ss, sizeof(inet_addr_.in4));
-#endif
     return 0;
 }
 
@@ -255,19 +272,14 @@ int InetAddr::get_ip_remote_s(ZRSOCKET_SOCKET fd, char *ip_addr, int ip_len, ush
         return ret;
     }
     if (port_number != 0) {
-#ifdef ZRSOCKET_IPV6
         if (ss.ss_family == AF_INET) { //IPV4
-            sockaddr_in *in4 = (sockaddr_in *)&ss;
-            *port_number = ntohs(in4->sin_port);
+            sockaddr_in *ipv4 = (sockaddr_in *)&ss;
+            *port_number = ntohs(ipv4->sin_port);
         }
         else { //IPV6
-            sockaddr_in6 *in6 = (sockaddr_in6 *)&ss;
-            *port_number = ntohs(in6->sin6_port);
+            sockaddr_in6 *ipv6 = (sockaddr_in6 *)&ss;
+            *port_number = ntohs(ipv6->sin6_port);
         }            
-#else
-        sockaddr_in *in4 = (sockaddr_in *)&ss;
-        *port_number = ntohs(in4->sin_port);
-#endif
     }
     ret = getnameinfo((sockaddr *)&ss, ss_len, ip_addr, ip_len, 0, 0, NI_NUMERICHOST);
     return ret;
@@ -282,19 +294,14 @@ int InetAddr::get_ip_local_s(ZRSOCKET_SOCKET fd, char *ip_addr, int ip_len, usho
         return ret;
     }
     if (port_number != 0) {
-#ifdef ZRSOCKET_IPV6
         if (ss.ss_family == AF_INET) { //IPV4
-            sockaddr_in *in4 = (sockaddr_in *)&ss;
-            *port_number = ntohs(in4->sin_port);
+            sockaddr_in *ipv4 = (sockaddr_in *)&ss;
+            *port_number = ntohs(ipv4->sin_port);
         }
         else { //IPV6
-            sockaddr_in6 *in6 = (sockaddr_in6 *)&ss;
-            *port_number = ntohs(in6->sin6_port);
+            sockaddr_in6 *ipv6 = (sockaddr_in6 *)&ss;
+            *port_number = ntohs(ipv6->sin6_port);
         }            
-#else
-        sockaddr_in *in4 = (sockaddr_in *)&ss;
-        *port_number = ntohs(in4->sin_port);
-#endif
     }
     ret = getnameinfo((sockaddr *)&ss, ss_len, ip_addr, ip_len, 0, 0, NI_NUMERICHOST);
     return ret;
@@ -304,19 +311,14 @@ int InetAddr::get_ip_s(const struct sockaddr *addr, int addrlen, char *ip_addr, 
 {
     int ret = 0;
     if (port_number != 0) {
-#ifdef ZRSOCKET_IPV6
         if (addr->sa_family == AF_INET) { //IPV4
-            sockaddr_in *in4 = (sockaddr_in *)addr;
-            *port_number = ntohs(in4->sin_port);
+            sockaddr_in *ipv4 = (sockaddr_in *)addr;
+            *port_number = ntohs(ipv4->sin_port);
         }
         else { //IPV6
-            sockaddr_in6 *in6 = (sockaddr_in6 *)addr;
-            *port_number = ntohs(in6->sin6_port);
+            sockaddr_in6 *ipv6 = (sockaddr_in6 *)addr;
+            *port_number = ntohs(ipv6->sin6_port);
         }            
-#else
-        sockaddr_in *in4 = (sockaddr_in *)addr;
-        *port_number = ntohs(in4->sin_port);
-#endif
     }
     ret = getnameinfo(addr, addrlen, ip_addr, ip_len, 0, 0, NI_NUMERICHOST);
     return ret;    
@@ -325,40 +327,39 @@ int InetAddr::get_ip_s(const struct sockaddr *addr, int addrlen, char *ip_addr, 
 int InetAddr::get_addr_s(const char *hostname, ushort_t port, sockaddr *addr, int addrlen)
 {
     struct addrinfo hints = {0};
-    struct addrinfo *ret = NULL;
-    int error = 0;
+    struct addrinfo *res = nullptr;
     if (addrlen == sizeof(sockaddr_in)) {
         hints.ai_family     = AF_INET;
-        sockaddr_in *in4    = (sockaddr_in *)addr;
-        in4->sin_port       = ntohs(port);
+        sockaddr_in *ipv4   = (sockaddr_in *)addr;
+        ipv4->sin_port      = ntohs(port);
     }
     else {
         hints.ai_family     = AF_INET6;
-        sockaddr_in6 *in6   = (sockaddr_in6 *)addr;
-        in6->sin6_port      = ntohs(port);
+        sockaddr_in6 *ipv6  = (sockaddr_in6 *)addr;
+        ipv6->sin6_port     = ntohs(port);
     }
-    if (hostname == NULL) {
+    if (nullptr == hostname) {
         return 0;
     }
 
-    error = getaddrinfo(hostname, 0, &hints, &ret);
-    if (error != 0) {
-        if (ret != NULL) {
-            freeaddrinfo(ret);
+    if (!getaddrinfo(hostname, nullptr, &hints, &res)) {
+        zrsocket_memcpy(addr, res->ai_addr, res->ai_addrlen);
+        freeaddrinfo(res);
+        if (addr->sa_family == AF_INET) {
+            sockaddr_in *ipv4 = (sockaddr_in *)addr;
+            ipv4->sin_port = ntohs(port);
         }
-        return -1;
-    }    
-    zrsocket_memcpy(addr, ret->ai_addr, ret->ai_addrlen);
-    freeaddrinfo(ret);
-    if (addr->sa_family == AF_INET) {
-        sockaddr_in *in4    = (sockaddr_in *)addr;
-        in4->sin_port       = ntohs(port);
+        else {
+            sockaddr_in6 *ipv6 = (sockaddr_in6 *)addr;
+            ipv6->sin6_port = ntohs(port);
+        }
     }
-    else {
-        sockaddr_in6 *in6   = (sockaddr_in6 *)addr;
-        in6->sin6_port      = ntohs(port);
+
+    if (res != nullptr) {
+        freeaddrinfo(res);
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END

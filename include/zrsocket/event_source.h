@@ -1,40 +1,40 @@
-#ifndef ZRSOCKET_EVENT_SOURCE_H_
-#define ZRSOCKET_EVENT_SOURCE_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_EVENT_SOURCE_H
+#define ZRSOCKET_EVENT_SOURCE_H
 #include "config.h"
 #include "base_type.h"
 #include "atomic.h"
 #include "inet_addr.h"
 #include "event_handler.h"
-#include "event_reactor.h"
+#include "event_loop.h"
+#include "message_common.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 class ZRSOCKET_EXPORT EventSource
 {
 public:
     enum SOURCE_STATE
     {
-        STATE_CLOSED      = 0,    //¹Ø±Õ
-        STATE_CONNECTING  = 1,    //Á¬½ÓÖĞ
-        STATE_CONNECTED   = 2,    //Á¬½Ó³É¹¦
+        STATE_CLOSED      = 0,    //å…³é—­
+        STATE_CONNECTING  = 1,    //è¿æ¥ä¸­
+        STATE_CONNECTED   = 2,    //è¿æ¥æˆåŠŸ
     };
 
     enum SOURCE_TYPE
     {
-        TYPE_UNKNOW = 0,    //Î´Öª
-        TYPE_CLIENT = 1,    //¿Í»§
-        TYPE_SERVER = 2,    //·şÎñ
+        TYPE_UNKNOW = 0,    //æœªçŸ¥
+        TYPE_CLIENT = 1,    //å®¢æˆ·
+        TYPE_SERVER = 2,    //æœåŠ¡
     };
 
     EventSource()
-        : get_msglen_proc_(get_msglen_int16_host)
-        , set_msglen_proc_(set_msglen_int16_host)
-        , handler_(NULL)
-        , reactor_(NULL)
-        , recvbuffer_size_(4096)
-        , msgbuffer_size_(4096)
-        , msglen_bytes_(2)
-        , msg_byteorder_(0)
+        : handler_(nullptr)
+        , event_loop_(nullptr)
+        , message_decoder_config_(nullptr)
     {
     }
 
@@ -42,101 +42,35 @@ public:
     {
     }
 
-    virtual InetAddr* get_local_addr()
+    virtual InetAddr * local_addr()
     {
-        return NULL;
+        return nullptr;
     }
 
-    inline EventHandler* get_handler()
+    inline EventHandler * handler()
     {
         return handler_;
     }
 
-    inline EventReactor* get_reactor()
+    inline EventLoop * event_loop()
     {
-        return reactor_;
+        return event_loop_;
     }
 
-    inline uint_t get_recvbuffer_size() const
+    inline MessageDecoderConfig * message_decoder_config()
+    {
+        return message_decoder_config_;
+    }
+
+    inline uint_t recvbuffer_size()
     {
         return recvbuffer_size_;
     }
 
-    inline uint_t get_msgbuffer_size() const
-    {
-        return msgbuffer_size_;
-    }
-
-    inline uint8_t get_msglen_bytes() const
-    {
-        return msglen_bytes_;
-    }
-
-    inline uint8_t get_msg_byteorder() const
-    {
-        return msg_byteorder_;
-    }
-
-    static int get_msglen_int8(const char *msg, int len)
-    {
-        return *msg;
-    }
-
-    static int get_msglen_int16_host(const char *msg, int len)
-    {
-        return  *((int16_t *)msg);
-    }
-
-    static int get_msglen_int16_network(const char *msg, int len)
-    {
-        return ntohs(*((int16_t *)msg));
-    }
-
-    static int get_msglen_int32_host(const char *msg, int len)
-    {
-         return  *((int32_t *)msg);
-    }
-
-    static int get_msglen_int32_network(const char *msg, int len)
-    {
-        return ntohl(*((int32_t *)msg));
-    }
-
-    static void set_msglen_int8(char *msg, int len)
-    {
-        *msg = len;
-    }
-
-    static void set_msglen_int16_host(char *msg, int len)
-    {
-        *((int16_t *)msg) = len;
-    }
-
-    static void set_msglen_int16_network(char *msg, int len)
-    {
-        *((int16_t *)msg) = htons(len);
-    }
-
-    static void set_msglen_int32_host(char *msg, int len)
-    {
-        *((int32_t *)msg) = len;
-    }
-
-    static void set_msglen_int32_network(char *msg, int len)
-    {
-        *((int32_t *)msg) = htonl(len);
-    }
-
-    static uint64_t generate_id()
-    {
-        static AtomicUInt64 id(0);
-        return ++id;
-    }
-
 public:
-    virtual EventHandler* alloc_handler()
+    virtual EventHandler * alloc_handler()
     {
-        return NULL;
+        return nullptr;
     }
 
     virtual int free_handler(EventHandler *handler)
@@ -163,23 +97,13 @@ public:
         return -1;
     }
 
-    typedef int (* get_msglen_proc)(const char *msg, int len);
-    typedef void (* set_msglen_proc)(char *msg, int len);
-
-    get_msglen_proc     get_msglen_proc_;       //È¡µÃÏûÏ¢³¤¶Èº¯ÊıÖ¸Õë
-    set_msglen_proc     set_msglen_proc_;       //ÉèÖÃÏûÏ¢³¤¶Èº¯ÊıÖ¸Õë
-
 protected:
-    EventHandler *handler_;
-    EventReactor *reactor_;
-
-    uint_t  recvbuffer_size_;
-    uint_t  msgbuffer_size_;
-    uint8_t msglen_bytes_;          //ÏûÏ¢³¤¶ÈÓòËùÕ¼×Ö½ÚÊı(Ò»°ãÎª1,2,4)
-    uint8_t msg_byteorder_;         //ÏûÏ¢µÄ×Ö½ÚË³Ğò(0:host-byte,1:big endian(network-byte) 2:little endian)
-
+    EventHandler         *handler_;
+    EventLoop            *event_loop_;
+    MessageDecoderConfig *message_decoder_config_;
+    uint_t                recvbuffer_size_;
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

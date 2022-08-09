@@ -1,4 +1,4 @@
-//**********************************************************************
+ï»¿//**********************************************************************
 //
 // Copyright (C) 2005-2007 Bolide Zhang(bolidezhang@gmail.com)
 // All rights reserved.
@@ -8,8 +8,12 @@
 //
 //**********************************************************************
 
-#ifndef ZRSOCKET_CONFIG_H_
-#define ZRSOCKET_CONFIG_H_
+// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_CONFIG_H
+#define ZRSOCKET_CONFIG_H
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
     #pragma once
@@ -39,7 +43,7 @@
 //#define ZRSOCKET_CC_INTEL
 //#define ZRSOCKET_CC_TYPE
 
-//C ±ê×¼
+//C æ ‡å‡†
 //1.C89
 //#define ZRSOCKET_C_STD_1989
 //2.C90
@@ -50,10 +54,10 @@
 //#define ZRSOCKET_C_STD_2011
 //5.C14
 //#define ZRSOCKET_C_STD_2014
-//5.C17
+//6.C17
 //#define ZRSOCKET_C_STD_2017
 
-//C++ ±ê×¼
+//C++ æ ‡å‡†
 //1.C++98
 //#define ZRSOCKET_CPLUSPLUS_STD_1998
 //2.C++03
@@ -69,7 +73,7 @@
 //7.C++17
 //#define ZRSOCKET_CPLUSPLUS_STD_2017
 
-//STL ÊµÏÖÌá¹©ÉÌ
+//STL å®žçŽ°æä¾›å•†
 //#define ZRSOCKET_STL_GNU_LIBSTDC++
 //#define ZRSOCKET_STL_MS
 //#define ZRSOCKET_STL_LLVM_LIBC++
@@ -78,13 +82,10 @@
 //#define ZRSOCKET_STL_SGI
 //#define ZRSOCKET_STL_APACHE_STDCXX
 
-//ipv6 support
-#define ZRSOCKET_IPV6 
-
 //STL Extension
 #define ZRSOCKET_USE_STLEXTENSION
 
-//×Ö½ÚÐòÏà¹Ø
+//å­—èŠ‚åºç›¸å…³
 //#define ZRSOCKET_BIG_ENDIAN
 //#define ZRSOCKET_LITTLE_ENDIAN
 //#define ZRSOCKET_BYTE_ORDER
@@ -106,8 +107,8 @@
     #include "config/linux.h"
 #endif
 
-#define ZRSOCKET_BEGIN namespace zrsocket {
-#define ZRSOCKET_END }
+#define ZRSOCKET_NAMESPACE_BEGIN namespace zrsocket {
+#define ZRSOCKET_NAMESPACE_END }
 #define ZRSOCKET zrsocket
 
 #define ZRSOCKET_MAX(a,b)   (((a) > (b)) ? (a) : (b))

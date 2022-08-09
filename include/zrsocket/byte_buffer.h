@@ -1,18 +1,22 @@
-#ifndef ZRSOCKET_BYTEBUFFER_H_
-#define ZRSOCKET_BYTEBUFFER_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_BYTEBUFFER_H
+#define ZRSOCKET_BYTEBUFFER_H
 #include "config.h"
 #include "base_type.h"
 #include "malloc.h"
 #include "memory.h"
 #include "atomic.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 class ZRSOCKET_EXPORT ByteBuffer
 {
 public:
     inline ByteBuffer()
-        : buffer_(NULL)
+        : buffer_(nullptr)
         , buffer_size_(0)
         , data_begin_index_(0)
         , data_end_index_(0)
@@ -26,13 +30,31 @@ public:
         , owner_(true)
     {
         char *new_buffer = (char *)zrsocket_malloc(buffer_size);
-        if (NULL != new_buffer) {
+        if (nullptr != new_buffer) {
             buffer_      = new_buffer;
             buffer_size_ = buffer_size;
         }
         else {
-            buffer_      = NULL;
+            buffer_      = nullptr;
             buffer_size_ = 0;
+        }
+    }
+
+    inline ByteBuffer(const char *data, uint_t size)
+        : data_begin_index_(0)
+        , owner_(true)
+    {
+        char *new_buffer = (char *)zrsocket_malloc(size);
+        if (nullptr != new_buffer) {
+            zrsocket_memcpy(new_buffer, data, size);
+            buffer_         = new_buffer;
+            buffer_size_    = size;
+            data_end_index_ = size;
+        }
+        else {
+            buffer_ = nullptr;
+            buffer_size_ = 0;
+            data_end_index_ = 0;
         }
     }
 
@@ -47,7 +69,26 @@ public:
             owner_              = true;
         }
         else {
-            buffer_             = NULL;
+            buffer_             = nullptr;
+            buffer_size_        = 0;
+            data_begin_index_   = 0;
+            data_end_index_     = 0;
+            owner_              = false;
+        }
+    }
+
+    inline ByteBuffer(ByteBuffer &&buf)
+    {
+        if (buf.owner_) {
+            buf.owner_          = false;
+            buffer_             = buf.buffer_;
+            buffer_size_        = buf.buffer_size_;
+            data_begin_index_   = buf.data_begin_index_;
+            data_end_index_     = buf.data_end_index_;
+            owner_ = true;
+        }
+        else {
+            buffer_             = nullptr;
             buffer_size_        = 0;
             data_begin_index_   = 0;
             data_end_index_     = 0;
@@ -57,15 +98,15 @@ public:
 
     inline ~ByteBuffer()
     {
-        if (owner_ && (NULL != buffer_)) {
+        if (owner_ && (nullptr != buffer_)) {
             zrsocket_free(buffer_);
         }
     }
 
-    inline ByteBuffer& operator= (const ByteBuffer &buf)
+    inline ByteBuffer & operator= (const ByteBuffer &buf)
     {
         if (this != &buf) {
-            if (owner_ && (NULL != buffer_)) {
+            if (owner_ && (nullptr != buffer_)) {
                 zrsocket_free(buffer_);
             }
 
@@ -78,7 +119,33 @@ public:
                 owner_              = true;
             }
             else {
-                buffer_             = NULL;
+                buffer_             = nullptr;
+                buffer_size_        = 0;
+                data_begin_index_   = 0;
+                data_end_index_     = 0;
+                owner_              = false;
+            }
+        }
+        return *this;
+    }
+
+    inline ByteBuffer & operator= (ByteBuffer && buf)
+    {
+        if (this != &buf) {
+            if (owner_ && (nullptr != buffer_)) {
+                zrsocket_free(buffer_);
+            }
+
+            if (buf.owner_) {
+                buf.owner_          = false;
+                buffer_             = buf.buffer_;
+                buffer_size_        = buf.buffer_size_;
+                data_begin_index_   = buf.data_begin_index_;
+                data_end_index_     = buf.data_end_index_;
+                owner_              = true;
+            }
+            else {
+                buffer_             = nullptr;
                 buffer_size_        = 0;
                 data_begin_index_   = 0;
                 data_end_index_     = 0;
@@ -90,10 +157,10 @@ public:
 
     inline void clear()
     {
-        if (owner_ && (NULL != buffer_)) {
+        if (owner_ && (nullptr != buffer_)) {
             zrsocket_free(buffer_);
         }
-        buffer_             = NULL;
+        buffer_             = nullptr;
         buffer_size_        = 0;
         data_begin_index_   = 0;
         data_end_index_     = 0;
@@ -106,7 +173,7 @@ public:
         data_end_index_     = 0;
     }
 
-    inline char* buffer() const
+    inline char * buffer() const
     {
         return buffer_;
     }
@@ -118,10 +185,10 @@ public:
 
     inline bool data(const char *data, uint_t size, bool owner = true)
     {
-        if (size == 0) {
+        if (0 == size) {
             return false;
         }
-        if (NULL == data) {
+        if (nullptr == data) {
             return false;
         }
         if ( (data >= buffer_) && (data < (buffer_ + buffer_size_)) ) {
@@ -136,7 +203,7 @@ public:
             else {   
                 new_buffer = (char *)zrsocket_malloc(size);
             }
-            if (NULL == new_buffer)
+            if (nullptr == new_buffer)
             {
                 return false;
             }
@@ -145,8 +212,7 @@ public:
         }
         else
         {
-            if (owner_ && (buffer_ != NULL))
-            {
+            if (owner_ && (buffer_ != nullptr)) {
                 zrsocket_free(buffer_);
             }
             buffer_ = (char *)data;
@@ -158,7 +224,7 @@ public:
         return true;
     }
 
-    inline char* data() const
+    inline char * data() const
     {
         return buffer_ + data_begin_index_;
     }
@@ -168,7 +234,7 @@ public:
         return data_end_index_ - data_begin_index_;
     }
 
-    //·µ»ØÎ´Ê¹ÓÃµÄÈİÁ¿
+    //è¿”å›æœªä½¿ç”¨çš„å®¹é‡
     inline uint_t free_size() const
     {
         return buffer_size_ - data_end_index_;
@@ -233,7 +299,7 @@ public:
         if (owner_) {
             if (new_size > buffer_size_) {
                 char *new_buffer = (char *)zrsocket_realloc(buffer_, new_size);
-                if (NULL != new_buffer) {
+                if (nullptr != new_buffer) {
                     buffer_             = new_buffer;
                     buffer_size_        = new_size;
                     data_begin_index_   = 0;
@@ -244,7 +310,7 @@ public:
         }
         else {
             char *new_buffer = (char *)zrsocket_malloc(new_size);
-            if (NULL != new_buffer) {
+            if (nullptr != new_buffer) {
                 buffer_             = new_buffer;
                 buffer_size_        = new_size;
                 data_begin_index_   = 0;
@@ -261,7 +327,7 @@ public:
         return reserve(new_size);
     }
 
-    //multiple: »º³åÇøÀ©´ó±¶Êı
+    //multiple: ç¼“å†²åŒºæ‰©å¤§å€æ•°
     inline bool write(const char *data, uint_t size, uint_t multiple = 100)
     {
         if (!owner_) {
@@ -275,7 +341,7 @@ public:
         else {   
             uint_t new_size  = buffer_size_ * multiple / 100 + buffer_size_ + size;
             char *new_buffer = (char *)zrsocket_realloc(buffer_, new_size);
-            if (NULL != new_buffer) {
+            if (nullptr != new_buffer) {
                 zrsocket_memcpy(new_buffer + data_end_index_, data, size);
                 buffer_ = new_buffer;
                 buffer_size_ = new_size;
@@ -290,7 +356,7 @@ public:
 
     inline bool write(const char *data)
     {
-        return write(data, (strlen(data) + 1));
+        return write(data, strlen(data));
     }
 
     inline bool write(char c)
@@ -333,22 +399,36 @@ public:
         return -1;
     }
 
-    inline char* read(uint_t size)
+    inline char * read(uint_t size)
     {
         if (data_size() >= size) {
             char *ret = (buffer_ + data_begin_index_);
             data_begin_index_ += size;
             return ret;
         }
-        return NULL;
+        return nullptr;
+    }
+
+    inline char * c_str()
+    {
+        if (!empty()) {
+            if (*(buffer_ + data_end_index_ - 1) != '\0') {
+                if (write('\0')) {
+                    --data_end_index_;
+                }
+            }
+            return data();
+        }
+
+        return nullptr;
     }
 
 private:
-    char           *buffer_;            //»º³åÇø
-    uint_t          buffer_size_;       //»º³åÇø´óĞ¡
-    uint_t          data_begin_index_;  //Êı¾İ¿ªÊ¼Î»
-    uint_t          data_end_index_;    //Êı¾İ½áÊøÎ»
-    mutable bool    owner_;             //±íÊ¾ÊÇ·ñÓµÓĞËùÓĞÈ¨
+    char           *buffer_;            //ç¼“å†²åŒº
+    uint_t          buffer_size_;       //ç¼“å†²åŒºå¤§å°
+    uint_t          data_begin_index_;  //æ•°æ®å¼€å§‹ä½
+    uint_t          data_end_index_;    //æ•°æ®ç»“æŸä½
+    mutable bool    owner_;             //è¡¨ç¤ºæ˜¯å¦æ‹¥æœ‰æ‰€æœ‰æƒ
 };
 
 class ZRSOCKET_EXPORT SharedBuffer
@@ -368,9 +448,22 @@ public:
         buffer_ = new Buffer_(buffer_size);
     }
 
-    inline SharedBuffer(const SharedBuffer &buf)
+    inline SharedBuffer(const char *data, uint_t size)
         : data_begin_index_(0)
-        , data_end_index_(0)
+    {
+        buffer_ = new Buffer_(data, size);
+        data_end_index_ = size;
+    }
+
+    inline SharedBuffer(const SharedBuffer &buf)
+    {
+        buf.buffer_->increment_refcount();
+        buffer_             = buf.buffer_;
+        data_begin_index_   = buf.data_begin_index_;
+        data_end_index_     = buf.data_end_index_;
+    }
+
+    inline SharedBuffer(SharedBuffer &&buf)
     {
         buf.buffer_->increment_refcount();
         buffer_             = buf.buffer_;
@@ -383,7 +476,7 @@ public:
         buffer_->release();
     }
 
-    inline SharedBuffer& operator=(const SharedBuffer &buf)
+    inline SharedBuffer & operator= (SharedBuffer &buf)
     {
         buffer_->release();
 
@@ -394,7 +487,18 @@ public:
         return *this;
     }
 
-    inline SharedBuffer& operator=(ByteBuffer &buf)
+    inline SharedBuffer & operator= (SharedBuffer &&buf)
+    {
+        buffer_->release();
+
+        buf.buffer_->increment_refcount();
+        buffer_             = buf.buffer_;
+        data_begin_index_   = buf.data_begin_index_;
+        data_end_index_     = buf.data_end_index_;
+        return *this;
+    }
+
+    inline SharedBuffer & operator= (ByteBuffer &buf)
     {
         if (buf.owner()) {
             data(buf.buffer(), buf.buffer_size(), false);
@@ -430,7 +534,7 @@ public:
 
     inline uint_t use_count()
     {
-        return buffer_->refcount_.load();
+        return buffer_->refcount_.load(std::memory_order::memory_order_relaxed);
     }
 
     inline bool empty() const
@@ -443,12 +547,12 @@ public:
         return buffer_->buffer_size();
     }
 
-    inline char* buffer()
+    inline char * buffer()
     {
         return buffer_->buffer();
     }
 
-    //·µ»ØÎ´Ê¹ÓÃµÄÈİÁ¿
+    //è¿”å›æœªä½¿ç”¨çš„å®¹é‡
     inline uint_t free_size() const
     {
         return buffer_->free_size();
@@ -459,7 +563,7 @@ public:
         if (size == 0) {
             return false;
         }
-        if (NULL == data) {
+        if (nullptr == data) {
             return false;
         }
         buffer_->release();
@@ -478,7 +582,7 @@ public:
         return true;
     }
 
-    inline char* data() const
+    inline char * data() const
     {
         return buffer_->buffer_ + data_begin_index_;
     }
@@ -495,13 +599,11 @@ public:
 
     inline void data_begin(uint_t new_begin_index)
     {
-        if (new_begin_index > buffer_->buffer_size_)
-        {
+        if (new_begin_index > buffer_->buffer_size_) {
             new_begin_index = buffer_->buffer_size_;
         }
         data_begin_index_ = new_begin_index;
-        if (data_begin_index_ > data_end_index_)
-        {
+        if (data_begin_index_ > data_end_index_) {
             data_end_index_ = data_begin_index_;
         }
     }
@@ -513,21 +615,21 @@ public:
 
     inline void data_end(uint_t new_end_index)
     {
-        if (new_end_index > buffer_->buffer_size_)
-        {
+        if (new_end_index > buffer_->buffer_size_) {
             new_end_index = buffer_->buffer_size_;
         }
         data_end_index_ = new_end_index;
-        if (data_begin_index_ > data_end_index_)
-        {
+        if (data_begin_index_ > data_end_index_) {
             data_begin_index_ = data_end_index_;
+        }
+        if (data_end_index_ > buffer_->use_size_) {
+            buffer_->use_size_ = data_end_index_;
         }
     }
 
     inline void advance(uint_t amount)
     {
-        if (buffer_->buffer_size() >= (data_end_index_ + amount))
-        {
+        if (buffer_->buffer_size() >= (data_end_index_ + amount)) {
             data_end_index_ += amount;
         }
     }
@@ -542,12 +644,11 @@ public:
         buffer_->owner_ = owner;
     }
 
-    //multiple: »º³åÇøÀ©´ó±¶Êı
+    //multiple: ç¼“å†²åŒºæ‰©å¤§å€æ•°
     inline bool write(const char *data, uint_t size, uint_t multiple = 100)
     {
         bool ret = buffer_->write(data, size, multiple);
-        if (ret)
-        {
+        if (ret) {
             data_end_index_ += size;
         }
         return ret;
@@ -555,7 +656,7 @@ public:
 
     inline bool write(const char *data)
     {
-        return write(data, (uint_t)(strlen(data) + 1));
+        return write(data, strlen(data));
     }
 
     inline bool write(char c)
@@ -599,7 +700,7 @@ public:
         return -1;
     }
 
-    inline char* read(uint_t size)
+    inline char * read(uint_t size)
     {
         uint_t data_size = data_end_index_ - data_begin_index_;
         if (data_size >= size) {
@@ -607,7 +708,21 @@ public:
             data_begin_index_ += size;
             return ret;
         }
-        return NULL;
+        return nullptr;
+    }
+
+    inline char * c_str()
+    {
+        if (!empty()) {
+            if (*(buffer_->buffer_ + data_end_index_ - 1) != '\0') {
+                if (write('\0')) {
+                    --data_end_index_;
+                }
+            }
+            return data();
+        }
+
+        return nullptr;
     }
 
 private:
@@ -615,27 +730,45 @@ private:
     {
     public:
         inline Buffer_()
-            : buffer_(NULL)
+            : buffer_(nullptr)
             , buffer_size_(0)
             , use_size_(0)
-            , refcount_(1)
             , owner_(true)
         {
+            refcount_.store(1, std::memory_order::memory_order_relaxed);
         }
 
         inline Buffer_(uint_t buffer_size)
             : use_size_(0)
-            , refcount_(1)
             , owner_(true)
         {
+            refcount_.store(1, std::memory_order::memory_order_relaxed);
             char *new_buffer = (char *)zrsocket_malloc(buffer_size);
-            if (NULL != new_buffer) {
+            if (nullptr != new_buffer) {
                 buffer_      = new_buffer;
                 buffer_size_ = buffer_size;
             }
             else {
-                buffer_      = NULL;
+                buffer_      = nullptr;
                 buffer_size_ = 0;
+            }
+        }
+
+        inline Buffer_(const char *data, uint_t size)
+            : owner_(true)
+        {
+            refcount_.store(1, std::memory_order::memory_order_relaxed);
+            char *new_buffer = (char *)zrsocket_malloc(size);
+            if (nullptr != new_buffer) {
+                zrsocket_memcpy(new_buffer, data, size);
+                buffer_      = new_buffer;
+                buffer_size_ = size;
+                use_size_    = size;
+            }
+            else {
+                buffer_      = nullptr;
+                buffer_size_ = 0;
+                use_size_    = 0;
             }
         }
 
@@ -647,7 +780,7 @@ private:
         {   
             if (owner_ && (new_size > buffer_size_)) {
                 char *new_buffer = (char *)zrsocket_realloc(buffer_, new_size);
-                if (NULL != new_buffer) {
+                if (nullptr != new_buffer) {
                     buffer_      = new_buffer;
                     buffer_size_ = new_size;
                     return true;
@@ -656,25 +789,25 @@ private:
             return false;
         }
 
-        //¼Ó1, ·µ»Ø±ä»¯ºóÖµ
+        //åŠ 1, è¿”å›å˜åŒ–åå€¼
         inline int increment_refcount()
         {
-            return ++refcount_;
+            return refcount_.fetch_add(1, std::memory_order::memory_order_relaxed) + 1;
         }
 
-        //¼õ1, ·µ»Ø±ä»¯ºóÖµ
+        //å‡1, è¿”å›å˜åŒ–åå€¼
         inline int decrement_refcount()
         {
-            return --refcount_;
+            return refcount_.fetch_sub(1, std::memory_order::memory_order_relaxed) - 1;
         }
 
         inline void clear()
         {
-            if (NULL != buffer_) {
+            if (nullptr != buffer_) {
                 if (owner_) {
                     zrsocket_free(buffer_);
                 }
-                buffer_ = NULL;
+                buffer_ = nullptr;
                 buffer_size_ = 0;
                 use_size_ = 0;
             }
@@ -682,12 +815,12 @@ private:
 
         inline void release()
         {
-            if (--refcount_ == 0) {
-                if (NULL != buffer_) {
+            if (decrement_refcount() == 0) {
+                if (nullptr != buffer_) {
                     if (owner_) {
                         zrsocket_free(buffer_);
                     }
-                    buffer_ = NULL;
+                    buffer_ = nullptr;
                     buffer_size_ = 0;
                     use_size_ = 0;
                 }
@@ -701,7 +834,7 @@ private:
             return buffer_size_;
         }
 
-        inline char* buffer()
+        inline char * buffer()
         {
             return buffer_;
         }
@@ -711,7 +844,7 @@ private:
             return buffer_size_ - use_size_;
         }
 
-        //multiple: »º³åÇøÀ©´ó±¶Êı
+        //multiple: ç¼“å†²åŒºæ‰©å¤§å€æ•°
         inline bool write(const char *data, uint_t size, uint_t multiple = 100)
         {
             if (free_size() >= size) {
@@ -723,7 +856,7 @@ private:
                 if (owner_) {
                     uint_t new_size  = buffer_size_ * multiple / 100 + buffer_size_ + size;
                     char *new_buffer = (char *)zrsocket_realloc(buffer_, new_size);
-                    if (NULL != new_buffer) {
+                    if (nullptr != new_buffer) {
                         zrsocket_memcpy(new_buffer + use_size_, data, size);
                         use_size_      += size;
                         buffer_size_    = new_size;
@@ -736,19 +869,19 @@ private:
         }
 
     public:
-        char           *buffer_;        //»º³åÇø
-        uint_t          buffer_size_;   //»º³åÇø´óĞ¡
-        uint_t          use_size_;      //ÒÑÊ¹ÓÃ´óĞ¡
-        AtomicUInt      refcount_;      //ÒıÓÃ¼ÆÊı
-        bool            owner_;         //±íÊ¾ÊÇ·ñÓµÓĞËùÓĞÈ¨
+        char           *buffer_;        //ç¼“å†²åŒº
+        uint_t          buffer_size_;   //ç¼“å†²åŒºå¤§å°
+        uint_t          use_size_;      //å·²ä½¿ç”¨å¤§å°
+        AtomicInt       refcount_;      //å¼•ç”¨è®¡æ•°
+        bool            owner_;         //è¡¨ç¤ºæ˜¯å¦æ‹¥æœ‰æ‰€æœ‰æƒ
     };
 
 private:
     Buffer_ *buffer_;       
-    uint_t   data_begin_index_; //Êı¾İ¿ªÊ¼Î»
-    uint_t   data_end_index_;   //Êı¾İ½áÊøÎ»
+    uint_t   data_begin_index_;         //æ•°æ®å¼€å§‹ä½
+    uint_t   data_end_index_;           //æ•°æ®ç»“æŸä½
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

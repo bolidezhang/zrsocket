@@ -23,27 +23,27 @@
     <ProjectGuid>{93930916-DB1A-4B37-BF1D-B64D67D5F52A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>znet</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -82,6 +82,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -90,7 +93,8 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;ZRSOCKET_SHARED_LIBRARY;ZRSOCKET_COMPILE_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\zrsocket\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -99,7 +103,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -122,7 +126,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;ZRSOCKET_SHARED_LIBRARY;ZRSOCKET_COMPILE_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\zrsocket\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -151,7 +156,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\znet\base_type.h" />
+    <ClInclude Include="include\zrsocket\application.h" />
     <ClInclude Include="include\zrsocket\atomic.h" />
     <ClInclude Include="include\zrsocket\base_type.h" />
     <ClInclude Include="include\zrsocket\byte_buffer.h" />
@@ -159,30 +164,52 @@
     <ClInclude Include="include\zrsocket\config\linux.h" />
     <ClInclude Include="include\zrsocket\config\windows.h" />
     <ClInclude Include="include\zrsocket\data_convert.h" />
-    <ClInclude Include="include\zrsocket\epoll_reactor.h" />
+    <ClInclude Include="include\zrsocket\epoll_event_loop.h" />
     <ClInclude Include="include\zrsocket\event_handler.h" />
-    <ClInclude Include="include\zrsocket\event_reactor.h" />
-    <ClInclude Include="include\zrsocket\event_reactor_group.h" />
+    <ClInclude Include="include\zrsocket\event_loop.h" />
+    <ClInclude Include="include\zrsocket\event_loop_group.h" />
     <ClInclude Include="include\zrsocket\event_source.h" />
+    <ClInclude Include="include\zrsocket\fixed_length_message_handler.h" />
+    <ClInclude Include="include\zrsocket\http_common.h" />
+    <ClInclude Include="include\zrsocket\http_request_handler.h" />
+    <ClInclude Include="include\zrsocket\http_response_handler.h" />
     <ClInclude Include="include\zrsocket\inet_addr.h" />
+    <ClInclude Include="include\zrsocket\length_field_message_handler.h" />
     <ClInclude Include="include\zrsocket\malloc.h" />
     <ClInclude Include="include\zrsocket\memory.h" />
+    <ClInclude Include="include\zrsocket\message_common.h" />
     <ClInclude Include="include\zrsocket\message_handler.h" />
     <ClInclude Include="include\zrsocket\mutex.h" />
     <ClInclude Include="include\zrsocket\object_pool.h" />
-    <ClInclude Include="include\zrsocket\select_reactor.h" />
-    <ClInclude Include="include\zrsocket\system_api.h" />
+    <ClInclude Include="include\zrsocket\seda_event.h" />
+    <ClInclude Include="include\zrsocket\seda_event_queue.h" />
+    <ClInclude Include="include\zrsocket\seda_interface.h" />
+    <ClInclude Include="include\zrsocket\seda_stage.h" />
+    <ClInclude Include="include\zrsocket\seda_stage2.h" />
+    <ClInclude Include="include\zrsocket\seda_stage_handler.h" />
+    <ClInclude Include="include\zrsocket\seda_stage_thread.h" />
+    <ClInclude Include="include\zrsocket\seda_stage2_thread.h" />
+    <ClInclude Include="include\zrsocket\seda_timer.h" />
+    <ClInclude Include="include\zrsocket\seda_timer_queue.h" />
+    <ClInclude Include="include\zrsocket\select_event_loop.h" />
+    <ClInclude Include="include\zrsocket\singleton.h" />
+    <ClInclude Include="include\zrsocket\os_api.h" />
+    <ClInclude Include="include\zrsocket\os_constant.h" />
     <ClInclude Include="include\zrsocket\tcpclient.h" />
     <ClInclude Include="include\zrsocket\tcpserver.h" />
     <ClInclude Include="include\zrsocket\tcpserver_handler.h" />
     <ClInclude Include="include\zrsocket\thread.h" />
+    <ClInclude Include="include\zrsocket\time.h" />
+    <ClInclude Include="include\zrsocket\timer.h" />
+    <ClInclude Include="include\zrsocket\timer_interface.h" />
+    <ClInclude Include="include\zrsocket\timer_queue.h" />
+    <ClInclude Include="include\zrsocket\udpsource.h" />
+    <ClInclude Include="include\zrsocket\udpsource_handler.h" />
     <ClInclude Include="include\zrsocket\version.h" />
     <ClInclude Include="include\zrsocket\zrsocket.h" />
-    <ClInclude Include="test\client\client.h" />
-    <ClInclude Include="test\message.h" />
-    <ClInclude Include="test\server\server.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\seda_timer_queue.cpp" />
     <ClCompile Include="src\data_convert.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -192,11 +219,9 @@
     <ClCompile Include="src\memory.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\system_api.cpp">
+    <ClCompile Include="src\os_api.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="test\client\client.cpp" />
-    <ClCompile Include="test\server\server.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

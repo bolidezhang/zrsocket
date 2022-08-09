@@ -1,27 +1,299 @@
-#ifndef ZRSOCKET_MESSAGE_HANDLER_H_
-#define ZRSOCKET_MESSAGE_HANDLER_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_MESSAGE_HANDLER_H
+#define ZRSOCKET_MESSAGE_HANDLER_H
 #include <deque>
 #include "config.h"
 #include "byte_buffer.h"
 #include "mutex.h"
-#include "system_api.h"
+#include "os_api.h"
 #include "event_handler.h"
 #include "event_source.h"
 
-//ZRSOCKET_Message_HandlerËù´¦ÀíÊı¾İ°üµÄ¸ñÊ½: Êı¾İ°ü³¤¶È+Êı¾İ°üÄÚÈİ
-//ÀàËÆÓÚ½á¹¹
-//struct ZRSOCKET_Message
-//{
-//    ushort len;
-//    char   content[0];
-//}
+ZRSOCKET_NAMESPACE_BEGIN
 
-ZRSOCKET_BEGIN
-
-template <typename TMessageBuffer, typename TMutex>
+template <class TSendBuffer, class TMutex>
 class MessageHandler : public EventHandler
 {
 public:
+    MessageHandler()
+    {
+        queue_active_   = &queue1_;
+        queue_standby_  = &queue2_;
+    }
+
+    virtual ~MessageHandler()
+    {
+    }
+
+    virtual int do_open()
+    {
+        return 0;
+    }
+
+    virtual int do_close()
+    {
+        return 0;
+    }
+
+    virtual int do_connect()
+    {
+        return 0;
+    }
+
+    virtual int decode(const char *data, uint_t len)
+    {
+        return 0;
+    }
+
+    SendResult send(const char *data, uint_t len, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        SendResult ret = send_i(data, len, direct_send, priority, flags);
+        mutex_.unlock();
+        switch (ret) {
+            case SendResult::FAILURE:
+                event_loop_->delete_handler(this, 0);
+                break;
+            case SendResult::PUSH_QUEUE:
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+                break;
+            case SendResult::SUCCESS:
+                break;
+            default:
+                break;
+        }
+        return ret;
+    }
+
+    SendResult send(TSendBuffer &msg, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        SendResult ret = send_i(msg, direct_send, priority, flags);
+        mutex_.unlock();
+        switch (ret) {
+            case SendResult::FAILURE:
+                event_loop_->delete_handler(this, 0);
+                break;
+            case SendResult::PUSH_QUEUE:
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+                break;
+            case SendResult::SUCCESS:
+                break;
+            default:
+                break;
+        }
+        return ret;
+    }
+
+    int handle_open()
+    {
+        message_buffer_.reset();
+        message_buffer_.reserve(source_->recvbuffer_size());
+        queue1_.clear();
+        queue2_.clear();
+        return do_open();
+    }
+
+protected:
+    int handle_close()
+    {
+        int ret = do_close();
+        mutex_.lock();
+        queue1_.clear();
+        queue2_.clear();
+        mutex_.unlock();
+        close();
+        return ret;
+    }
+
+    int handle_connect()
+    {
+        return do_connect();
+    }
+
+    int handle_read()
+    {
+        ByteBuffer *recv_buffer = event_loop_->get_recv_buffer();
+        char *recv_buf          = recv_buffer->buffer();
+        int   recv_buf_size     = recv_buffer->buffer_size();
+        int   ret;
+        int   error_id;
+
+        do {
+            ret = OSApi::socket_recv(socket_, recv_buf, recv_buf_size, 0, nullptr, error_id);
+            if (ret > 0) {
+                if (decode(recv_buf, ret) < 0) {
+                    return -1;
+                }
+            }
+            else if (0 == ret) {
+                //è¿æ¥å·²å…³é—­
+                last_errno_ = EventHandler::ERROR_CLOSE_PASSIVE;
+                return -1;
+            }
+            else {
+                //ret < 0: å‡ºç°å¼‚å¸¸(å¦‚è¿æ¥å·²å…³é—­)
+                if ((ZRSOCKET_EAGAIN == error_id) ||
+                    (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                    (ZRSOCKET_EINTR == error_id)) {
+                    //éé˜»å¡æ¨¡å¼ä¸‹æ­£å¸¸æƒ…å†µ
+                    return 0;
+                }
+
+                last_errno_ = error_id;
+                return -1;
+            }
+        } while (ret == recv_buf_size);
+
+        return 1;
+    }
+
+    SendResult send_i(const char *data, uint_t len, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        if (direct_send) {
+            if (queue_standby_->empty() && queue_active_->empty()) {
+                //ç›´æ¥å‘é€æ•°æ®
+                int error_id = 0;
+                int send_bytes = OSApi::socket_send(socket_, data, len, flags, nullptr, &error_id);
+                if (send_bytes > 0) {
+                    if ((uint_t)send_bytes == len) {
+                        return SendResult::SUCCESS;
+                    }
+
+                    queue_standby_->emplace_back(data + send_bytes, len - send_bytes);
+                    return SendResult::PUSH_QUEUE;
+                }
+                else {
+                    last_errno_ = error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //éé˜»å¡æ¨¡å¼ä¸‹æ­£å¸¸æƒ…å†µ
+                    }
+                    else { //éé˜»å¡æ¨¡å¼ä¸‹å¼‚å¸¸æƒ…å†µ
+                        return SendResult::FAILURE;
+                    }
+                }
+            }
+        }
+
+        queue_standby_->emplace_back(data, len);
+        return SendResult::PUSH_QUEUE;
+    }
+
+    SendResult send_i(TSendBuffer &msg, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        if (direct_send) {
+            if (queue_standby_->empty() && queue_active_->empty()) {
+                char *data = msg.data();
+                uint_t len = msg.data_size();
+                int error_id = 0;
+                int send_bytes = OSApi::socket_send(socket_, data, len, flags, nullptr, &error_id);
+                if (send_bytes > 0) {
+                    if ((uint_t)send_bytes == len) {
+                        return SendResult::SUCCESS;
+                    }
+
+                    msg.data_begin(msg.data_begin() + send_bytes);
+                }
+                else {
+                    last_errno_ = error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //éé˜»å¡æ¨¡å¼ä¸‹æ­£å¸¸æƒ…å†µ
+                    }
+                    else {
+                        //éé˜»å¡æ¨¡å¼ä¸‹å¼‚å¸¸æƒ…å†µ
+                        return SendResult::FAILURE;
+                    }
+                }
+            }
+        }
+
+        queue_standby_->emplace_back(std::move(msg));
+        return SendResult::PUSH_QUEUE;
+    }
+
+    int handle_write()
+    {
+        mutex_.lock();
+        if (queue_active_->empty()) {
+            if (!queue_standby_->empty()) {
+                std::swap(queue_standby_, queue_active_);
+            }
+            else {
+                mutex_.unlock();
+                event_loop_->delete_event(this, EventHandler::WRITE_EVENT_MASK);
+                return EventHandler::WriteResult::WRITE_RESULT_NOT_DATA;
+            }
+        }
+        mutex_.unlock();
+
+        int iovecs_count = 0;
+        ZRSOCKET_IOVEC *iovecs = event_loop_->iovecs(iovecs_count);
+        int queue_size = queue_active_->size();
+        if (iovecs_count > queue_size) {
+            iovecs_count = queue_size;
+        }
+        auto iter = queue_active_->begin();
+        for (int i = 0; i < iovecs_count; ++i) {
+            iovecs[i].iov_len  = (*iter).data_size();
+            iovecs[i].iov_base = (*iter).data();
+            ++iter;
+        }
+
+        //å‘é€æ•°æ®
+        int error_id = 0;
+        int send_bytes = OSApi::socket_sendv(socket_, iovecs, iovecs_count, 0, nullptr, error_id);
+        if (send_bytes > 0) {
+            int data_size;
+            int i = 1;
+            for (; i <= iovecs_count; ++i) {
+                data_size = queue_active_->front().data_size();
+                if (send_bytes >= data_size) {
+                    queue_active_->pop_front();
+                    send_bytes -= data_size;
+                    if (send_bytes < 1) {
+                        break;
+                    }
+                }
+                else {
+                    queue_active_->front().data_begin(queue_active_->front().data_begin() + send_bytes);
+                    break;
+                }
+            }
+
+            if (i == iovecs_count) {
+                return EventHandler::WriteResult::WRITE_RESULT_SUCCESS;
+            }
+            else {
+                return EventHandler::WriteResult::WRITE_RESULT_PART;
+            }
+        }
+        else {
+            if ((ZRSOCKET_EAGAIN == error_id) || 
+                (ZRSOCKET_EWOULDBLOCK == error_id) || 
+                (ZRSOCKET_IO_PENDING == error_id) || 
+                (ZRSOCKET_ENOBUFS == error_id)) {
+                //éé˜»å¡æ¨¡å¼ä¸‹æ­£å¸¸æƒ…å†µ
+                return EventHandler::WriteResult::WRITE_RESULT_PART;
+            }
+            else {
+                //éé˜»å¡æ¨¡å¼ä¸‹å¼‚å¸¸æƒ…å†µ
+                last_errno_ = error_id;
+                event_loop_->delete_handler(this, 0);
+                return EventHandler::WriteResult::WRITE_RESULT_FAILURE;
+            }
+        }
+    }
+
+protected:
     // These enumerations are used to describe when messages are delivered.
     enum MessagePriority
     {
@@ -37,382 +309,25 @@ public:
         // Low priority messages are only sent when no other messages are waiting.
         LOW_PRIORITY,
 
-        // ÄÚ²¿Ê¹ÓÃ
+        // å†…éƒ¨ä½¿ç”¨
         NUMBER_OF_PRIORITIES
     };
 
-    enum WRITE_RETURN_VALUE
-    {
-        WRITE_RETURN_NOT_INITIAL    = -3,   //Ã»³õÊ¼»¯
-        WRITE_RETURN_STATUS_INVALID = -2,   //±íÊ¾Socket×´Ì¬Ê§Ğ§
-        WRITE_RETURN_SEND_FAIL      = -1,   //±íÊ¾·¢ËÍÊ§°Ü(SocketÒÑÊ§Ğ§)
-        WRITE_RETURN_NOT_DATA       = 0,    //±íÊ¾Ã»ÓĞÊı¾İ¿É·¢ËÍ 
-        WRITE_RETURN_SEND_SUCCESS   = 1,    //±íÊ¾·¢ËÍ³É¹¦
-        WRITE_RETURN_SEND_PART      = 2     //±íÊ¾·¢ËÍ³ö²¿·ÖÊı¾İ(°üº¬0³¤¶È)
-    };
+    typedef TSendBuffer SendBuffer;
 
-    MessageHandler()
-        : need_len_(0)
-        , last_error_msglen_(0)
-        , last_left_(0)
-    {
-        queue_active_   = &queue1_;
-        queue_standby_  = &queue2_;
-    }
+    //ç»æµ‹è¯•å‘ç°: dequeæ¯”listæ€§èƒ½å¥½ä¸å°‘
+    typedef std::deque<TSendBuffer> SEND_QUEUE;
+    //typedef std::list<TMessageBuffer> SEND_QUEUE;
 
-    virtual ~MessageHandler()
-    {
-    }
-
-    int handle_open()
-    {
-        message_buffer_.reserve(source_->get_msgbuffer_size());
-        message_buffer_.reset();
-        need_len_           = 0;
-        last_error_msglen_  = 0;
-        last_left_          = 0;
-        queue1_.clear();
-        queue2_.clear();
-        return 0;
-    }
-
-    //½ÓÊÕµ½ÍêÕûÏûÏ¢Ê±,»Øµ÷´Ëº¯Êı
-    virtual int handle_message(const char *message, uint_t len)
-    {
-        return 0;
-    }
-
-    int push_message(uint64_t handler_id, const char *message, uint_t len, bool direct_send = false, int priority = 0, int flags = 0)
-    {
-        if (handler_id_ == handler_id) {
-            mutex_.lock();
-            int ret = push_message_i(message, len, priority, flags);
-            mutex_.unlock();
-            return ret;
-        }
-        return -1;
-    }
-
-    int push_message(uint64_t handler_id, TMessageBuffer &message, bool direct_send = false, int priority = 0, int flags = 0)
-    {
-        if (handler_id_ == handler_id) {
-            mutex_.lock();
-            int ret = push_message_i(message, priority, flags);
-            mutex_.unlock();
-            return ret;
-        }
-        return -1;
-    }
-
-protected:
-    int handle_read()
-    {
-        int   msglen_bytes = source_->get_msglen_bytes();
-        int   msgbuffer_size = source_->get_msgbuffer_size();
-        int   recv_buffer_size = reactor_->get_recv_buffer_size();
-        char *recv_buffer = reactor_->get_recv_buffer();
-
-        char *pos;
-        int   pos_size;
-        int   msglen;
-        int   ret;
-        int   error_id;
-
-        do {
-            ret = SystemApi::socket_recv(socket_, recv_buffer, recv_buffer_size, 0, NULL, error_id);
-            if (ret > 0) {
-                pos = recv_buffer;
-                pos_size = ret;
-                do {
-                    if (0 == need_len_) {
-                        if (0 == last_left_) {
-                            if (pos_size >= msglen_bytes) {
-                                msglen = source_->get_msglen_proc_(pos, pos_size);
-                                if ((msglen <= 0) || (msglen > msgbuffer_size)) {
-                                    //ÏûÏ¢´óĞ¡ÎŞĞ§»ò³¬¹ıÏûÏ¢»º³å´óĞ¡
-                                    last_errno_ = EventHandler::ERROR_CLOSE_RECV;
-                                    last_error_msglen_ = msglen;
-                                    return -1;
-                                }
-                                if (pos_size >= msglen) {
-                                    if (handle_message(pos, msglen) < 0) {
-                                        last_errno_ = EventHandler::ERROR_CLOSE_ACTIVE;
-                                        return -1;
-                                    }
-                                    pos += msglen;
-                                    pos_size -= msglen;
-                                }
-                                else {
-                                    message_buffer_.write(pos, pos_size);
-                                    need_len_ = msglen - pos_size;
-                                    break;
-                                }
-                            }
-                            else {
-                                message_buffer_.write(pos, pos_size);
-                                last_left_ = pos_size;
-                                break;
-                            }
-                        }
-                        else {
-                            //last_left_>0
-                            if (last_left_ + pos_size < msglen_bytes) {
-                                message_buffer_.write(pos, pos_size);
-                                last_left_ += pos_size;
-                                break;
-                            }
-                            else {
-                                message_buffer_.write(pos, msglen_bytes - last_left_);
-                                pos += (msglen_bytes - last_left_);
-                                pos_size -= (msglen_bytes - last_left_);
-                                msglen = source_->get_msglen_proc_(message_buffer_.data(), msglen_bytes);
-                                if ((msglen <= 0) || (msglen > msgbuffer_size)) {
-                                    //ÏûÏ¢´óĞ¡ÎŞĞ§»ò³¬¹ıÏûÏ¢»º³å´óĞ¡
-                                    last_errno_ = EventHandler::ERROR_CLOSE_RECV;
-                                    last_error_msglen_ = msglen;
-                                    return -1;
-                                }
-                                last_left_ = 0;
-
-                                if (pos_size + msglen_bytes >= msglen)
-                                {
-                                    message_buffer_.write(pos, msglen - msglen_bytes);
-                                    if (handle_message(message_buffer_.data(), msglen) < 0)
-                                    {
-                                        last_errno_ = EventHandler::ERROR_CLOSE_ACTIVE;
-                                        return -1;
-                                    }
-                                    message_buffer_.reset();
-                                    pos += (msglen - msglen_bytes);
-                                    pos_size -= (msglen - msglen_bytes);
-                                }
-                                else
-                                {
-                                    message_buffer_.write(pos, pos_size);
-                                    need_len_ = msglen - pos_size - msglen_bytes;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        //need_size_>0
-                        if (pos_size >= need_len_) {
-                            message_buffer_.write(pos, need_len_);
-                            if (handle_message(message_buffer_.data(), message_buffer_.data_size()) < 0) {
-                                last_errno_ = EventHandler::ERROR_CLOSE_ACTIVE;
-                                return -1;
-                            }
-                            message_buffer_.reset();
-                            pos += need_len_;
-                            pos_size -= need_len_;
-                            need_len_ = 0;
-                        }
-                        else {
-                            message_buffer_.write(pos, pos_size);
-                            need_len_ -= pos_size;
-                            break;
-                        }
-                    }
-                } while (pos_size > 0);
-            }
-            else if (ret == 0) {
-                //Á¬½ÓÒÑ¹Ø±Õ
-                last_errno_ = EventHandler::ERROR_CLOSE_PASSIVE;
-                return -1;
-            }
-            else {
-                //ret < 0: ³öÏÖÒì³£(ÈçÁ¬½ÓÒÑ¹Ø±Õ)
-                if ((ZRSOCKET_EAGAIN == error_id) ||
-                    (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                    (ZRSOCKET_EINTR == error_id)) {
-                    //·Ç×èÈûÄ£Ê½ÏÂÕı³£Çé¿ö
-                    return 0;
-                }
-                last_errno_ = error_id;
-                return -1;
-            }
-        } while (ret == recv_buffer_size);
-
-        return 1;
-    }
-
-    int handle_write()
-    {
-        return write_data();
-    }
-
-    int push_message_i(const char *message, uint_t len, bool direct_send = false, int priority = 0, int flags = 0)
-    {
-        if (direct_send) {
-            if (queue_standby_->empty() && queue_active_->empty()) {
-                //Ö±½Ó·¢ËÍÊı¾İ
-                int error_id = 0;
-                int send_bytes = SystemApi::socket_send(socket_, message, len, 0, NULL, &error_id);
-                if (send_bytes > 0) {
-                    if (send_bytes == len) {
-                        return 1;
-                    }
-
-                    TMessageBuffer tmsg(len - send_bytes);
-                    tmsg.write(message + send_bytes, len - send_bytes);
-                    queue_standby_->emplace_back(tmsg);
-                    return 0;
-                }
-                else {
-                    if ((ZRSOCKET_EAGAIN == error_id) ||
-                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                        (ZRSOCKET_IO_PENDING == error_id) ||
-                        (ZRSOCKET_ENOBUFS == error_id)) {
-                        //·Ç×èÈûÄ£Ê½ÏÂÕı³£Çé¿ö
-                    }
-                    else { //·Ç×èÈûÄ£Ê½ÏÂÒì³£Çé¿ö
-                        last_errno_ = error_id;
-                        reactor_->del_handler(this, 0);
-                        return -1;
-                    }
-                }
-            }
-        }
-        else {
-            TMessageBuffer tmsg(len);
-            tmsg.write(message, len);
-            queue_standby_->emplace_back(tmsg);
-            reactor_->add_event(this, EventHandler::WRITE_EVENT_MASK);
-        }
-
-        return 0;
-    }
-
-    int push_message_i(TMessageBuffer &message, bool direct_send = false, int priority = 0, int flags = 0)
-    {
-        if (direct_send) {
-            if (queue_standby_->empty() && queue_active_->empty()) {
-                char  *msg = message.data();
-                uint_t len = message.data_size();
-                int  error_id = 0;
-                int  send_bytes = SystemApi::socket_send(socket_, msg, len, 0, NULL, &error_id);
-                if (send_bytes > 0) {
-                    if (send_bytes == len) {
-                        return 1;
-                    }
-                    message.data_begin(message.data_begin() + send_bytes);
-                }
-                else {
-                    if ((ZRSOCKET_EAGAIN == error_id) ||
-                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                        (ZRSOCKET_IO_PENDING == error_id) ||
-                        (ZRSOCKET_ENOBUFS == error_id)) {
-                        //·Ç×èÈûÄ£Ê½ÏÂÕı³£Çé¿ö
-                    }
-                    else {
-                        //·Ç×èÈûÄ£Ê½ÏÂÒì³£Çé¿ö
-                        last_errno_ = error_id;
-                        reactor_->del_handler(this, 0);
-                        return -1;
-                    }
-                }
-            }
-        }
-        else {
-            queue_standby_->emplace_back(message);
-            reactor_->add_event(this, EventHandler::WRITE_EVENT_MASK);
-        }
-
-        return 0;
-    }
-
-    int write_data()
-    {
-        if (queue_active_->empty())  {
-            mutex_.lock();
-            if (!queue_standby_->empty()) {
-                std::swap(queue_standby_, queue_active_);
-                mutex_.unlock();
-            }
-            else {
-                queue_standby_->shrink_to_fit();
-                queue_active_->shrink_to_fit();
-                mutex_.unlock();
-                reactor_->del_event(this, EventHandler::WRITE_EVENT_MASK);
-                return WRITE_RETURN_NOT_DATA;
-            }
-        }
-
-        ZRSOCKET_IOVEC *iovec = reactor_->get_iovec();
-        int iovec_count = reactor_->get_iovec_count();
-        int queue_size = queue_active_->size();
-        int node_count = (queue_size < iovec_count) ? queue_size : iovec_count;
-        auto iter = queue_active_->begin();
-        for (int i = 0; i < node_count; ++i) {
-            iovec[i].iov_len  = (*iter).data_size();
-            iovec[i].iov_base = (*iter).data();
-            ++iter;
-        }
-
-        //·¢ËÍÊı¾İ
-        int error_id = 0;
-        int send_bytes = SystemApi::socket_sendv(socket_, iovec, node_count, 0, NULL, error_id);
-        if (send_bytes > 0) {
-            int data_size;
-            int i = 1;
-            for (; i <= node_count; ++i) {
-                data_size = queue_active_->front().data_size();
-                if (send_bytes >= data_size) {
-                    queue_active_->pop_front();
-                    send_bytes -= data_size;
-                    if (send_bytes < 1) {
-                        break;
-                    }
-                }
-                else {
-                    queue_active_->front().data_begin(queue_active_->front().data_begin() + send_bytes);
-                    break;
-                }
-            }
-
-            WRITE_RETURN_VALUE ret;
-            if (i == node_count) {
-                ret = WRITE_RETURN_SEND_SUCCESS;
-            }
-            else {
-                ret = WRITE_RETURN_SEND_PART;
-            }
-            return ret;
-        }
-        else {
-            if ((ZRSOCKET_EAGAIN == error_id) || 
-                (ZRSOCKET_EWOULDBLOCK == error_id) || 
-                (ZRSOCKET_IO_PENDING == error_id) || 
-                (ZRSOCKET_ENOBUFS == error_id)) {
-                //·Ç×èÈûÄ£Ê½ÏÂÕı³£Çé¿ö
-            }
-            else {
-                //·Ç×èÈûÄ£Ê½ÏÂÒì³£Çé¿ö
-                last_errno_ = error_id;
-                reactor_->del_handler(this, 0);
-                return WRITE_RETURN_SEND_FAIL;
-            }
-        }
-        return WRITE_RETURN_NOT_DATA;
-    }
-
-protected:
-    typedef std::deque<TMessageBuffer> SEND_QUEUE;
-
-    int             need_len_;              //×é³ÉÒ»¸öÏûÏ¢°ü£¬»¹ĞèÒª³¤¶È
-    int             last_error_msglen_;     //×é°ü³ö´íÊ±Êı¾İ°ü³¤¶È
-    int8_t          last_left_;             //µ±ÊÕµ½µÄÊı¾İ³¤¶ÈĞ¡ÓÚÏûÏ¢lenÓòËùÕ¼³¤¶ÈÊ±ÓĞĞ§£¬Ò»°ãÎª0
-
-    ByteBuffer      message_buffer_;        //ÏûÏ¢»º´æ
     SEND_QUEUE      queue1_;
     SEND_QUEUE      queue2_;
     SEND_QUEUE     *queue_active_;
     SEND_QUEUE     *queue_standby_;
-
     TMutex          mutex_;
+
+    ByteBuffer      message_buffer_;        //æ¶ˆæ¯ç¼“å­˜
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

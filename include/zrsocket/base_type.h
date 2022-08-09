@@ -1,4 +1,4 @@
-//**********************************************************************
+ï»¿//**********************************************************************
 //
 // Copyright (C) 2017 Bolide Zhang <bolidezhang@gmail.com>
 // All rights reserved.
@@ -8,21 +8,26 @@
 //
 //**********************************************************************
 
-//float128ËµÃ÷
+//float128è¯´æ˜
 //gcc
 // a)long double, sizeof(long double)==16;
-// b)µ«ÆäÔÚlinux x86 and x86-64ÏÂµÄÓĞĞ§×Ö½ÚÊıÎª10(80-bit x87 floating point type on x86 and x86-64 architectures);
-// c)4.7.0ÒÔÉÏ°æ±¾, ÓĞ__float128, __float128ÊıÑ§ÔËËãº¯ÊıĞè¼ÓÔØlibquadmath¿â
+// b)ä½†å…¶åœ¨linux x86 and x86-64ä¸‹çš„æœ‰æ•ˆå­—èŠ‚æ•°ä¸º10(80-bit x87 floating point type on x86 and x86-64 architectures);
+// c)4.7.0ä»¥ä¸Šç‰ˆæœ¬, æœ‰__float128, __float128æ•°å­¦è¿ç®—å‡½æ•°éœ€åŠ è½½libquadmathåº“
 //vc
-// a)µÈÍ¬ÓÚdouble, sizeof(long double)==8;
-// b)__m128(µ¥¾«¶È¸¡µãÊı)/__m128d(Ë«¾«¶È¸¡µãÊı), ²»ÄÜÖ±½Ó·ÃÎÊ, Streaming SIMD Extensions 2(SSE2) instructions intrinsics, is defined in xmmintrin.h
+// a)ç­‰åŒäºdouble, sizeof(long double)==8;
+// b)__m128(å•ç²¾åº¦æµ®ç‚¹æ•°)/__m128d(åŒç²¾åº¦æµ®ç‚¹æ•°), ä¸èƒ½ç›´æ¥è®¿é—®, Streaming SIMD Extensions 2(SSE2) instructions intrinsics, is defined in xmmintrin.h
 
-//int128ËµÃ÷
-// a)gcc: 4.7.0ÒÔÉÏ°æ±¾£¬ÓĞ__int128
-// b)vc: __m128i(ÕûÊı), ²»ÄÜÖ±½Ó·ÃÎÊ, Streaming SIMD Extensions 2(SSE2) instructions intrinsics, is defined in emmintrin.h
+//int128è¯´æ˜
+// a)gcc: 4.7.0ä»¥ä¸Šç‰ˆæœ¬ï¼Œæœ‰__int128
+// b)vc: __m128i(æ•´æ•°), ä¸èƒ½ç›´æ¥è®¿é—®, Streaming SIMD Extensions 2(SSE2) instructions intrinsics, is defined in emmintrin.h
 
-#ifndef ZRSOCKET_BASE_TYPE_H_
-#define ZRSOCKET_BASE_TYPE_H_
+// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_BASE_TYPE_H
+#define ZRSOCKET_BASE_TYPE_H
+
 #include <stdint.h>
 #include "config.h"
 
@@ -30,7 +35,7 @@
     #pragma once
 #endif
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 typedef long long           longlong_t;
 typedef unsigned char       uchar_t;
@@ -44,6 +49,6 @@ typedef double              real64_t;
 typedef real32_t            float32_t;
 typedef real64_t            float64_t;
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

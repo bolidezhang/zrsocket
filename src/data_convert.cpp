@@ -1,13 +1,13 @@
-#include "zrsocket/data_convert.h"
+ï»¿#include "zrsocket/data_convert.h"
 #include <assert.h>
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 char DataConvert::digits_[201] = "0001020304050607080910111213141516171819"
 "20212223242526272829303132333435363738394041424344454647484950515253545556575859"
 "60616263646566676869707172737475767778798081828384858687888990919293949596979899";
 
-//µ¥×Ö·û×ªÕûÊý
+//å•å­—ç¬¦è½¬æ•´æ•°
 #define ZRSOCKET_CHAR_CONVERT_INTEGER           \
     if (*str >= '0' && *str <= '9')             \
     {                                           \
@@ -56,7 +56,7 @@ char DataConvert::digits_[201] = "0001020304050607080910111213141516171819"
         goto EXIT_PROC;                         \
     }
 
-//µ¥×Ö·û×ªÎÞ·ûºÅÕûÊý
+//å•å­—ç¬¦è½¬æ— ç¬¦å·æ•´æ•°
 #define ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER  \
     if (*str >= '0' && *str <= '9')             \
     {                                           \
@@ -93,13 +93,13 @@ char DataConvert::digits_[201] = "0001020304050607080910111213141516171819"
         goto EXIT_PROC;                         \
     }
 
-//×Ö·û´®×ª4×Ö½ÚÕûÊý
+//å­—ç¬¦ä¸²è½¬4å­—èŠ‚æ•´æ•°
 int32_t DataConvert::atoi(const char *str)
 {
     assert(str);
     int32_t ret = 0;
-    bool  negative_flag  = false;   //¸ºÊý±ê¼Ç
-    bool  first_num_flag = false;   //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool  negative_flag  = false;   //è´Ÿæ•°æ ‡è®°
+    bool  first_num_flag = false;   //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     for (;;) {
         ZRSOCKET_CHAR_CONVERT_INTEGER;
@@ -113,13 +113,13 @@ EXIT_PROC:
     return ret;
 }
 
-//×Ö·û´®×ª4×Ö½ÚÕûÊý
+//å­—ç¬¦ä¸²è½¬4å­—èŠ‚æ•´æ•°
 int32_t DataConvert::atoi(const char *str, uint_t len, char **endptr)
 {
     assert(str);
     int32_t ret = 0;
-    bool  negative_flag  = false;   //¸ºÊý±ê¼Ç
-    bool  first_num_flag = false;   //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool  negative_flag  = false;   //è´Ÿæ•°æ ‡è®°
+    bool  first_num_flag = false;   //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     if (len < 1) {
         for (;;) {
@@ -135,7 +135,7 @@ int32_t DataConvert::atoi(const char *str, uint_t len, char **endptr)
     }
 
 EXIT_PROC:
-    if (NULL != endptr) {
+    if (nullptr != endptr) {
         *endptr = (char *)str;
     }
     if (negative_flag) {
@@ -144,12 +144,12 @@ EXIT_PROC:
     return ret;
 }
 
-//×Ö·û´®×ª4×Ö½ÚÎÞ·ûºÅÕûÊý
+//å­—ç¬¦ä¸²è½¬4å­—èŠ‚æ— ç¬¦å·æ•´æ•°
 uint32_t DataConvert::atoui(const char *str)
 {
     assert(str);
     uint32_t ret = 0;
-    bool   first_num_flag = false;  //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool   first_num_flag = false;  //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     for (;;) {
         ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
@@ -164,7 +164,7 @@ uint32_t DataConvert::atoui(const char *str, uint_t len, char **endptr)
 {
     assert(str);
     uint32_t ret = 0;
-    bool   first_num_flag = false;  //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool   first_num_flag = false;  //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     if (len < 1) {
         for (;;) {
@@ -180,19 +180,19 @@ uint32_t DataConvert::atoui(const char *str, uint_t len, char **endptr)
     }
 
 EXIT_PROC:
-    if (NULL != endptr) {
+    if (nullptr != endptr) {
         *endptr = (char *)str;
     }
     return ret;
 }
 
-//×Ö·û´®×ª8×Ö½ÚÕûÊý
+//å­—ç¬¦ä¸²è½¬8å­—èŠ‚æ•´æ•°
 int64_t DataConvert::atoll(const char *str)
 {
     assert(str);
     int64_t ret = 0;
-    bool  negative_flag  = false;   //¸ºÊý±ê¼Ç
-    bool  first_num_flag = false;   //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool  negative_flag  = false;   //è´Ÿæ•°æ ‡è®°
+    bool  first_num_flag = false;   //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     for (;;) {
         ZRSOCKET_CHAR_CONVERT_INTEGER;
@@ -210,8 +210,8 @@ int64_t DataConvert::atoll(const char *str, uint_t len, char **endptr)
 {
     assert(str);
     int64_t ret = 0;
-    bool  negative_flag  = false;   //¸ºÊý±ê¼Ç
-    bool  first_num_flag = false;   //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool  negative_flag  = false;   //è´Ÿæ•°æ ‡è®°
+    bool  first_num_flag = false;   //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     if (len < 1) {
         for (;;) {
@@ -228,7 +228,7 @@ int64_t DataConvert::atoll(const char *str, uint_t len, char **endptr)
     }
 
 EXIT_PROC:
-    if (NULL != endptr) {
+    if (nullptr != endptr) {
         *endptr = (char *)str;
     }
     if (negative_flag) {
@@ -237,12 +237,12 @@ EXIT_PROC:
     return ret;
 }
 
-//×Ö·û´®×ª8×Ö½ÚÎÞ·ûºÅÕûÊý
+//å­—ç¬¦ä¸²è½¬8å­—èŠ‚æ— ç¬¦å·æ•´æ•°
 uint64_t DataConvert::atoull(const char *str)
 {
     assert(str);
     uint64_t ret = 0;
-    bool first_num_flag = false;  //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool first_num_flag = false;  //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     for (;;) {
         ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
@@ -257,7 +257,7 @@ uint64_t DataConvert::atoull(const char *str, uint_t len, char **endptr)
 {
     assert(str);
     uint64_t ret = 0;
-    bool   first_num_flag = false;  //ÊÇ·ñÕÒµ½µÚÒ»¸öÊý×Ö±ê¼Ç
+    bool   first_num_flag = false;  //æ˜¯å¦æ‰¾åˆ°ç¬¬ä¸€ä¸ªæ•°å­—æ ‡è®°
 
     if (len < 1) {
         for (;;) {
@@ -273,17 +273,17 @@ uint64_t DataConvert::atoull(const char *str, uint_t len, char **endptr)
     }
 
 EXIT_PROC:
-    if (NULL != endptr) {
+    if (nullptr != endptr) {
         *endptr = (char *)str;
     }
     return ret;
 }
 
-//ÕûÊý×ª×Ö·û´®
-//¾­²âÊÔ:  window7-32 vc2010 cpu: 4*i5-2310 memory: 4G:
-//              ½«ifÌõ¼þÕ¹¿ªÓëwhileÑ­»·Ïà±È½Ï ÐÔÄÜÌáÉýÃ÷ÏÔ
+//æ•´æ•°è½¬å­—ç¬¦ä¸²
+//ç»æµ‹è¯•:  window7-32 vc2010 cpu: 4*i5-2310 memory: 4G:
+//              å°†ifæ¡ä»¶å±•å¼€ä¸Žwhileå¾ªçŽ¯ç›¸æ¯”è¾ƒ æ€§èƒ½æå‡æ˜Žæ˜¾
 //         linux:
-//              ½«ifÌõ¼þÕ¹¿ªÓëwhileÑ­»·Ïà±È½Ï ÐÔÄÜ·´¶øÏÂ½µ
+//              å°†ifæ¡ä»¶å±•å¼€ä¸Žwhileå¾ªçŽ¯ç›¸æ¯”è¾ƒ æ€§èƒ½åè€Œä¸‹é™
 
 #ifdef ZRSOCKET_OS_WINDOWS
 
@@ -669,4 +669,4 @@ int DataConvert::ulltoa(uint64_t value, char str[21])
 
 #endif //linux
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END

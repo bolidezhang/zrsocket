@@ -1,24 +1,26 @@
-#ifndef ZRSOCKET_MUTEX_H_
-#define ZRSOCKET_MUTEX_H_
+﻿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_MUTEX_H
+#define ZRSOCKET_MUTEX_H
 #include <mutex>
+#include <condition_variable>
 #include "config.h"
 #include "atomic.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 #define zrsocket_lockguard(TMutex, mutex, lock) std::lock_guard<TMutex> lock(mutex)
 typedef std::mutex ThreadMutex;
+typedef std::mutex Mutex;
+typedef std::condition_variable Condition;
 
 class ZRSOCKET_EXPORT NullMutex
 {
 public:
-    inline NullMutex()
-    {
-    }
-
-    inline ~NullMutex()
-    {
-    }
+    inline NullMutex() = default;
+    inline ~NullMutex() = default;
 
     inline void lock()
     {
@@ -35,47 +37,41 @@ public:
 
 private:
     NullMutex(const NullMutex &) = delete;
-    NullMutex& operator=(const NullMutex &) = delete;
+    NullMutex(NullMutex &&) = delete;
+    NullMutex & operator=(const NullMutex &) = delete;
+    NullMutex & operator=(NullMutex &&) = delete;
 };
 
 class ZRSOCKET_EXPORT SpinMutex
 {
 public:
-    inline SpinMutex()
+    inline SpinMutex() = default;
+    inline ~SpinMutex() = default;
+
+    inline void lock() noexcept
     {
+        while (spin_mutex_.test_and_set(std::memory_order_acquire));
     }
 
-    inline ~SpinMutex()
-    {
-    }
-
-    inline void lock()
-    {
-        while (spin_mutex_.test_and_set(std::memory_order_acquire)) {
-        };
-    }
-
-    inline void unlock()
+    inline void unlock() noexcept
     {
         spin_mutex_.clear(std::memory_order_release);
     }
 
-    inline bool try_lock()
+    inline bool try_lock() noexcept
     {
-        if (spin_mutex_.test_and_set(std::memory_order_acquire)) {
-            return true;
-        }
-
-        return false;
+        return !spin_mutex_.test_and_set(std::memory_order_acquire);
     }
 
 private:
     SpinMutex(const SpinMutex &) = delete;
-    SpinMutex& operator=(const SpinMutex &) = delete;
+    SpinMutex(SpinMutex &&) = delete;
+    SpinMutex & operator=(const SpinMutex &) = delete;
+    SpinMutex & operator=(SpinMutex &&) = delete;
 
     std::atomic_flag spin_mutex_ = ATOMIC_FLAG_INIT;
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

@@ -1,11 +1,15 @@
-#ifndef ZRSOCKET_TCPSERVER_HANDLER_H_
-#define ZRSOCKET_TCPSERVER_HANDLER_H_
-#include "system_api.h"
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_TCPSERVER_HANDLER_H
+#define ZRSOCKET_TCPSERVER_HANDLER_H
+#include "os_api.h"
 #include "inet_addr.h"
 #include "event_handler.h"
 #include "event_source.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 class TcpServerHandler : public EventHandler
 {
@@ -20,24 +24,24 @@ public:
 
     int handle_read()
     { 
-        InetAddr addr(source_->get_local_addr()->is_ipv6());
+        InetAddr addr(source_->local_addr()->is_ipv6());
         int addrlen = addr.get_addr_size();
 
-        //for(;;)´æÔÚµÄÄ¿µÄ, ÒòÎªlinux epoll±ßÔµ´¥·¢Ä£Ê½(EPOLLET)
-        //¼àÌýµÄ¾ä±ú±»ÉèÖÃÎªEPOLLET,µ±Í¬Ê±¶à¸öÁ¬½Ó½¨Á¢µÄÊ±ºò,
-        //ÈôÖ»accept³öÒ»¸öÁ¬½Ó½øÐÐ´¦Àí,ÕâÑù¾Í¿ÉÄÜµ¼ÖÂºóÀ´µÄÁ¬½Ó²»ÄÜ±»¼°Ê±´¦Àí,ÒªµÈµ½ÏÂÒ»´ÎÁ¬½Ó²Å»á±»¼¤»î
-        ZRSOCKET_SOCKET fd;
+        //for(;;)å­˜åœ¨çš„ç›®çš„, å› ä¸ºlinux epollè¾¹ç¼˜è§¦å‘æ¨¡å¼(EPOLLET)
+        //ç›‘å¬çš„å¥æŸ„è¢«è®¾ç½®ä¸ºEPOLLET,å½“åŒæ—¶å¤šä¸ªè¿žæŽ¥å»ºç«‹çš„æ—¶å€™,
+        //è‹¥åªacceptå‡ºä¸€ä¸ªè¿žæŽ¥è¿›è¡Œå¤„ç†,è¿™æ ·å°±å¯èƒ½å¯¼è‡´åŽæ¥çš„è¿žæŽ¥ä¸èƒ½è¢«åŠæ—¶å¤„ç†,è¦ç­‰åˆ°ä¸‹ä¸€æ¬¡è¿žæŽ¥æ‰ä¼šè¢«æ¿€æ´»
+        ZRSOCKET_SOCKET client_fd;
         EventHandler *handler;
-        EventReactor *reactor;
+        EventLoop *event_loop;
         for (;;) {
-            fd = SystemApi::socket_accept(socket_, addr.get_addr(), &addrlen, ZRSOCKET_SOCK_NONBLOCK);
-            if (ZRSOCKET_INVALID_SOCKET != fd) {
+            client_fd = OSApi::socket_accept(socket_, addr.get_addr(), &addrlen, ZRSOCKET_SOCK_NONBLOCK);
+            if (ZRSOCKET_INVALID_SOCKET != client_fd) {
                 handler = source_->alloc_handler();
-                if (NULL != handler) {
-                    reactor = source_->get_reactor();
-                    handler->init(fd, source_, reactor, EventHandler::STATE_CONNECTED);
+                if (nullptr != handler) {
+                    event_loop = source_->event_loop();
+                    handler->init(client_fd, source_, event_loop, EventHandler::STATE_CONNECTED);
                     if (handler->handle_open() >= 0) {
-                        if (reactor->add_handler(handler, EventHandler::READ_EVENT_MASK) < 0) {
+                        if (event_loop->add_handler(handler, EventHandler::READ_EVENT_MASK) < 0) {
                             source_->free_handler(handler);
                         }
                     }
@@ -46,11 +50,11 @@ public:
                     }
                 }
                 else {
-                    SystemApi::socket_close(fd);
+                    OSApi::socket_close(client_fd);
                 }
             }
             else {
-                //·Ç×èÈûÄ£Ê½(NIO)ÏÂ,ÍË³ö´Ë´Î¼¤»îÊÂ¼þ´¦Àí
+                //éžé˜»å¡žæ¨¡å¼(NIO)ä¸‹,é€€å‡ºæ­¤æ¬¡æ¿€æ´»äº‹ä»¶å¤„ç†
                 break;
             }
         }
@@ -58,14 +62,14 @@ public:
         return 0;
     }
 
-    int handle_accept(ZRSOCKET_SOCKET fd, InetAddr &addr)
+    int handle_accept(ZRSOCKET_SOCKET client_fd, InetAddr &addr)
     {
         EventHandler *handler = source_->alloc_handler();
-        if (NULL != handler) {
-            EventReactor *reactor = source_->get_reactor();
-            handler->init(fd, source_, reactor, EventHandler::STATE_CONNECTED);
+        if (nullptr != handler) {
+            EventLoop *loop = source_->event_loop();
+            handler->init(client_fd, source_, loop, EventHandler::STATE_CONNECTED);
             if (handler->handle_open() >= 0) {
-                if (reactor->add_handler(handler, EventHandler::READ_EVENT_MASK) < 0) {
+                if (loop->add_handler(handler, EventHandler::READ_EVENT_MASK) < 0) {
                     source_->free_handler(handler);
                     return -1;
                 }
@@ -79,7 +83,7 @@ public:
             return -3;
         }
 
-        return 0; 
+        return 0;
     }
 
     int handle_close()
@@ -88,6 +92,6 @@ public:
     }
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

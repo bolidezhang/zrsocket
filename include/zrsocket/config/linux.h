@@ -1,5 +1,9 @@
-#ifndef ZRSOCKET_CONFIG_LINUX_H_
-#define ZRSOCKET_CONFIG_LINUX_H_
+Ôªø// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_CONFIG_LINUX_H
+#define ZRSOCKET_CONFIG_LINUX_H
 
 #define ZRSOCKET_OS_LINUX
 #ifdef ZRSOCKET_STATIC
@@ -40,7 +44,7 @@ typedef iovec ZRSOCKET_IOVEC;
 #define ZRSOCKET_SHUT_RDWR      SHUT_RDWR
 #define ZRSOCKET_SOCK_NONBLOCK  SOCK_NONBLOCK
 
-//“ª–©≥£º˚Socket¥ÌŒÛ
+//‰∏Ä‰∫õÂ∏∏ËßÅSocketÈîôËØØ
 #define ZRSOCKET_EAGAIN         EAGAIN
 #define ZRSOCKET_ENOBUFS        ENOBUFS
 #define ZRSOCKET_EINVAL         EINVAL
@@ -55,8 +59,19 @@ typedef iovec ZRSOCKET_IOVEC;
 #define ZRSOCKET_ECONNECTING    EINPROGRESS
 #define ZRSOCKET_IO_PENDING     EAGAIN
 
-#ifndef ZRSOCKET_NOT_USE_ACCEPT4
-    #define ZRSOCKET_USE_ACCEPT4
+//accept4 os api 
+#ifndef ZRSOCKET_NOT_HAVE_ACCEPT4
+    #define ZRSOCKET_HAVE_ACCEPT4
+#endif
+
+//SO_REUSEPORT socket option 
+#ifndef ZRSOCKET_NOT_HAVE_REUSREPORT
+    #define ZRSOCKET_HAVE_REUSREPORT
+#endif
+
+//recvmmsg/sendmmsg os api 
+#ifndef ZRSOCKET_NOT_HAVE_RECVSENDMMSG
+    #define ZRSOCKET_HAVE_RECVSENDMMSG
 #endif
 
 #endif

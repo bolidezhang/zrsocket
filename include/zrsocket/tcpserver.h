@@ -1,26 +1,29 @@
-#ifndef ZRSOCKET_TCPSERVER_H_
-#define ZRSOCKET_TCPSERVER_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_TCPSERVER_H
+#define ZRSOCKET_TCPSERVER_H
 #include "config.h"
 #include "object_pool.h"
 #include "thread.h"
-#include "system_api.h"
+#include "os_api.h"
 #include "inet_addr.h"
 #include "event_handler.h"
-#include "event_reactor.h"
+#include "event_loop.h"
 #include "event_source.h"
 #include "tcpserver_handler.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
-template <typename TClientHandler, typename TObjectPool, typename TServerHandler = TcpServerHandler>
+template <class TClientHandler, class TObjectPool, class TServerHandler = TcpServerHandler>
 class TcpServer : public EventSource
 {
 public:
     TcpServer()
-        : accept_reactor_(NULL)
-        , object_pool_(NULL)
+        : accept_event_loop_(nullptr)
+        , object_pool_(nullptr)
     {
-        handler_ = &server_handler_;
         set_config();
     }
 
@@ -29,151 +32,113 @@ public:
         close();
     }
 
-    int open(ushort_t local_port, int backlog = 1024, const char *local_name = NULL, bool is_ipv6 = false)
+    int open(ushort_t local_port, int backlog = 1024, const char *local_name = nullptr, bool is_ipv6 = false)
     {
         close();
 
         int ret = local_addr_.set(local_name, local_port, is_ipv6);
-        if (ret < 0)
-        {
+        if (ret < 0) {
             return -1;
         }
         int address_family = is_ipv6 ? AF_INET6:AF_INET;
-        ZRSOCKET_SOCKET fd = SystemApi::socket_open(address_family, SOCK_STREAM, IPPROTO_TCP);
-        if (ZRSOCKET_INVALID_SOCKET == fd)
-        {
+        ZRSOCKET_SOCKET fd = OSApi::socket_open(address_family, SOCK_STREAM, IPPROTO_TCP);
+        if (ZRSOCKET_INVALID_SOCKET == fd) {
             return -2;
         }
-        server_handler_.init(fd, this, accept_reactor_, EventHandler::STATE_CONNECTED);
-        if (server_handler_.handle_open() < 0)
-        {
+
+        server_handler_.init(fd, this, accept_event_loop_, EventHandler::STATE_CONNECTED);
+        if (server_handler_.handle_open() < 0) {
             ret = -3;
             goto EXCEPTION_EXIT_PROC;
         }
 
-        SystemApi::socket_set_reuseaddr(fd, 1);
-        ret = SystemApi::socket_bind(fd, local_addr_.get_addr(), local_addr_.get_addr_size());
-        if (ret < 0)
-        {
+        OSApi::socket_set_reuseaddr(fd, 1);
+        OSApi::socket_set_reuseport(fd, 1);
+        ret = OSApi::socket_bind(fd, local_addr_.get_addr(), local_addr_.get_addr_size());
+        if (ret < 0) {
             ret = -4;
             goto EXCEPTION_EXIT_PROC;
         }
-        ret = SystemApi::socket_listen(fd, backlog);
-        if (ret < 0)
-        {
+        ret = OSApi::socket_listen(fd, backlog);
+        if (ret < 0) {
             ret = -5;
             goto EXCEPTION_EXIT_PROC;
         }
         
-        if (NULL != accept_reactor_)
-        {
-            if (accept_reactor_->add_handler(&server_handler_, EventHandler::READ_EVENT_MASK) < 0)
-            {
+        if (nullptr != accept_event_loop_) {
+            OSApi::socket_set_block(fd, false);
+            if (accept_event_loop_->add_handler(&server_handler_, EventHandler::READ_EVENT_MASK) < 0) {
                 ret = -6;
                 goto EXCEPTION_EXIT_PROC;
             }
         }
-        else
-        {
-            if (accept_thread_num_ > 0)
-            {
-                SystemApi::socket_set_block(fd, true);
-                if (accept_thread_group_.start(accept_thread_num_, accept_thread_num_, accept_function, this) < 0)
-                {
+        else {
+            if (accept_thread_num_ > 0) {
+                OSApi::socket_set_block(fd, true);
+                if (accept_thread_group_.start(accept_thread_num_, accept_thread_num_, accept_proc, this) < 0) {
                     ret = -7;
                     goto EXCEPTION_EXIT_PROC;
                 }
             }
-            else
-            {
-                if (reactor_->add_handler(&server_handler_, EventHandler::READ_EVENT_MASK) < 0)
-                {
+            else {
+                if (event_loop_->add_handler(&server_handler_, EventHandler::READ_EVENT_MASK) < 0) {
                     ret = -8;
                     goto EXCEPTION_EXIT_PROC;
                 }
             }
         }
+        handler_ = &server_handler_;
         return 0;
 
  EXCEPTION_EXIT_PROC:
-        SystemApi::socket_close(fd);
+        OSApi::socket_close(fd);
         return ret;
     }
 
     int close()
     {
         accept_thread_group_.clear();
-        server_handler_.close();
+        if (nullptr != handler_) {
+            if (nullptr != accept_event_loop_) {
+                accept_event_loop_->delete_handler(&server_handler_, 0);
+            }
+            else {
+                server_handler_.handle_close();
+            }
+            server_handler_.close();
+            handler_ = nullptr;
+        }
         return 0;
     }
 
     int set_config(uint_t   accept_thread_num = 1,
                    uint_t   max_connect_num   = 100000,
-                   uint_t   recvbuffer_size   = 4096,
-                   uint_t   msgbuffer_size    = 4096,
-                   uint8_t  msglen_bytes      = 2,
-                   uint8_t  msg_byteorder     = 0)
+                   uint_t   recvbuffer_size   = 4096)
     {
         accept_thread_num_  = accept_thread_num;
         max_connect_num_    = max_connect_num;
         recvbuffer_size_    = recvbuffer_size;
-        msgbuffer_size_     = msgbuffer_size;
-        msglen_bytes_       = msglen_bytes;
-        msg_byteorder_      = msg_byteorder;
-
-        switch (msglen_bytes)
-        {
-            case 1:
-                {
-                    get_msglen_proc_  = EventSource::get_msglen_int8;
-                    set_msglen_proc_  = EventSource::set_msglen_int8;
-                }
-                break;
-            case 2:
-                if (msg_byteorder)
-                {
-                    get_msglen_proc_ = EventSource::get_msglen_int16_network;
-                    set_msglen_proc_ = EventSource::set_msglen_int16_network;
-                }
-                else
-                {
-                    get_msglen_proc_ = EventSource::get_msglen_int16_host;
-                    set_msglen_proc_ = EventSource::set_msglen_int16_host;
-                }
-                break;
-            case 4:
-                if (msg_byteorder)
-                {
-                    get_msglen_proc_ = EventSource::get_msglen_int32_network;
-                    set_msglen_proc_ = EventSource::set_msglen_int32_network;
-                }
-                else
-                {
-                    get_msglen_proc_ = EventSource::get_msglen_int32_host;
-                    set_msglen_proc_ = EventSource::set_msglen_int32_host;
-                }
-                break;
-            default:
-                break;
-        }
-
         return 0;
     }
     
-    inline int set_interface(TObjectPool *object_pool, EventReactor *reactor, EventReactor *accept_reactor = NULL)
+    inline int set_interface(TObjectPool *object_pool, 
+        EventLoop *event_loop, 
+        MessageDecoderConfig *message_decoder_config, 
+        EventLoop *accept_event_loop = nullptr)
     {
-        object_pool_    = object_pool;
-        reactor_        = reactor;
-        accept_reactor_ = accept_reactor;
+        object_pool_            = object_pool;
+        event_loop_             = event_loop;
+        message_decoder_config_ = message_decoder_config;
+        accept_event_loop_      = accept_event_loop;
         return 0;
     }
 
-    TServerHandler* get_handler()
+    TServerHandler * handler()
     {
         return &server_handler_;
     }
 
-    InetAddr* get_local_addr()
+    InetAddr * local_addr()
     {
         return &local_addr_;
     }
@@ -187,20 +152,18 @@ private:
     EventHandler * alloc_handler()
     {
         EventHandler *handler = object_pool_->pop();
-        if (NULL != handler) {
-            handler->in_objectpool_ = false;
-            handler->handler_id_ = EventSource::generate_id();
+        if (nullptr != handler) {
+            handler->in_object_pool_ = false;
             return handler;
         }
-        return NULL;
+        return nullptr;
     }
 
     int free_handler(EventHandler *handler)
     {
-        if (handler != NULL) {
-            if ((handler != &server_handler_) && (!handler->in_objectpool_)) {
-                handler->close();
-                handler->in_objectpool_ = true;
+        if (handler != nullptr) {
+            if ((handler != &server_handler_) && (!handler->in_object_pool_)) {
+                handler->in_object_pool_ = true;
                 object_pool_->push((TClientHandler *)handler);
                 return 1;
             }
@@ -209,10 +172,10 @@ private:
         return -1;
     }
 
-    static int accept_function(uint_t thread_index, void *arg)
+    static int accept_proc(uint_t thread_index, void *arg)
     {
-        TcpServer *tcpserver = (TcpServer *)arg;
-        InetAddr iaddr(tcpserver->get_local_addr()->is_ipv6());
+        TcpServer *tcpserver = static_cast<TcpServer *>(arg);
+        InetAddr iaddr(tcpserver->local_addr()->is_ipv6());
         sockaddr *addr  = iaddr.get_addr();     
         int addrlen     = iaddr.get_addr_size();
 
@@ -221,15 +184,15 @@ private:
         ZRSOCKET_SOCKET listen_fd = server_handler.socket();
         Thread *thread = tcpserver->accept_thread_group_.get_thread(thread_index);
 
-        while (thread->state() == Thread::RUNNING) {
-            client_fd = SystemApi::socket_accept(listen_fd, addr, &addrlen, ZRSOCKET_SOCK_NONBLOCK);
+        while (thread->state() == Thread::State::RUNNING) {
+            client_fd = OSApi::socket_accept(listen_fd, addr, &addrlen, ZRSOCKET_SOCK_NONBLOCK);
             if (ZRSOCKET_INVALID_SOCKET != client_fd) {
                 if (server_handler.handle_accept(client_fd, iaddr) < 0) {
-                    SystemApi::socket_close(client_fd);
+                    OSApi::socket_close(client_fd);
                 }
             }
             else {
-                //¹Ø±ÕTcpServer::socket_,½ø¶ø´ÙÊ¹acceptÏß³ÌÍË³ö
+                //å…³é—­TcpServer::socket_,è¿›è€Œä¿ƒä½¿acceptçº¿ç¨‹é€€å‡º
                 break;
             }
         }
@@ -241,11 +204,11 @@ protected:
     uint_t          max_connect_num_;
     uint_t          accept_thread_num_;
     ThreadGroup     accept_thread_group_;
-    EventReactor   *accept_reactor_;
+    EventLoop      *accept_event_loop_;
     TObjectPool    *object_pool_;
     TServerHandler  server_handler_;
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

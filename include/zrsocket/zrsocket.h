@@ -1,8 +1,13 @@
-#ifndef ZRSOCKET_H_
-#define ZRSOCKET_H_
+﻿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_H
+#define ZRSOCKET_H
 
 #include "version.h"
 #include "config.h"
+#include "atomic.h"
 #include "byte_buffer.h"
 #include "base_type.h"
 #include "malloc.h"
@@ -10,22 +15,45 @@
 #include "object_pool.h"
 #include "mutex.h"
 #include "thread.h"
-#include "system_api.h"
+#include "os_api.h"
+#include "os_constant.h"
 #include "event_handler.h"
+#include "message_common.h"
 #include "message_handler.h"
-#include "event_reactor.h"
-#include "event_reactor_group.h"
+#include "fixed_length_message_handler.h"
+#include "length_field_message_handler.h"
+#include "event_loop.h"
+#include "event_loop_group.h"
 #include "event_source.h"
-#include "select_reactor.h"
-#include "epoll_reactor.h"
+#include "select_event_loop.h"
+#include "epoll_event_loop.h"
 #include "tcpserver_handler.h"
 #include "tcpserver.h"
 #include "tcpclient.h"
+#include "udpsource.h"
+#include "udpsource_handler.h"
+#include "time.h"
+#include "timer.h"
+#include "timer_queue.h"
+#include "http_common.h"
+#include "http_request_handler.h"
+#include "http_response_handler.h"
+#include "seda_event.h"
+#include "seda_event_queue.h"
+#include "seda_timer.h"
+#include "seda_timer_queue.h"
+#include "seda_interface.h"
+#include "seda_stage_handler.h"
+#include "seda_stage.h"
+#include "seda_stage_thread.h"
+#include "seda_stage2.h"
+#include "seda_stage2_thread.h"
+#include "application.h"
 
 #ifdef ZRSOCKET_OS_WINDOWS
-    #define zrsocket_default_reactor SelectReactor
+    #define zrsocket_default_event_loop zrsocket::SelectEventLoop
 #else
-    #define zrsocket_default_reactor EpollReactor
+    #define zrsocket_default_event_loop zrsocket::EpollEventLoop
 #endif
 
 #endif

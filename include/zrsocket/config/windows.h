@@ -1,5 +1,9 @@
-#ifndef ZRSOCKET_CONFIG_WINDOWS_H_
-#define ZRSOCKET_CONFIG_WINDOWS_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_CONFIG_WINDOWS_H
+#define ZRSOCKET_CONFIG_WINDOWS_H
 
 #define ZRSOCKET_OS_WINDOWS
 #if defined(ZRSOCKET_STATIC)
@@ -20,7 +24,7 @@
     #define FD_SETSIZE 1024
 #endif
 
-// Winsock¿â°æ±¾(Ä¬ÈÏwinsock2)
+// Winsockåº“ç‰ˆæœ¬(é»˜è®¤winsock2)
 #if !defined(ZRSOCKET_USE_WINSOCK2)
     #define ZRSOCKET_USE_WINSOCK2 1
 #endif
@@ -30,7 +34,7 @@
     // will also include windows.h, if not present
     #include <winsock2.h>
     #if (_WIN32_WINNT >= 0x0500)  //window 2000 or later version
-        //Õâ¸öÁ½¸öÍ·ÎÄ¼şÏÈºóË³Ğò²»ÄÜ¸Ä±ä,·ñÔòÔÚvc2008ÒÔÉÏ°æ±¾±àÒëÍ¨²»¹ı
+        //è¿™ä¸ªä¸¤ä¸ªå¤´æ–‡ä»¶å…ˆåé¡ºåºä¸èƒ½æ”¹å˜,å¦åˆ™åœ¨vc2008ä»¥ä¸Šç‰ˆæœ¬ç¼–è¯‘é€šä¸è¿‡
         #include <mstcpip.h>
         #include <ws2tcpip.h>
     #endif
@@ -68,7 +72,7 @@ struct ZRSOCKET_IOVEC
 #define ZRSOCKET_SHUT_RDWR      SD_BOTH
 #define ZRSOCKET_SOCK_NONBLOCK  0
 
-//Ò»Ğ©³£¼ûSocket´íÎó
+//ä¸€äº›å¸¸è§Socketé”™è¯¯
 #define ZRSOCKET_EAGAIN         WSAEWOULDBLOCK
 #define ZRSOCKET_ENOBUFS        WSAENOBUFS
 #define ZRSOCKET_EINVAL         WSAEINVAL

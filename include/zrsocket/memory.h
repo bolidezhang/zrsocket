@@ -1,36 +1,40 @@
-#ifndef ZRSOCKET_MEMORY_H_
-#define ZRSOCKET_MEMORY_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_MEMORY_H
+#define ZRSOCKET_MEMORY_H
 #include <cstring>
 #include "config.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 class ZRSOCKET_EXPORT Memory
 {
 public:
-    //ÄÚ´æ¿½±´
-    //¾­²âÊÔ:  window7-32 vc2010 cpu: 4*i5-2310 memory: 4G:
-    //              1)Ğ¡¿éÄÚ´æÊ±, °´8×Ö½ÚÕûÊı¸³Öµ,ĞÔÄÜÌáÉıÃ÷ÏÔ;
-    //              2)´ó¿éÄÚ´æÊ±, °´8×Ö½ÚÕûÊı¸³Öµ,ĞÔÄÜ·´¶øÏÂ½µ;ËùÒÔÄÚ´æ¿é´óÓÚ256Ê±,Ö±½Óµ÷±ê×¼¿âmemcpy.
+    //å†…å­˜æ‹·è´
+    //ç»æµ‹è¯•:  window7-32 vc2010 cpu: 4*i5-2310 memory: 4G:
+    //              1)å°å—å†…å­˜æ—¶, æŒ‰8å­—èŠ‚æ•´æ•°èµ‹å€¼,æ€§èƒ½æå‡æ˜æ˜¾;
+    //              2)å¤§å—å†…å­˜æ—¶, æŒ‰8å­—èŠ‚æ•´æ•°èµ‹å€¼,æ€§èƒ½åè€Œä¸‹é™;æ‰€ä»¥å†…å­˜å—å¤§äº256æ—¶,ç›´æ¥è°ƒæ ‡å‡†åº“memcpy.
     //         linux:
-    //              1)ĞÔÄÜ¿ÉÄÜºÃĞ©,Ò²¿ÉÄÜ²îĞ©(Ê¹ÓÃÇ°,ÇëÔÚÔËĞĞ»·¾³ÏÂ×ĞÏ¸²âÁ¿)
-    //              2)centos6.3      x86-64 kernel:2.6.32 gcc:4.4.6 cpu:4*i5-2310  memory:4G 8×Ö½ÚÕûÊı¸³Öµ ĞÔÄÜÌáÉıÃ÷ÏÔ
-    //              3)centos7.0.1406 x86-64 kernel:3.10.0 gcc:4.8.2 cpu:4*i5-3330S memory:8G 8×Ö½ÚÕûÊı¸³Öµ ±È ±ê×¼memcpy ĞÔÄÜÂÔ²î.
-    static void* memcpy(void *dest, const void *src, size_t n);
+    //              1)æ€§èƒ½å¯èƒ½å¥½äº›,ä¹Ÿå¯èƒ½å·®äº›(ä½¿ç”¨å‰,è¯·åœ¨è¿è¡Œç¯å¢ƒä¸‹ä»”ç»†æµ‹é‡)
+    //              2)centos6.3      x86-64 kernel:2.6.32 gcc:4.4.6 cpu:4*i5-2310  memory:4G 8å­—èŠ‚æ•´æ•°èµ‹å€¼ æ€§èƒ½æå‡æ˜æ˜¾
+    //              3)centos7.0.1406 x86-64 kernel:3.10.0 gcc:4.8.2 cpu:4*i5-3330S memory:8G 8å­—èŠ‚æ•´æ•°èµ‹å€¼ æ¯” æ ‡å‡†memcpy æ€§èƒ½ç•¥å·®.
+    static void * memcpy(void *dest, const void *src, size_t n);
 
-    //ÄÚ´æÇåÁã
-    static void memclear(void *dest, size_t n);
+    //å†…å­˜æ¸…é›¶
+    static void   memclear(void *dest, size_t n);
 
-    //ÄÚ´æ±È½Ï
+    //å†…å­˜æ¯”è¾ƒ
     static inline int memcmp(const void *s1, const void *s2, size_t n)
     {
         return std::memcmp(s1, s2, n);
     }
 
-    //ÄÚ´æÖÃÖµ
-    //ÁíÒ»ÖÖÊµÏÖ·½Ê½: Ô¤ÏÈ¼ÆËã  8×Ö½ÚÕûÊı¸³Öµ(Ã¿×Ö½Ú¶¼µÈÓÚÕûÊıcµÄÊıÖµ)
-    //                          4×Ö½ÚÕûÊı¸³Öµ(Ã¿×Ö½Ú¶¼µÈÓÚÕûÊıcµÄÊıÖµ)
-    //                          2×Ö½ÚÕûÊı¸³Öµ(Ã¿×Ö½Ú¶¼µÈÓÚÕûÊıcµÄÊıÖµ)
+    //å†…å­˜ç½®å€¼
+    //å¦ä¸€ç§å®ç°æ–¹å¼: é¢„å…ˆè®¡ç®—  8å­—èŠ‚æ•´æ•°èµ‹å€¼(æ¯å­—èŠ‚éƒ½ç­‰äºæ•´æ•°cçš„æ•°å€¼)
+    //                          4å­—èŠ‚æ•´æ•°èµ‹å€¼(æ¯å­—èŠ‚éƒ½ç­‰äºæ•´æ•°cçš„æ•°å€¼)
+    //                          2å­—èŠ‚æ•´æ•°èµ‹å€¼(æ¯å­—èŠ‚éƒ½ç­‰äºæ•´æ•°cçš„æ•°å€¼)
     static inline void* memset(void *dest, int c, size_t n)
     {
         return std::memset(dest, c, n);
@@ -52,14 +56,14 @@ private:
 };
 
 #ifdef ZRSOCKET_OS_WINDOWS
-    #define zrsocket_memcpy(dest, src, n)   ZRSOCKET::Memory::memcpy(dest, src, n)
-    #define zrsocket_memclear(dest, n)      ZRSOCKET::Memory::memclear(dest, n)
+    #define zrsocket_memcpy(dest, src, n)   zrsocket::Memory::memcpy(dest, src, n)
+    #define zrsocket_memclear(dest, n)      zrsocket::Memory::memclear(dest, n)
     #define zrsocket_memcmp(s1, s2, n)      std::memcmp(s1, s2, n)
     #define zrsocket_memset(dest, c, n)     std::memset(dest, c, n)
     #define zrsocket_memmove(dest, src, n)  std::memmove(dest, src, n)
 #else
-    //Òòzrsocket::memcpyÔÚiosÏÂ¿ÉÄÜ»á±À»Ù,
-    //ËùÒÔÔÚ·ÇwindowsÏÂĞèÒª¶¨ÒåºêZRSOCKET_USE_CUSTOM_MEMCPYÀ´ÆôÓÃzrsocket_memcpyÊµÏÖÎªzrsocket::memcpy
+    //å› zrsocket::memcpyåœ¨iosä¸‹å¯èƒ½ä¼šå´©æ¯,
+    //æ‰€ä»¥åœ¨éwindowsä¸‹éœ€è¦å®šä¹‰å®ZRSOCKET_USE_CUSTOM_MEMCPYæ¥å¯ç”¨zrsocket_memcpyå®ç°ä¸ºzrsocket::memcpy
     #ifdef ZRSOCKET_USE_CUSTOM_MEMCPY
         #define zrsocket_memcpy(dest, src, n) ZRSOCKET::Memory::memcpy(dest, src, n)
         #define zrsocket_memclear(dest, n)    ZRSOCKET::Memory::memclear(dest, n)
@@ -73,6 +77,6 @@ private:
     #define zrsocket_memmove(dest, src, n)    std::memmove(dest, src, n)
 #endif
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

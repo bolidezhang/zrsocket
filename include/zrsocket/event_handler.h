@@ -1,18 +1,35 @@
-#ifndef ZRSOCKET_EVENT_HANDLER_H_
-#define ZRSOCKET_EVENT_HANDLER_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_EVENT_HANDLER_H
+#define ZRSOCKET_EVENT_HANDLER_H
 #include "config.h"
 #include "base_type.h"
 #include "byte_buffer.h"
-#include "system_api.h"
+#include "os_api.h"
+#include "inet_addr.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
+
+//æ¶ˆæ¯å‘é€ç»“æœ
+enum class SendResult
+{
+    FAILURE     = -1,       //å‘é€å¤±è´¥
+    PUSH_QUEUE  = 0,        //å…¥é€é˜Ÿåˆ—
+    SUCCESS     = 1,        //å‘é€æˆåŠŸ
+    END         = 2,        //ç»“æŸ
+};
 
 class EventSource;
-class EventReactor;
-template <typename TMutex> class SelectReactor;
-template <typename TMutex> class EpollReactor;
-template <typename TEventReactor> class EventReactorGroup;
-template <typename TClientHandler, typename TObjectPool, typename TServerHandler> class TcpServer;
+class EventLoop;
+template <class TMutex, class TLoopData> class SelectEventLoop;
+template <class TMutex, class TLoopData> class EpollEventLoop;
+template <class TMutex, class TLoopData> class EpollETEventLoop;
+template <class TEventLoop> class EventLoopGroup;
+template <class TClientHandler, class TObjectPool, class TServerHandler> class TcpServer;
+template <class TUdpSourceHandler> class UdpSource;
+template <class THandler> class TcpClient;
 
 class ZRSOCKET_EXPORT EventHandler
 {
@@ -29,38 +46,47 @@ public:
 
     enum HANDLER_STATE
     {
-        STATE_CLOSED            = 0x00,             //¹Ø±Õ
-        STATE_OPENED            = 0x01,             //´ò¿ª
-        STATE_CONNECTED         = 0x02,             //Á¬½Ó³É¹¦,¿ÉÊÕ·¢Êı¾İ
-        STATE_CLOSE_WAIT        = 0x04,             //µÈ´ı¹Ø±Õ(Ó¦ÓÃ²ãÖ÷¶¯Òª¹Ø±Õsocket,socket»¹Î´¹Ø±Õ)
-        STATE_CLOSE_SEND        = 0x08,             //¹Ø±Õ·¢ËÍÍ¨µÀ(socketÒÑ¹Ø±Õ·¢ËÍÍ¨µÀ,µ«¿É½ÓÊÕÊı¾İ)
-        STATE_CLOSE_RECV        = 0x10,             //¹Ø±Õ½ÓÊÕÍ¨µÀ(socketÒÑ¹Ø±Õ½ÓÊÕÍ¨µÀ,µ«¿É·¢ËÍÊı¾İ)
+        STATE_CLOSED            = 0x00,             //å…³é—­
+        STATE_OPENED            = 0x01,             //æ‰“å¼€
+        STATE_CONNECTED         = 0x02,             //è¿æ¥æˆåŠŸ,å¯æ”¶å‘æ•°æ®
+        STATE_CLOSE_WAIT        = 0x04,             //ç­‰å¾…å…³é—­(åº”ç”¨å±‚ä¸»åŠ¨è¦å…³é—­socket,socketè¿˜æœªå…³é—­)
+        STATE_CLOSE_SEND        = 0x08,             //å…³é—­å‘é€é€šé“(socketå·²å…³é—­å‘é€é€šé“,ä½†å¯æ¥æ”¶æ•°æ®)
+        STATE_CLOSE_RECV        = 0x10,             //å…³é—­æ¥æ”¶é€šé“(socketå·²å…³é—­æ¥æ”¶é€šé“,ä½†å¯å‘é€æ•°æ®)
     };
 
     enum HANDLE_ERROR
     {
         ERROR_START_NUMBER      = 1000000,
 
-        ERROR_CLOSE_PASSIVE     = 1000001,          //±»¶¯¹Ø±Õ(Ô¶¶Ë¹Ø±Õremote)
-        ERROR_CLOSE_ACTIVE      = 1000002,          //Ö÷¶¯¹Ø±Õ(±¾µØ¹Ø±Õlocal)
-        ERROR_CLOSE_RECV        = 1000003,          //½ÓÊÕÊ±×é°ü³ö´í¹Ø±Õ
-        ERROR_CLOSE_SEND        = 1000004,          //·¢ËÍÊı¾İ³ö´í¹Ø±Õ
-        ERROR_KEEPALIVE_TIMEOUT = 1000005,          //keepalive³¬Ê±¹Ø±Õ
+        ERROR_CLOSE_PASSIVE     = 1000001,          //è¢«åŠ¨å…³é—­(è¿œç«¯å…³é—­remote)
+        ERROR_CLOSE_ACTIVE      = 1000002,          //ä¸»åŠ¨å…³é—­(æœ¬åœ°å…³é—­local)
+        ERROR_CLOSE_RECV        = 1000003,          //æ¥æ”¶æ—¶ç»„åŒ…å‡ºé”™å…³é—­
+        ERROR_CLOSE_SEND        = 1000004,          //å‘é€æ•°æ®å‡ºé”™å…³é—­
+        ERROR_KEEPALIVE_TIMEOUT = 1000005,          //keepaliveè¶…æ—¶å…³é—­
 
         ERROR_END_NUMBER        = 1009999,
     };
 
+    enum WriteResult
+    {
+        WRITE_RESULT_NOT_INITIAL    = -3,           //æ²¡åˆå§‹åŒ–
+        WRITE_RESULT_STATUS_INVALID = -2,           //è¡¨ç¤ºSocketçŠ¶æ€å¤±æ•ˆ
+        WRITE_RESULT_FAILURE        = -1,           //è¡¨ç¤ºå‘é€å¤±è´¥(Socketå·²å¤±æ•ˆ)
+        WRITE_RESULT_NOT_DATA       = 0,            //è¡¨ç¤ºæ²¡æœ‰æ•°æ®å¯å‘é€
+        WRITE_RESULT_SUCCESS        = 1,            //è¡¨ç¤ºå‘é€æˆåŠŸ
+        WRITE_RESULT_PART           = 2             //è¡¨ç¤ºå‘é€å‡ºéƒ¨åˆ†æ•°æ®(åŒ…å«0é•¿åº¦)
+    };
+
     inline EventHandler()
-        : source_(NULL)
-        , reactor_(NULL)
+        : source_(nullptr)
+        , event_loop_(nullptr)
         , socket_(ZRSOCKET_INVALID_SOCKET)
-        , handler_id_(0)
         , last_update_time_(0)
         , last_errno_(0)
         , event_mask_(READ_EVENT_MASK)
         , state_(STATE_CLOSED)
-        , in_reactor_(false)
-        , in_objectpool_(true)
+        , in_event_loop_(false)
+        , in_object_pool_(true)
     {
     }
 
@@ -73,30 +99,35 @@ public:
         return socket_;
     }
 
-    inline EventSource* get_source() const
+    inline EventSource * source() const
     {
         return source_;
     }
 
-    inline EventReactor* get_reactor() const
+    inline EventLoop * event_loop() const
     {
-        return reactor_;
+        return event_loop_;
     }
     
-    inline uint64_t handler_id() const
+    inline int8_t state() const
     {
-        return handler_id_;
+        return state_;
     }
 
-    void init(ZRSOCKET_SOCKET fd, EventSource *source, EventReactor *reactor, HANDLER_STATE state)
+    int event_mask() const
+    {
+        return event_mask_;
+    }
+
+    void init(ZRSOCKET_SOCKET fd, EventSource *source, EventLoop *event_loop, HANDLER_STATE state)
     {
         socket_ = fd;
         source_ = source;
-        reactor_ = reactor;
+        event_loop_ = event_loop;
         last_errno_ = 0;
         state_ = state;
-#ifndef ZRSOCKET_USE_ACCEPT4
-        SystemApi::socket_set_block(fd, false);
+#ifndef ZRSOCKET_HAVE_ACCEPT4
+        OSApi::socket_set_block(fd, false);
 #endif
     }
 
@@ -107,6 +138,7 @@ public:
 
     virtual int handle_close()
     {
+        close();
         return 0;
     }
 
@@ -125,49 +157,38 @@ public:
         return 0;
     }
 
-    virtual int write_data()
+    virtual void close()
     {
-        return 0;
-    }
-
-    inline int8_t status()
-    {
-        return state_;
-    }
-
-    int event_mask()
-    {
-        return event_mask_;
-    }
-
-    inline void close()
-    {
-        SystemApi::socket_close(socket_);
-        socket_ = ZRSOCKET_INVALID_SOCKET;
-        state_  = STATE_CLOSED;
+        if (ZRSOCKET_INVALID_SOCKET != socket_) {
+            OSApi::socket_close(socket_);
+            socket_ = ZRSOCKET_INVALID_SOCKET;
+            state_ = STATE_CLOSED;
+        }
     }
 
  protected:
     EventSource    *source_;
-    EventReactor   *reactor_;
+    EventLoop      *event_loop_;
     ZRSOCKET_SOCKET socket_;
 
-    uint64_t        handler_id_;
     uint64_t        last_update_time_;
-    int             last_errno_;        //×îºó´íÎóºÅ
+    int             last_errno_;        //æœ€åé”™è¯¯å·
 
 private:
-    int             event_mask_;        //ÊÂ¼şÂë(ÉÏ²ã²»ÄÜĞŞ¸Ä)
-    int8_t          state_;             //µ±Ç°×´Ì¬
-    bool            in_reactor_;        //ÊÇ·ñ¼ÓÈëreactor_ÖĞ(ÉÏ²ã²»ÄÜĞŞ¸Ä)
-    bool            in_objectpool_;     //ÊÇ·ñÔÚobjectpoolÖĞ(ÉÏ²ã²»ÄÜĞŞ¸Ä)
+    int             event_mask_;        //äº‹ä»¶ç (ä¸Šå±‚ä¸èƒ½ä¿®æ”¹)
+    int8_t          state_;             //å½“å‰çŠ¶æ€
+    bool            in_event_loop_;     //æ˜¯å¦åŠ å…¥event_loop_ä¸­(ä¸Šå±‚ä¸èƒ½ä¿®æ”¹)
+    bool            in_object_pool_;    //æ˜¯å¦åœ¨object_poolä¸­(ä¸Šå±‚ä¸èƒ½ä¿®æ”¹)
 
-    template <typename TMutex> friend class SelectReactor;
-    template <typename TMutex> friend class EpollReactor;
-    template <typename TEventReactor> friend class EventReactorGroup;
-    template <typename TClientHandler, typename TObjectPool, typename TServerHandler> friend class TcpServer;
+    template <class TMutex, class TLoopData> friend class SelectEventLoop;
+    template <class TMutex, class TLoopData> friend class EpollEventLoop;
+    template <class TMutex, class TLoopData> friend class EpollETEventLoop;
+    template <class TEventLoop> friend class EventLoopGroup;
+    template <class TClientHandler, class TObjectPool, class TServerHandler> friend class TcpServer;
+    template <class TUdpSourceHandler> friend class UdpSource;
+    template <class THandler> friend class TcpClient;
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif

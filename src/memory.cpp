@@ -1,7 +1,7 @@
-#include "zrsocket/memory.h"
+ï»¿#include "zrsocket/memory.h"
 #include "zrsocket/base_type.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 void* Memory::memcpy(void *dest, const void *src, size_t n)
 {
@@ -82,16 +82,16 @@ void* Memory::memcpy(void *dest, const void *src, size_t n)
     int64_t *dest_64  = (int64_t *)dest;
     int64_t *src_64   = (int64_t *)src;
 
-    //·½·¨1
+    //æ–¹æ³•1
     for (; n > 256; n -= 256) {
         MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;
         MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;MOD0;
     }
 
-    //·½·¨2 (¾­²âÊÔ, ÔÚÄ³Ð©»·¾³ÏÂ,ÐÔÄÜ±È·½·¨1²îºÜ¶à)
-    //long doubleÌØ±ðËµÃ÷
+    //æ–¹æ³•2 (ç»æµ‹è¯•, åœ¨æŸäº›çŽ¯å¢ƒä¸‹,æ€§èƒ½æ¯”æ–¹æ³•1å·®å¾ˆå¤š)
+    //long doubleç‰¹åˆ«è¯´æ˜Ž
     //1)linux gcc, sizeof(long double)==16;
-    //2)µ«ÆäÔÚlinux x86 and x86-64ÏÂµÄÓÐÐ§×Ö½ÚÊýÎª10(80-bit x87 floating point type on x86 and x86-64 architectures)
+    //2)ä½†å…¶åœ¨linux x86 and x86-64ä¸‹çš„æœ‰æ•ˆå­—èŠ‚æ•°ä¸º10(80-bit x87 floating point type on x86 and x86-64 architectures)
     //if (n > 260)
     //{
     //    char *dest_8  = (char *)dest;
@@ -3077,4 +3077,4 @@ void Memory::memclear(void *dest, size_t n)
 
 }
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END

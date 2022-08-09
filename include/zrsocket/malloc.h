@@ -1,14 +1,13 @@
-#ifndef ZRSOCKET_MALLOC_H_
-#define ZRSOCKET_MALLOC_H_
+ï»¿#pragma once
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1200)
-    #pragma once
-#endif
+#ifndef ZRSOCKET_MALLOC_H
+#define ZRSOCKET_MALLOC_H
+
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
 
-//±È½ÏÓÅĞãmallocµÄÊµÏÖ
+//æ¯”è¾ƒä¼˜ç§€mallocçš„å®ç°
 //memory allocation: malloc implement
 //1.jemalloc freebsd/facebook/firefox
 //#define ZRSOCKET_USE_JEMALLOC
@@ -22,22 +21,22 @@
 //#define ZRSOCKET_USE_LOCKLESS
 //6.intel tbbmalloc
 //#define ZRSOCKET_USE_TBBMALLOC
-//7.ptmalloc - a) linux glibc default malloc b) ÆğÔ´ÓÚ Doug Lea µÄ dlmalloc
+//7.ptmalloc - a) linux glibc default malloc b) èµ·æºäº Doug Lea çš„ dlmalloc
 //#define ZRSOCKET_USE_PTMALLOC
 //8.dlmalloc - Doug Lea dlmalloc
 //#define ZRSOCKET_USE_DLMALLOC
 
 #if defined(ZRSOCKET_USE_JEMALLOC)
-    #define JEMALLOC_NO_DEMANGLE
+    //#define JEMALLOC_NO_DEMANGLE
     #include <jemalloc/jemalloc.h>
 
-    //ÖØĞÂ¶¨ÒåÄÚ´æ·ÖÅäÆ÷
+    //é‡æ–°å®šä¹‰å†…å­˜åˆ†é…å™¨
     #define zrsocket_malloc(size) je_malloc(size)
     #define zrsocket_calloc(count, size) je_calloc(count, size)
     #define zrsocket_realloc(ptr, size) je_realloc(ptr, size)
     #define zrsocket_free(ptr) je_free(ptr)
 
-    //Ìæ»»ÔËĞĞÊ±¿âµÄÄ¬ÈÏÄÚ´æ·ÖÅäÆ÷
+    //æ›¿æ¢è¿è¡Œæ—¶åº“çš„é»˜è®¤å†…å­˜åˆ†é…å™¨
     #define malloc(size) je_malloc(size)
     #define calloc(count, size) je_calloc(count, size)
     #define realloc(ptr, size) je_realloc(ptr, size)
@@ -45,26 +44,26 @@
 #elif defined(ZRSOCKET_USE_TCMALLOC)
     #include <google/tcmalloc.h>
 
-    //ÖØĞÂ¶¨ÒåÄÚ´æ·ÖÅäÆ÷
+    //é‡æ–°å®šä¹‰å†…å­˜åˆ†é…å™¨
     #define zrsocket_malloc(size) tc_malloc(size)
     #define zrsocket_calloc(count, size) tc_calloc(count, size)
     #define zrsocket_realloc(ptr, size) tc_realloc(ptr, size)
     #define zrsocket_free(ptr) tc_free(ptr)
 
-    //Ìæ»»ÔËĞĞÊ±¿âµÄÄ¬ÈÏÄÚ´æ·ÖÅäÆ÷
+    //æ›¿æ¢è¿è¡Œæ—¶åº“çš„é»˜è®¤å†…å­˜åˆ†é…å™¨
     #define malloc(size) tc_malloc(size)
     #define calloc(count, size) tc_calloc(count, size)
     #define realloc(ptr, size) tc_realloc(ptr, size)
     #define free(ptr) tc_free(ptr)
 #else
-    //ÖØĞÂ¶¨ÒåÄÚ´æ·ÖÅäÆ÷
+    //é‡æ–°å®šä¹‰å†…å­˜åˆ†é…å™¨
     #define zrsocket_malloc(size) ::malloc(size)
     #define zrsocket_calloc(count, size) ::calloc(count, size)
     #define zrsocket_realloc(ptr, size) ::realloc(ptr, size)
     #define zrsocket_free(ptr) ::free(ptr)
 #endif
 
-//Ä¬ÈÏµÄÄÚ´æ¿é´óĞ¡£¬¾­ÑéÖµ
+//é»˜è®¤çš„å†…å­˜å—å¤§å°ï¼Œç»éªŒå€¼
 #define ZRSOCKET_DEFAULT_MEMORY_BLOCK_SIZE  8192
 
 #endif

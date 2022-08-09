@@ -1,30 +1,34 @@
-#ifndef ZRSOCKET_DATA_CONVERT_H_
-#define ZRSOCKET_DATA_CONVERT_H_
+ï»¿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef ZRSOCKET_DATA_CONVERT_H
+#define ZRSOCKET_DATA_CONVERT_H
 #include "config.h"
 #include "base_type.h"
 
-ZRSOCKET_BEGIN
+ZRSOCKET_NAMESPACE_BEGIN
 
 class ZRSOCKET_EXPORT DataConvert
 {
 public:
-    //×Ö·û´®×ª4×Ö½ÚÕûÊý
+    //å­—ç¬¦ä¸²è½¬4å­—èŠ‚æ•´æ•°
     static int32_t   atoi(const char *str);
     static int32_t   atoi(const char *str, uint_t len, char **endptr);
-    //×Ö·û´®×ª4×Ö½ÚÎÞ·ûºÅÕûÊý
+    //å­—ç¬¦ä¸²è½¬4å­—èŠ‚æ— ç¬¦å·æ•´æ•°
     static uint32_t  atoui(const char *str);
     static uint32_t  atoui(const char *str, uint_t len, char **endptr);
-    //×Ö·û´®×ª8×Ö½ÚÕûÊý
+    //å­—ç¬¦ä¸²è½¬8å­—èŠ‚æ•´æ•°
     static int64_t   atoll(const char *str);
     static int64_t   atoll(const char *str, uint_t len, char **endptr);
-    //×Ö·û´®×ª8×Ö½ÚÎÞ·ûºÅÕûÊý
+    //å­—ç¬¦ä¸²è½¬8å­—èŠ‚æ— ç¬¦å·æ•´æ•°
     static uint64_t  atoull(const char *str);
     static uint64_t  atoull(const char *str, uint_t len, char **endptr);
 
-    //4×Ö½ÚÎÞ·ûºÅÕûÊý×ª10½øÖÆ×Ö´®
+    //4å­—èŠ‚æ— ç¬¦å·æ•´æ•°è½¬10è¿›åˆ¶å­—ä¸²
     static int uitoa(uint32_t value, char str[12]);
 
-    //4×Ö½ÚÕûÊý×ª10½øÖÆ×Ö´®
+    //4å­—èŠ‚æ•´æ•°è½¬10è¿›åˆ¶å­—ä¸²
     static inline int itoa(int32_t value, char str[12])
     {
         if (value >= 0) {
@@ -36,10 +40,10 @@ public:
         }
     }
 
-    //8×Ö½ÚÎÞ·ûºÅÕûÊý×ª10½øÖÆ×Ö´®
+    //8å­—èŠ‚æ— ç¬¦å·æ•´æ•°è½¬10è¿›åˆ¶å­—ä¸²
     static int ulltoa(uint64_t value, char str[21]);
 
-    //8×Ö½ÚÕûÊý×ª10½øÖÆ×Ö´®
+    //8å­—èŠ‚æ•´æ•°è½¬10è¿›åˆ¶å­—ä¸²
     static inline int lltoa(int64_t value, char str[21])
     {
         if (value >= 0) {
@@ -51,7 +55,7 @@ public:
         }
     }
 
-    //¼ÆËãÕûÊý×ªÎª10½øÖÆ×Ö·û´®µÄ³¤¶È
+    //è®¡ç®—æ•´æ•°è½¬ä¸º10è¿›åˆ¶å­—ç¬¦ä¸²çš„é•¿åº¦
     static inline int digits10(uint32_t value)
     {
         if (value < 10)
@@ -75,7 +79,7 @@ public:
         return 10;
     }
 
-    //¼ÆËãÕûÊý×ªÎª10½øÖÆ×Ö·û´®µÄ³¤¶È
+    //è®¡ç®—æ•´æ•°è½¬ä¸º10è¿›åˆ¶å­—ç¬¦ä¸²çš„é•¿åº¦
     static inline int digits10(uint64_t value)
     {
         if (value < 10ull)
@@ -131,6 +135,6 @@ private:
     static char digits_[201];
 };
 
-ZRSOCKET_END
+ZRSOCKET_NAMESPACE_END
 
 #endif
