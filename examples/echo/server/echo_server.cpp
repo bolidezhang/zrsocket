@@ -86,49 +86,6 @@ int main(int argc, char *argv[])
         app.port_ = atoi(argv[1]);
     }
 
-#define TEST 1
-#if defined(TEST) && (TEST != 0)
-    {
-        zrsocket::InetAddr inet_addr;
-        inet_addr.set("192.168.0.1", 3000);
-        //printf("addr:\n");
-
-        zrsocket::InetAddr inet_addr2 = inet_addr;
-        zrsocket::InetAddr inet_addr3;
-        inet_addr3 = inet_addr;
-
-        zrsocket::InetAddr inet_addr4(std::move(inet_addr));
-        zrsocket::InetAddr inet_addr5;
-        inet_addr5 = std::move(inet_addr4);
-    }
-
-    //计算i中1的个数
-    //uint_t count = 0;
-    //int i = 3;
-    //while (i) {
-    //    count++;
-    //    i = i & (i - 1);
-    //}
-    //printf("count:%d\n", count);
-
-    //int x = 100;
-    //int mod1 = x % 8;
-    //int mod2 = x - ((x >> 3) << 3);
-
-    //std::vector<int> v;
-    //v.reserve(10);
-    //v.push_back(1);
-
-    //std::vector<int> &v1 = v;
-    //v1.push_back(2);
-    
-    auto i = sizeof(zrsocket::InetAddr);
-    auto j = sizeof(sockaddr_in);
-    auto k = sizeof(sockaddr_in6);
-
-    return 0;
-#endif
-
     printf("zrsocket version:%s\n", ZRSOCKET_VERSION_STR);
     printf("please use the format: port (e.g.: 6611)\n");
     printf("server port:%d\n", app.port_);
