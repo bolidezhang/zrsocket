@@ -218,7 +218,7 @@ struct HttpMessage
     virtual ~HttpMessage() = default;
 
 
-    static HttpMethodId find_http_method_id(std::string& method)
+    static HttpMethodId find_http_method_id(std::string &method)
     {
         auto iter = http_methods_name2id_.find(method);
         if (iter != http_methods_name2id_.end()) {
@@ -238,7 +238,7 @@ struct HttpMessage
         return http_null_string_;
     }
 
-    static HttpVersionId find_http_version_id(std::string& version)
+    static HttpVersionId find_http_version_id(std::string &version)
     {
         auto iter = http_versions_name2id_.find(version);
         if (iter != http_versions_name2id_.end()) {
