@@ -100,7 +100,7 @@ public:
     inline SedaTimer * set_lru_timer(int slot, SedaTimer::TimerParam param)
     {
         if ((slot < 0) || (slot >= (int)lru_timer_managers_.size())) {
-            return NULL;
+            return nullptr;
         }
         return lru_timer_managers_[slot].set_timer(0, param);
     }

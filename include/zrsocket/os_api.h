@@ -321,16 +321,16 @@ public:
     static inline int socket_recv(ZRSOCKET_SOCKET fd, char *buf, uint_t len, int flags, ZRSOCKET_OVERLAPPED *overlapped, int &error)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long   bytes_recv = 0;
+            long recv_bytes = 0;
             WSABUF wsabuf;
             wsabuf.len = len;
             wsabuf.buf = (char *)buf;
-            int ret = WSARecv(fd, &wsabuf, 1, (ulong_t *)&bytes_recv, (LPDWORD)&flags, overlapped, 0);
+            int ret = WSARecv(fd, &wsabuf, 1, (ulong_t *)&recv_bytes, (LPDWORD)&flags, overlapped, 0);
             if (ret < 0) {
                 error = socket_get_lasterror_wsa();
                 return ret;
             }
-            return bytes_recv;
+            return recv_bytes;
         #else 
             int ret = recv(fd, buf, len, flags);
             if (ret < 0) {
@@ -342,33 +342,33 @@ public:
 
     static inline int socket_recvn(ZRSOCKET_SOCKET fd, char *buf, uint_t len, int flags, ZRSOCKET_OVERLAPPED *overlapped, int &error)
     {
-        uint_t bytes_recv = 0;
+        uint_t recv_bytes = 0;
         int  ret;
-        while (bytes_recv < len) {
-            ret = recv(fd, buf+bytes_recv, len-bytes_recv, flags);
+        while (recv_bytes < len) {
+            ret = recv(fd, buf+ recv_bytes, len- recv_bytes, flags);
             if (ret < 0) {
                 error = socket_get_lasterror_wsa();
-                return bytes_recv;
+                return recv_bytes;
             }
             else
             {
-                bytes_recv += ret;
+                recv_bytes += ret;
             }
         }
-        return bytes_recv;
+        return recv_bytes;
     }
 
     static inline int socket_recvv(ZRSOCKET_SOCKET fd, ZRSOCKET_IOVEC *iov, uint_t iovcnt, int flags, 
         ZRSOCKET_OVERLAPPED *overlapped, int &error)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long bytes_recv = 0;
-            int ret = WSARecv(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&bytes_recv, (LPDWORD)&flags, overlapped, 0);
+            long recv_bytes = 0;
+            int ret = WSARecv(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&recv_bytes, (LPDWORD)&flags, overlapped, 0);
             if (ret < 0) {
                 error = socket_get_lasterror_wsa();
                 return ret;
             }
-            return bytes_recv;
+            return recv_bytes;
         #else
             int ret = readv(fd, iov, iovcnt);
             if (ret < 0) {
@@ -382,18 +382,18 @@ public:
         ZRSOCKET_OVERLAPPED *overlapped = nullptr, int *error = nullptr)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long bytes_send = 0;
+            long send_bytes = 0;
             WSABUF wsabuf;
             wsabuf.len = len;
             wsabuf.buf = (char *)buf;
-            int ret = WSASend(fd, &wsabuf, 1, (ulong_t *)&bytes_send, flags, overlapped, 0);
+            int ret = WSASend(fd, &wsabuf, 1, (ulong_t *)&send_bytes, flags, overlapped, 0);
             if (ret < 0) {
                 if (nullptr != error) {
                     *error = socket_get_lasterror_wsa();
                 }
                 return ret;
             }
-            return bytes_send;
+            return send_bytes;
         #else 
             int ret = send(fd, buf, len, flags);
             if (ret < 0) {
@@ -408,34 +408,35 @@ public:
     static inline int socket_sendn(ZRSOCKET_SOCKET fd, const char *buf, uint_t len, int flags = 0, 
         ZRSOCKET_OVERLAPPED *overlapped = nullptr, int *error = nullptr)
     {
-        uint_t bytes_send = 0;
+        uint_t send_bytes = 0;
         int  ret;
-        while (bytes_send < len ) {
-            ret = send(fd, buf+bytes_send, len-bytes_send, flags);
+        do {
+            ret = send(fd, buf+ send_bytes, len-send_bytes, flags);
             if (ret < 0) {
                 if (nullptr != error) {
                     *error = socket_get_lasterror_wsa();
                 }
-                return bytes_send;
+                return send_bytes;
             }
             else {
-                bytes_send += ret;
+                send_bytes += ret;
             }
-        }
-        return bytes_send;
+        } while (send_bytes < len);
+
+        return send_bytes;
     }
 
     static inline int socket_sendv(ZRSOCKET_SOCKET fd, const ZRSOCKET_IOVEC *iov, int iovcnt, int flags, 
         ZRSOCKET_OVERLAPPED *overlapped, int &error)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long bytes_send = 0;
-            int ret = WSASend(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&bytes_send, flags, overlapped, 0);
+            long send_bytes = 0;
+            int ret = WSASend(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&send_bytes, flags, overlapped, 0);
             if (ret < 0) {
                 error = socket_get_lasterror_wsa();
                 return ret;
             }
-            return bytes_send;
+            return send_bytes;
         #else
             int ret = writev(fd, iov, iovcnt);
             if (ret < 0) {
@@ -449,16 +450,16 @@ public:
         ZRSOCKET_OVERLAPPED *overlapped, int &error)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long bytes_recv = 0;
+            long recv_bytes = 0;
             WSABUF wsabuf;
             wsabuf.len = len;
             wsabuf.buf = (char *)buf;
-            int ret = WSARecvFrom(fd, &wsabuf, 1, (ulong_t *)&bytes_recv, (LPDWORD)&flags, src_addr, addrlen, overlapped, 0);
+            int ret = WSARecvFrom(fd, &wsabuf, 1, (ulong_t *)&recv_bytes, (LPDWORD)&flags, src_addr, addrlen, overlapped, 0);
             if (ret < 0) {
                 error = socket_get_lasterror_wsa();
                 return ret;
             }
-            return bytes_recv;
+            return recv_bytes;
         #else 
             int ret = recvfrom(fd, buf, len, flags, src_addr, (socklen_t *)addrlen);
             if (ret < 0) {
@@ -472,18 +473,18 @@ public:
         ZRSOCKET_OVERLAPPED *overlapped, int *error)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            long bytes_send = 0;
+            long send_bytes = 0;
             WSABUF wsabuf;
             wsabuf.len = len;
             wsabuf.buf = (char *)buf;
-            int ret = WSASendTo(fd, &wsabuf, 1, (ulong_t *)&bytes_send, flags, dest_addr, addrlen, overlapped, 0);
+            int ret = WSASendTo(fd, &wsabuf, 1, (ulong_t *)&send_bytes, flags, dest_addr, addrlen, overlapped, 0);
             if (ret < 0) {
                 if (nullptr != error) {
                     *error = socket_get_lasterror_wsa();
                 }
                 return ret;
             }
-            return bytes_send;
+            return send_bytes;
         #else 
             int ret = sendto(fd, buf, len, flags, dest_addr, addrlen);
             if (ret < 0) {

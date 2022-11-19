@@ -138,6 +138,28 @@ public:
         return ret;
     }
 
+    SendResult send(ZRSOCKET_IOVEC *iovecs, int iovecs_count, std::list<InetAddr *> &to_addrs, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        SendResult ret = send_i(iovecs, iovecs_count, to_addrs, direct_send, priority, flags);
+        mutex_.unlock();
+        switch (ret) {
+        case SendResult::FAILURE:
+            event_loop_->delete_handler(this, 0);
+            break;
+        case SendResult::PUSH_QUEUE:
+            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            break;
+        case SendResult::SUCCESS:
+            break;
+        case SendResult::END:
+            break;
+        default:
+            break;
+        }
+        return ret;
+    }
+
 protected:
     SendResult send_i(const char *data, uint_t len, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
@@ -215,7 +237,7 @@ protected:
         }
         else {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags,
+            int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags, 
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
                 return SendResult::SUCCESS;
@@ -225,6 +247,18 @@ protected:
                 return SendResult::END;
             }
         }
+    }
+
+    SendResult send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, std::list<InetAddr *> &to_addrs, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        if (nullptr != event_loop_) {
+            if (direct_send) {
+            }
+        }
+        else {
+        }
+
+        return SendResult::END;
     }
 
     inline int handle_read()

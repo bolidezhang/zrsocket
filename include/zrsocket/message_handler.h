@@ -88,6 +88,26 @@ public:
         return ret;
     }
 
+    SendResult send(ZRSOCKET_IOVEC *iovecs, int iovecs_count, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        SendResult ret = send_i(iovecs, iovecs_count, direct_send, priority, flags);
+        mutex_.unlock();
+        switch (ret) {
+        case SendResult::FAILURE:
+            event_loop_->delete_handler(this, 0);
+            break;
+        case SendResult::PUSH_QUEUE:
+            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            break;
+        case SendResult::SUCCESS:
+            break;
+        default:
+            break;
+        }
+        return ret;
+    }
+
     int handle_open()
     {
         message_buffer_.reset();
@@ -220,6 +240,62 @@ protected:
         return SendResult::PUSH_QUEUE;
     }
 
+    SendResult send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        if (direct_send) {
+            if (queue_standby_->empty() && queue_active_->empty()) {
+                int error_id = 0;
+                int send_bytes = OSApi::socket_sendv(socket_, iovecs, iovecs_count, direct_send, flags, nullptr, error_id);
+                if (send_bytes > 0) {
+                    int i = 0;
+                    int iovec_remain_bytes = 0;
+                    int remain_bytes = send_bytes;
+                    for (; i<iovecs_count; ++i) {
+                        iovec_remain_bytes = iovecs[i].iov_len - remain_bytes;
+                        remain_bytes -= iovecs[i].iov_len;
+                        if (remain_bytes <= 0) {
+                            break;
+                        }
+                    }
+                    if (i < iovecs_count) {
+                        TSendBuffer buf(1024);
+                        if (iovec_remain_bytes > 0) {
+                            buf.write(iovecs[i].iov_base + iovec_remain_bytes, iovec_remain_bytes);
+                        }
+                        ++i;
+                        for (; i < iovecs_count; ++i) {
+                            buf.write(iovecs[i].iov_base, iovecs[i].iov_len);
+                        }
+                        queue_standby_->emplace_back(std::move(buf));
+                        return SendResult::PUSH_QUEUE;
+                    }
+
+                    return SendResult::SUCCESS;
+                }
+                else {
+                    last_errno_ = error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //非阻塞模式下正常情况
+                    }
+                    else {
+                        //非阻塞模式下异常情况
+                        return SendResult::FAILURE;
+                    }
+                }
+            }
+        }
+
+        TSendBuffer buf(1024);
+        for (int i = 0; i < iovecs_count; ++i) {
+            buf.write(iovecs[i].iov_base, iovecs[i].iov_len);
+        }
+        queue_standby_->emplace_back(std::move(buf));
+        return SendResult::PUSH_QUEUE;
+    }
+
     int handle_write()
     {
         mutex_.lock();
@@ -241,10 +317,12 @@ protected:
         if (iovecs_count > queue_size) {
             iovecs_count = queue_size;
         }
+        int iovecs_bytes = 0;
         auto iter = queue_active_->begin();
         for (int i = 0; i < iovecs_count; ++i) {
             iovecs[i].iov_len  = (*iter).data_size();
             iovecs[i].iov_base = (*iter).data();
+            iovecs_bytes += iovecs[i].iov_len;
             ++iter;
         }
 
@@ -252,7 +330,7 @@ protected:
         int error_id = 0;
         int send_bytes = OSApi::socket_sendv(socket_, iovecs, iovecs_count, 0, nullptr, error_id);
         if (send_bytes > 0) {
-            int data_size;
+            int data_size = 0;
             int i = 1;
             for (; i <= iovecs_count; ++i) {
                 data_size = queue_active_->front().data_size();
@@ -269,7 +347,7 @@ protected:
                 }
             }
 
-            if (i == iovecs_count) {
+            if (send_bytes == iovecs_bytes) {
                 return EventHandler::WriteResult::WRITE_RESULT_SUCCESS;
             }
             else {

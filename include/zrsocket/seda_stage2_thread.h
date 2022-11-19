@@ -84,7 +84,7 @@ public:
     {
         if ((slot < 0) || (slot >= (int)lru_timer_managers_.size()))
         {
-            return NULL;
+            return nullptr;
         }
         return lru_timer_managers_[slot].set_timer(0, param);
     }
@@ -179,7 +179,7 @@ private:
 
         SedaThreadIdleEvent  idle_event;
         SedaTimerExpireEvent timer_expire_event;
-        SedaEvent *event = NULL;
+        SedaEvent *event = nullptr;
 
         if (!timer_event_flag) {
             if (!idle_event_flag) { //timer_event_flag = false and idle_event_flag = false
