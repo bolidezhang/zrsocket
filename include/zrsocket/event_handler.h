@@ -15,10 +15,10 @@ ZRSOCKET_NAMESPACE_BEGIN
 //消息发送结果
 enum class SendResult
 {
-    FAILURE     = -1,       //发送失败
-    PUSH_QUEUE  = 0,        //入送队列
-    SUCCESS     = 1,        //发送成功
-    END         = 2,        //结束
+    FAILURE     = -100000,  // <0:发送失败
+    PUSH_QUEUE  = 0,        //==0:入送队列
+    SUCCESS     = 1,        //==1:发送成功
+    END         = 2,        //==2:结束
 };
 
 class EventSource;
@@ -56,15 +56,15 @@ public:
 
     enum HANDLE_ERROR
     {
-        ERROR_START_NUMBER      = 1000000,
+        ERROR_START_NUMBER      = -1000000,
 
-        ERROR_CLOSE_PASSIVE     = 1000001,          //被动关闭(远端关闭remote)
-        ERROR_CLOSE_ACTIVE      = 1000002,          //主动关闭(本地关闭local)
-        ERROR_CLOSE_RECV        = 1000003,          //接收时组包出错关闭
-        ERROR_CLOSE_SEND        = 1000004,          //发送数据出错关闭
-        ERROR_KEEPALIVE_TIMEOUT = 1000005,          //keepalive超时关闭
+        ERROR_CLOSE_PASSIVE     = -1000001,         //被动关闭(远端关闭remote)
+        ERROR_CLOSE_ACTIVE      = -1000002,         //主动关闭(本地关闭local)
+        ERROR_CLOSE_RECV        = -1000003,         //接收时组包出错关闭
+        ERROR_CLOSE_SEND        = -1000004,         //发送数据出错关闭
+        ERROR_KEEPALIVE_TIMEOUT = -1000005,         //keepalive超时关闭
 
-        ERROR_END_NUMBER        = 1009999,
+        ERROR_END_NUMBER        = -1009999,
     };
 
     enum WriteResult

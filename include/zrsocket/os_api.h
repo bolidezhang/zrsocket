@@ -103,12 +103,7 @@ public:
 
     static inline int socket_get_lasterror_wsa()
     {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            return WSAGetLastError();
-        #else
-            return errno;
-        #endif
-
+        return socket_get_lasterror();
     }
 
     static inline int socket_get_error(ZRSOCKET_SOCKET fd)
@@ -128,8 +123,7 @@ public:
 
     static inline int socket_close(ZRSOCKET_SOCKET fd)
     {
-        if ( (fd < 0) || (ZRSOCKET_INVALID_SOCKET == fd) )
-        {
+        if ((fd < 0) || (ZRSOCKET_INVALID_SOCKET == fd)) {
             return -1;
         }
         #ifdef ZRSOCKET_OS_WINDOWS
@@ -141,8 +135,7 @@ public:
 
     static inline int socket_shutdown(ZRSOCKET_SOCKET fd, int how)
     {
-        if ( (fd < 0) || (ZRSOCKET_INVALID_SOCKET == fd) )
-        {
+        if ((fd < 0) || (ZRSOCKET_INVALID_SOCKET == fd)) {
             return -1;
         }
         return shutdown(fd, how);
@@ -327,14 +320,14 @@ public:
             wsabuf.buf = (char *)buf;
             int ret = WSARecv(fd, &wsabuf, 1, (ulong_t *)&recv_bytes, (LPDWORD)&flags, overlapped, 0);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
                 return ret;
             }
             return recv_bytes;
         #else 
             int ret = recv(fd, buf, len, flags);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
             }
             return ret;
         #endif
@@ -347,7 +340,7 @@ public:
         while (recv_bytes < len) {
             ret = recv(fd, buf+ recv_bytes, len- recv_bytes, flags);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
                 return recv_bytes;
             }
             else
@@ -365,14 +358,14 @@ public:
             long recv_bytes = 0;
             int ret = WSARecv(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&recv_bytes, (LPDWORD)&flags, overlapped, 0);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
                 return ret;
             }
             return recv_bytes;
         #else
             int ret = readv(fd, iov, iovcnt);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
             }
             return ret;
         #endif
@@ -389,7 +382,7 @@ public:
             int ret = WSASend(fd, &wsabuf, 1, (ulong_t *)&send_bytes, flags, overlapped, 0);
             if (ret < 0) {
                 if (nullptr != error) {
-                    *error = socket_get_lasterror_wsa();
+                    *error = socket_get_lasterror();
                 }
                 return ret;
             }
@@ -398,7 +391,7 @@ public:
             int ret = send(fd, buf, len, flags);
             if (ret < 0) {
                 if (nullptr != error) {
-                    *error = socket_get_lasterror_wsa();
+                    *error = socket_get_lasterror();
                 }
             }
             return ret;
@@ -414,7 +407,7 @@ public:
             ret = send(fd, buf+ send_bytes, len-send_bytes, flags);
             if (ret < 0) {
                 if (nullptr != error) {
-                    *error = socket_get_lasterror_wsa();
+                    *error = socket_get_lasterror();
                 }
                 return send_bytes;
             }
@@ -433,14 +426,14 @@ public:
             long send_bytes = 0;
             int ret = WSASend(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&send_bytes, flags, overlapped, 0);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
                 return ret;
             }
             return send_bytes;
         #else
             int ret = writev(fd, iov, iovcnt);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
             }
             return ret;
         #endif
@@ -456,14 +449,14 @@ public:
             wsabuf.buf = (char *)buf;
             int ret = WSARecvFrom(fd, &wsabuf, 1, (ulong_t *)&recv_bytes, (LPDWORD)&flags, src_addr, addrlen, overlapped, 0);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
                 return ret;
             }
             return recv_bytes;
         #else 
             int ret = recvfrom(fd, buf, len, flags, src_addr, (socklen_t *)addrlen);
             if (ret < 0) {
-                error = socket_get_lasterror_wsa();
+                error = socket_get_lasterror();
             }
             return ret;
         #endif
@@ -480,7 +473,7 @@ public:
             int ret = WSASendTo(fd, &wsabuf, 1, (ulong_t *)&send_bytes, flags, dest_addr, addrlen, overlapped, 0);
             if (ret < 0) {
                 if (nullptr != error) {
-                    *error = socket_get_lasterror_wsa();
+                    *error = socket_get_lasterror();
                 }
                 return ret;
             }
@@ -489,11 +482,54 @@ public:
             int ret = sendto(fd, buf, len, flags, dest_addr, addrlen);
             if (ret < 0) {
                 if (nullptr != error) {
-                    *error = socket_get_lasterror_wsa();
+                    *error = socket_get_lasterror();
                 }
             }
             return ret;
         #endif
+    }
+
+    static inline int socket_sendtov(ZRSOCKET_SOCKET  fd, const ZRSOCKET_IOVEC *iov, int iovcnt, int flags, const struct sockaddr *dest_addr, int addrlen,
+        ZRSOCKET_OVERLAPPED *overlapped, int *error)
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        long send_bytes = 0;
+        int ret = WSASendTo(fd, (WSABUF *)iov, iovcnt, (ulong_t *)&send_bytes, flags, dest_addr, addrlen, overlapped, 0);
+        if (ret < 0) {
+            if (nullptr != error) {
+                *error = socket_get_lasterror();
+            }
+            return ret;
+        }
+        return send_bytes;
+#else
+        /*
+        struct msghdr {
+            void            *msg_name;        // protocol address
+            socklen_t        msg_namelen;     // size of protocol address
+            struct iovec    *msg_iov;         // scatter/gather array
+            int              msg_iovlen;      // elements in msg_iov
+            void            *msg_control;     // ancillary data (cmsghdr struct)
+            socklen_t        msg_controllen;  // length of ancillary data
+            int              msg_flags;       // flags returned by recvmsg()
+        };
+        */
+        struct msghdr msg;
+        msg.msg_name        = (struct sockaddr *)dest_addr;
+        msg.msg_namelen     = addrlen;
+        msg.msg_iov         = (ZRSOCKET_IOVEC *)iov;
+        msg.msg_iovlen      = iovcnt;
+        msg.msg_control     = nullptr;
+        msg.msg_controllen  = 0;
+        msg.msg_flags       = flags;
+        int ret = sendmsg(fd, &msg, flags);
+        if (ret < 0) {
+            if (nullptr != error) {
+                *error = socket_get_lasterror();
+            }
+        }
+        return ret;
+#endif
     }
 
     //sleep以毫秒为单位

@@ -1,7 +1,6 @@
 ﻿#ifndef ECHO_SERVER_H
 #define ECHO_SERVER_H
 #include "zrsocket/zrsocket.h"
-#include <forward_list>
 #include "message.h"
 
 using namespace zrsocket;
@@ -58,13 +57,33 @@ public:
         *((char *)data + len) = '\0';
         printf("udp handle_read data:%s, len:%d\n", data, len);
         *((char *)data + len) = data_end;
-        send(data, len, from_addr, false);
-        send(data, len, from_addr, false);
-        send("123", 3, from_addr, false);
+        send(data, len, from_addr, true);
+        send(data, len, from_addr, true);
+        send("123", 3, from_addr, true);
 
         LoopData *loop_data = static_cast<LoopData *>(event_loop_->get_loop_data());
         loop_data->a = 999;
         loop_data->b = 666;
+
+        std::list<InetAddr> addrs;
+        addrs.push_back(from_addr);
+        //addrs.push_back(from_addr);
+        std::vector<ZRSOCKET_IOVEC> iovecs(2);
+        iovecs[0].iov_base = (char *)data;
+        iovecs[0].iov_len  = len;
+        iovecs[1].iov_base = (char *)data;
+        iovecs[1].iov_len  = len;
+
+        int ret = 0;
+        ret = send(iovecs.data(), iovecs.size(), from_addr, true, 0, 0);
+        printf("sendv1 ret:%d\n", ret);
+        //ret = send(iovecs.data(), iovecs.size(), from_addr, false, 0, 0);
+        //printf("sendv2 ret:%d\n", ret);
+
+        ret = send(iovecs.data(), iovecs.size(), addrs.begin(), addrs.end(), [](InetAddr& addr) {return &addr; }, true, 0, 0);
+        printf("sendvv1 ret:%d\n", ret);
+        //ret = send(iovecs.data(), iovecs.size(), addrs.begin(), addrs.end(), [](InetAddr &addr){return &addr;}, false, 0, 0);
+        //printf("sendvv2 ret:%d\n", ret);
 
         return 0;
     }

@@ -36,6 +36,7 @@ int TestAppServer::init()
     decoder_config_.length_field_length_ = 2;
     decoder_config_.max_message_length_ = 16384;
     decoder_config_.update();
+    main_event_loop_.buffer_size();
     main_event_loop_.open(1024, 1024);
     recv_messge_count_.store(0, std::memory_order_relaxed);
     sub_event_loop_.init(std::thread::hardware_concurrency(), 10000, 2);
@@ -81,6 +82,17 @@ int TestAppServer::init()
 
 int main(int argc, char *argv[])
 {
+#define TEST 1
+#ifdef TEST
+    {
+        //std::stable_sort()
+        //std::vector<int> v1;
+        //v1.erase()
+        //std::sort()
+        //std::for_each()
+    }
+#endif
+
     TestAppServer &app = TestAppServer::instance();
     if (argc > 1) {
         app.port_ = atoi(argv[1]);

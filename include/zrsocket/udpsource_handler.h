@@ -55,10 +55,10 @@ public:
 
             for (int i = 0; i < recv_mmsgs_->msgs_count; ++i) {
                 recv_mmsgs_->iovecs[i].iov_base = recv_buf->buffer() + MAX_UDPMSG_SIZE * i;
-                recv_mmsgs_->iovecs[i].iov_len = MAX_UDPMSG_SIZE;
-                recv_mmsgs_->msgs[i].msg_hdr.msg_iov = recv_mmsgs_->iovecs + i;
-                recv_mmsgs_->msgs[i].msg_hdr.msg_iovlen = 1;
-                recv_mmsgs_->msgs[i].msg_hdr.msg_name = recv_mmsgs_->from_addrs[i].get_addr();
+                recv_mmsgs_->iovecs[i].iov_len  = MAX_UDPMSG_SIZE;
+                recv_mmsgs_->msgs[i].msg_hdr.msg_iov     = recv_mmsgs_->iovecs + i;
+                recv_mmsgs_->msgs[i].msg_hdr.msg_iovlen  = 1;
+                recv_mmsgs_->msgs[i].msg_hdr.msg_name    = recv_mmsgs_->from_addrs[i].get_addr();
                 recv_mmsgs_->msgs[i].msg_hdr.msg_namelen = recv_mmsgs_->from_addrs[i].get_addr_size();
                 recv_mmsgs_->msgs[i].msg_hdr.msg_control = nullptr;
                 recv_mmsgs_->msgs[i].msg_hdr.msg_controllen = 0;
@@ -94,86 +94,83 @@ public:
         return nullptr;
     }
 
-    SendResult send(const char *data, uint_t len, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    int send(const char *data, uint_t len, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
         mutex_.lock();
-        SendResult ret = send_i(data, len, to_addr, direct_send, priority, flags);
+        int ret = send_i(data, len, to_addr, direct_send, priority, flags);
         mutex_.unlock();
-        switch (ret) {
-            case SendResult::FAILURE:
-                event_loop_->delete_handler(this, 0);
-                break;
-            case SendResult::PUSH_QUEUE:
-                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
-                break;
-            case SendResult::SUCCESS:
-                break;
-            case SendResult::END:
-                break;
-            default:
-                break;
-        }
-        return ret;
-    }
 
-    SendResult send(TSendBuffer &msg, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
-    {
-        mutex_.lock();
-        SendResult ret = send_i(msg, to_addr, direct_send, priority, flags);
-        mutex_.unlock();
-        switch (ret) {
-            case SendResult::FAILURE:
-                event_loop_->delete_handler(this, 0);
-                break;
-            case SendResult::PUSH_QUEUE:
-                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
-                break;
-            case SendResult::SUCCESS:
-                break;
-            case SendResult::END:
-                break;
-            default:
-                break;
-        }
-        return ret;
-    }
-
-    SendResult send(ZRSOCKET_IOVEC *iovecs, int iovecs_count, std::list<InetAddr *> &to_addrs, bool direct_send = true, int priority = 0, int flags = 0)
-    {
-        mutex_.lock();
-        SendResult ret = send_i(iovecs, iovecs_count, to_addrs, direct_send, priority, flags);
-        mutex_.unlock();
-        switch (ret) {
-        case SendResult::FAILURE:
-            event_loop_->delete_handler(this, 0);
-            break;
-        case SendResult::PUSH_QUEUE:
+        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
             event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
-            break;
-        case SendResult::SUCCESS:
-            break;
-        case SendResult::END:
-            break;
-        default:
-            break;
+        }
+        else if (ret < 0) {
+            event_loop_->delete_handler(this, 0);
         }
         return ret;
     }
+
+    int send(TSendBuffer &msg, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        int ret = send_i(msg, to_addr, direct_send, priority, flags);
+        mutex_.unlock();
+
+        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        }
+        else if (ret < 0) {
+            event_loop_->delete_handler(this, 0);
+        }
+        return ret;
+    }
+
+    int send(ZRSOCKET_IOVEC *iovecs, int iovecs_count, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        int ret = send_i(iovecs, iovecs_count, to_addr, direct_send, priority, flags);
+        mutex_.unlock();
+
+        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        }
+        else if (ret < 0) {
+            event_loop_->delete_handler(this, 0);
+        }
+        return ret;
+    }
+
+    //返回已发送的消息数
+    template <class TAddrsIt, class TFnGetInetAddr>
+    int send(ZRSOCKET_IOVEC *iovecs, int iovecs_count, TAddrsIt addrs_first, TAddrsIt addrs_last, TFnGetInetAddr get_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+        mutex_.lock();
+        int ret = send_i(iovecs, iovecs_count, addrs_first, addrs_last, get_addr, direct_send, priority, flags);
+        mutex_.unlock();
+
+        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        }
+        else if (ret < 0) {
+            event_loop_->delete_handler(this, 0);
+        }
+        return ret;
+    }   
 
 protected:
-    SendResult send_i(const char *data, uint_t len, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    int send_i(const char *data, uint_t len, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
         if (nullptr != event_loop_) {
             if (direct_send) {
                 if (queue_standby_->empty() && queue_active_->empty()) {
                     //直接发送数据
                     int error_id = 0;
-                    int send_bytes = OSApi::socket_sendto(socket_, data, len, flags,
+                    int send_bytes = OSApi::socket_sendto(socket_, data, len, flags, 
                         to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
                     if (send_bytes > 0) {
-                        return SendResult::SUCCESS;
+                        return static_cast<int>(SendResult::SUCCESS);
                     }
                     else {
+                        last_errno_ = -error_id;
                         if ((ZRSOCKET_EAGAIN == error_id) ||
                             (ZRSOCKET_EWOULDBLOCK == error_id) ||
                             (ZRSOCKET_IO_PENDING == error_id) ||
@@ -181,84 +178,268 @@ protected:
                             //非阻塞模式下正常情况
                         }
                         else { //非阻塞模式下异常情况
-                            last_errno_ = error_id;
-                            return SendResult::FAILURE;
+                            return last_errno_;
                         }
                     }
                 }
             }
 
             queue_standby_->emplace_back(data, len, to_addr);
-            return SendResult::PUSH_QUEUE;
+            return static_cast<int>(SendResult::PUSH_QUEUE);
         }
         else {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendto(socket_, data, len, flags,
+            int send_bytes = OSApi::socket_sendto(socket_, data, len, flags, 
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
-                return SendResult::SUCCESS;
+                return static_cast<int>(SendResult::SUCCESS);
             }
             else {
-                last_errno_ = error_id;
-                return SendResult::END;
+                last_errno_ = -error_id;
+                return last_errno_;
             }
         }
     }
 
-    SendResult send_i(TSendBuffer &msg, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    int send_i(TSendBuffer &msg, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
         if (nullptr != event_loop_) {
-            if (direct_send) {
-                if (queue_standby_->empty() && queue_active_->empty()) {
-                    int error_id = 0;
-                    int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags,
-                        to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
-                    if (send_bytes > 0) {
-                        return SendResult::SUCCESS;
+            if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
+                int error_id = 0;
+                int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags, 
+                    to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
+                if (send_bytes > 0) {
+                    return static_cast<int>(SendResult::SUCCESS);
+                }
+                else {
+                    last_errno_ = -error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //非阻塞模式下正常情况
                     }
                     else {
-                        if ((ZRSOCKET_EAGAIN == error_id) ||
-                            (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                            (ZRSOCKET_IO_PENDING == error_id) ||
-                            (ZRSOCKET_ENOBUFS == error_id)) {
-                            //非阻塞模式下正常情况
-                        }
-                        else {
-                            //非阻塞模式下异常情况
-                            last_errno_ = error_id;
-                            return SendResult::FAILURE;
-                        }
+                        //非阻塞模式下异常情况
+                        return last_errno_;
                     }
                 }
             }
 
             queue_standby_->emplace_back(msg, to_addr);
-            return SendResult::PUSH_QUEUE;
+            return static_cast<int>(SendResult::PUSH_QUEUE);
         }
         else {
             int error_id = 0;
             int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags, 
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
-                return SendResult::SUCCESS;
+                return static_cast<int>(SendResult::SUCCESS);
             }
             else {
-                last_errno_ = error_id;
-                return SendResult::END;
+                last_errno_ = -error_id;
+                return last_errno_;
             }
         }
     }
 
-    SendResult send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, std::list<InetAddr *> &to_addrs, bool direct_send = true, int priority = 0, int flags = 0)
+    int send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, InetAddr &to_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
         if (nullptr != event_loop_) {
-            if (direct_send) {
+            if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
+                int error_id = 0;
+                int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                    to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
+                if (send_bytes > 0) {
+                    return static_cast<int>(SendResult::SUCCESS);
+                }
+                else {
+                    last_errno_ = -error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //非阻塞模式下正常情况
+                    }
+                    else {
+                        //非阻塞模式下异常情况
+                        return last_errno_;
+                    }
+                }
             }
+
+            UdpBuffer buffer;
+            buffer.buf_.reserve(1024);
+            for (int i = 0; i < iovecs_count; ++i) {
+                buffer.buf_.write(static_cast<const char *>(iovecs[i].iov_base), iovecs[i].iov_len);
+            }
+            buffer.to_addrs_.push_back(to_addr);
+            queue_standby_->push_back(std::move(buffer));
+            return static_cast<int>(SendResult::PUSH_QUEUE);
         }
         else {
+            int error_id = 0;
+            int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags,
+                to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
+            if (send_bytes > 0) {
+                return static_cast<int>(SendResult::SUCCESS);
+            }
+            else {
+                last_errno_ = -error_id;
+                return last_errno_;
+            }
         }
+    }
 
-        return SendResult::END;
+    //返回已发送的消息数
+    template <class TAddrsIt, class TfnGetInetAddr>
+    int send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, TAddrsIt addrs_first, TAddrsIt addrs_last, TfnGetInetAddr get_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    {
+#ifdef ZRSOCKET_HAVE_RECVSENDMMSG
+        if (nullptr != event_loop_) {
+            int sendmsg_count = 0;
+            if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
+                int  i = 0;
+                std::vector<struct mmsghdr> msgs;
+                msgs.reserve(100);
+                struct mmsghdr msg;
+                for (auto iter = addrs_first; iter != addrs_last; ++iter) {
+                    InetAddr *addr = get_addr(*iter);
+                    msg.msg_len = 0;
+                    msg.msg_hdr.msg_name    = addr->get_addr();
+                    msg.msg_hdr.msg_namelen = addr->get_addr_size();
+                    msg.msg_hdr.msg_iov     = iovecs;
+                    msg.msg_hdr.msg_iovlen  = iovecs_count;
+                    msg.msg_hdr.msg_control = nullptr;
+                    msg.msg_hdr.msg_controllen = 0;
+                    msg.msg_hdr.msg_flags = flags;
+                    msgs.push_back(msg);
+                    ++i;
+                }
+
+                sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), flags);
+                if (static_cast<size_t>(sendmsg_count) == msgs.size()) {
+                    return sendmsg_count;
+                }
+                else if (sendmsg_count <= 0) {
+                    int error_id = OSApi::socket_get_lasterror();
+                    last_errno_  = -error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //非阻塞模式下正常情况
+                    }
+                    else {
+                        //非阻塞模式下异常情况
+                        return last_errno_;
+                    }
+                }
+            }
+
+            UdpBuffer buffer;
+            buffer.buf_.reserve(1024);
+            for (int i = 0; i < iovecs_count; ++i) {
+                buffer.buf_.write(static_cast<const char *>(iovecs[i].iov_base), iovecs[i].iov_len);
+            }
+            auto iter = addrs_first;
+            for (int i = 0; i < sendmsg_count; ++i) {
+                ++iter;
+            }
+            for (; iter != addrs_last; ++iter) {
+                buffer.to_addrs_.push_back(*get_addr(*iter));
+            }
+            queue_standby_->push_back(std::move(buffer));
+
+            return sendmsg_count;
+        }
+        else {
+            int  i = 0;
+            std::vector<struct mmsghdr> msgs;
+            msgs.reserve(100);
+            struct mmsghdr msg;
+            for (auto iter = addrs_first; iter != addrs_last; ++iter) {
+                InetAddr *addr = get_addr(*iter);
+                msg.msg_len = 0;
+                msg.msg_hdr.msg_name    = addr->get_addr();
+                msg.msg_hdr.msg_namelen = addr->get_addr_size();
+                msg.msg_hdr.msg_iov     = iovecs;
+                msg.msg_hdr.msg_iovlen  = iovecs_count;
+                msg.msg_hdr.msg_control = nullptr;
+                msg.msg_hdr.msg_controllen = 0;
+                msg.msg_hdr.msg_flags = 0;
+                msgs.push_back(msg);
+                ++i;
+            }
+
+            int sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), 0);
+            if (sendmsg_count <= 0) {
+                int error_id = OSApi::socket_get_lasterror();
+                last_errno_  = -error_id;
+            }
+
+            return sendmsg_count;
+        }
+#else
+        int sendmsg_count = 0;
+        if (nullptr != event_loop_) {
+            auto iter = addrs_first;
+            if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
+                for (; iter != addrs_last; ++iter) {
+                    InetAddr *addr = get_addr(*iter);
+                    int error_id = 0;
+                    int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                        addr->get_addr(), addr->get_addr_size(), nullptr, &error_id);
+                    if (send_bytes <= 0) {
+                        last_errno_ = -error_id;
+                        if ((ZRSOCKET_EAGAIN == error_id) ||
+                            (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                            (ZRSOCKET_IO_PENDING == error_id) ||
+                            (ZRSOCKET_ENOBUFS == error_id)) {
+                            //非阻塞模式下正常情况
+                            break;
+                        }
+                        else {
+                            //非阻塞模式下异常情况
+                            return sendmsg_count;
+                        }
+                    }
+                    ++sendmsg_count;
+                }
+            }
+
+
+            UdpBuffer buffer;
+            buffer.buf_.reserve(1024);
+            for (int i = 0; i < iovecs_count; ++i) {
+                buffer.buf_.write(static_cast<const char *>(iovecs[i].iov_base), iovecs[i].iov_len);
+            }
+            for (; iter != addrs_last; ++iter) {
+                buffer.to_addrs_.push_back(*get_addr(*iter));
+            }
+            queue_standby_->push_back(std::move(buffer));
+
+            return sendmsg_count;
+
+        }
+        else {
+            for (auto iter = addrs_first; iter != addrs_last; ++iter) {
+                InetAddr *addr = get_addr(*iter);
+                int error_id = 0;
+                int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                    addr->get_addr(), addr->get_addr_size(), nullptr, &error_id);
+                if (send_bytes <= 0) {
+                    last_errno_ = -error_id;
+                    return sendmsg_count;
+                }
+                ++sendmsg_count;
+            }
+
+            return sendmsg_count;
+        }
+#endif
+
+        return 0;
     }
 
     inline int handle_read()
@@ -271,7 +452,7 @@ protected:
         char       *loop_buf = recv_buffer->buffer();
         int         source_buf_size = source_->recvbuffer_size();
 
-        int   error = 0;
+        int   error_id = 0;
         int   ret = 0;
         char *buf = nullptr;
         int   buf_size = 0;
@@ -289,16 +470,18 @@ protected:
                 buf_size = source_buf_size;
             }
 
-            ret = OSApi::socket_recvfrom(socket_, buf, buf_size, 0, addr, &addrlen, nullptr, error);
+            ret = OSApi::socket_recvfrom(socket_, buf, buf_size, 0, addr, &addrlen, nullptr, error_id);
             if (ret > 0) {
                 handle_read(buf, ret, is_alloc_buf, from_addr_);
             }
             else {
-                if ((ZRSOCKET_EAGAIN == error) || (ZRSOCKET_EWOULDBLOCK == error) || (ZRSOCKET_EINTR == error)) {
+                int error_id = OSApi::socket_get_lasterror();
+                last_errno_ = -error_id;
+                if ((ZRSOCKET_EAGAIN == error_id) || (ZRSOCKET_EWOULDBLOCK == error_id) || (ZRSOCKET_EINTR == error_id)) {
                     //非阻塞模式下正常情况
                     return 0;
                 }
-                return -1;
+                return last_errno_;
             }
         } while (1);
 #else
@@ -307,6 +490,7 @@ protected:
             retval = ::recvmmsg(socket_, recv_mmsgs_->msgs, recv_mmsgs_->msgs_count, 0, nullptr);
             if (retval <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
+                last_errno_  = -error_id;
                 if ((ZRSOCKET_EAGAIN == error_id) ||
                     (ZRSOCKET_EWOULDBLOCK == error_id) ||
                     (ZRSOCKET_IO_PENDING == error_id) ||
@@ -316,8 +500,7 @@ protected:
                 }
                 else {
                     //非阻塞模式下异常情况
-                    last_errno_ = error_id;
-                    return -1;
+                    return last_errno_;
                 }
             }
 
@@ -366,9 +549,9 @@ protected:
                     iovecs[msgs_count].iov_base = (*iter).buf_.data();
                     iovecs[msgs_count].iov_len  = (*iter).buf_.data_size();
                     send_mmsgs_[msgs_count].msg_len = 0;
-                    send_mmsgs_[msgs_count].msg_hdr.msg_iov = iovecs + msgs_count;
-                    send_mmsgs_[msgs_count].msg_hdr.msg_iovlen = 1;
-                    send_mmsgs_[msgs_count].msg_hdr.msg_name = (*iter_addr).get_addr();
+                    send_mmsgs_[msgs_count].msg_hdr.msg_iov     = iovecs + msgs_count;
+                    send_mmsgs_[msgs_count].msg_hdr.msg_iovlen  = 1;
+                    send_mmsgs_[msgs_count].msg_hdr.msg_name    = (*iter_addr).get_addr();
                     send_mmsgs_[msgs_count].msg_hdr.msg_namelen = (*iter_addr).get_addr_size();
                     send_mmsgs_[msgs_count].msg_hdr.msg_control = nullptr;
                     send_mmsgs_[msgs_count].msg_hdr.msg_controllen = 0;
@@ -437,24 +620,30 @@ protected:
         int error_id = 0;
         do {
             UdpBuffer &buf = queue_active_->front();
-            if (OSApi::socket_sendto(socket_, buf.buf_.data(), buf.buf_.data_size(), 0, 
-                buf.to_addr_.get_addr(), buf.to_addr_.get_addr_size(), nullptr, &error_id) > 0) {
-                queue_active_->pop_front();
-            }
-            else {
-                if ((ZRSOCKET_EAGAIN == error_id) ||
-                    (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                    (ZRSOCKET_IO_PENDING == error_id) ||
-                    (ZRSOCKET_ENOBUFS == error_id)) {
-                    //非阻塞模式下正常情况
-                    return EventHandler::WriteResult::WRITE_RESULT_PART;
+
+            auto iter_addr = buf.to_addrs_.begin();
+            while (iter_addr != buf.to_addrs_.end()) {
+                if (OSApi::socket_sendto(socket_, buf.buf_.data(), buf.buf_.data_size(), 0, 
+                    (*iter_addr).get_addr(), (*iter_addr).get_addr_size(), nullptr, &error_id) > 0) {
+                    iter_addr = buf.to_addrs_.erase(iter_addr);
                 }
                 else {
-                    //非阻塞模式下异常情况
-                    last_errno_ = error_id;
-                    return EventHandler::WriteResult::WRITE_RESULT_FAILURE;
+                    last_errno_ = -error_id;
+                    if ((ZRSOCKET_EAGAIN == error_id) ||
+                        (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                        (ZRSOCKET_IO_PENDING == error_id) ||
+                        (ZRSOCKET_ENOBUFS == error_id)) {
+                        //非阻塞模式下正常情况
+                        return EventHandler::WriteResult::WRITE_RESULT_PART;
+                    }
+                    else {
+                        //非阻塞模式下异常情况
+                        return EventHandler::WriteResult::WRITE_RESULT_FAILURE;
+                    }
                 }
             }
+
+            queue_active_->pop_front();
         } while (!queue_active_->empty());
 #endif
 
@@ -464,10 +653,16 @@ protected:
 private:
     InetAddr from_addr_;
 
-#ifdef ZRSOCKET_HAVE_RECVSENDMMSG
     class UdpBuffer
     {
     public:
+        UdpBuffer() = default;
+        ~UdpBuffer()
+        {
+            buf_.clear();
+            to_addrs_.clear();
+        }
+
         UdpBuffer(const char *buf, uint_t len, InetAddr &to_addr)
             : buf_(buf, len)
         {
@@ -509,52 +704,6 @@ private:
         TSendBuffer buf_;
         std::deque<InetAddr> to_addrs_;
     };
-#else
-    class UdpBuffer
-    {
-    public:
-        UdpBuffer(const char *buf, uint_t len, InetAddr &to_addr)
-            : buf_(buf, len)
-            , to_addr_(std::move(to_addr))
-        {
-        }
-
-        UdpBuffer(TSendBuffer &buf, InetAddr &to_addr)
-            : buf_(std::move(buf))
-            , to_addr_(std::move(to_addr))
-        {
-        }
-
-        UdpBuffer(const UdpBuffer &udp_buffer)
-            : buf_(std::move(udp_buffer.buf_))
-            , to_addr_(std::move(udp_buffer.to_addr_))
-        {
-        }
-
-        UdpBuffer(UdpBuffer &&udp_buffer)
-            : buf_(std::move(udp_buffer.buf_))
-            , to_addr_(std::move(udp_buffer.to_addr_))
-        {
-        }
-
-        UdpBuffer & operator= (const UdpBuffer &udp_buffer)
-        {
-            buf_ = udp_buffer.buf_;
-            to_addr_ = udp_buffer.to_addr_;
-            return *this;
-        }
-
-        UdpBuffer & operator= (UdpBuffer &&udp_buffer) noexcept
-        {
-            buf_ = std::move(udp_buffer.buf_);
-            to_addr_ = std::move(udp_buffer.to_addr_);
-            return *this;
-        }
-
-        TSendBuffer buf_;
-        InetAddr    to_addr_;
-    };
-#endif
 
     typedef std::deque<UdpBuffer> SEND_QUEUE;
     SEND_QUEUE      queue1_;
@@ -569,7 +718,7 @@ private:
 
     //const int MAX_UDPMSG_SIZE = 2048;
     //const int MTU_SIZE = 2048;
-    class RECVMMSGS 
+    class RECVMMSGS
     {
     public:
         RECVMMSGS(int count)

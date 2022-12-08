@@ -131,7 +131,7 @@ EXCEPTION_EXIT_PROC:
         return 0;
     }
 
-    SendResult send(const char *buf, int len, InetAddr &to_addr)
+    int send(const char *buf, int len, InetAddr &to_addr)
     {
         return udpsource_handler_.send(buf, len, to_addr);
     }
