@@ -61,13 +61,15 @@ public:
         send(data, len, from_addr, true);
         send("123", 3, from_addr, true);
 
-        LoopData *loop_data = static_cast<LoopData *>(event_loop_->get_loop_data());
-        loop_data->a = 999;
-        loop_data->b = 666;
+        if (nullptr != event_loop_) {
+            LoopData *loop_data = static_cast<LoopData *>(event_loop_->get_loop_data());
+            loop_data->a = 999;
+            loop_data->b = 666;
+        }
 
-        std::list<InetAddr> addrs;
-        addrs.push_back(from_addr);
-        //addrs.push_back(from_addr);
+        std::list<InetAddr> to_addrs;
+        to_addrs.push_back(from_addr);
+        to_addrs.push_back(from_addr);
         std::vector<ZRSOCKET_IOVEC> iovecs(2);
         iovecs[0].iov_base = (char *)data;
         iovecs[0].iov_len  = len;
@@ -80,13 +82,14 @@ public:
         //ret = send(iovecs.data(), iovecs.size(), from_addr, false, 0, 0);
         //printf("sendv2 ret:%d\n", ret);
 
-        ret = send(iovecs.data(), iovecs.size(), addrs.begin(), addrs.end(), [](InetAddr& addr) {return &addr; }, true, 0, 0);
+        ret = send(iovecs.data(), iovecs.size(), to_addrs.begin(), to_addrs.end(), [](InetAddr &addr){return &addr;}, true, 0, 0);
         printf("sendvv1 ret:%d\n", ret);
-        //ret = send(iovecs.data(), iovecs.size(), addrs.begin(), addrs.end(), [](InetAddr &addr){return &addr;}, false, 0, 0);
+        //ret = send(iovecs.data(), iovecs.size(), to_addrs.begin(), to_addrs.end(), [](InetAddr &addr){return &addr;}, false, 0, 0);
         //printf("sendvv2 ret:%d\n", ret);
 
         return 0;
     }
+
 };
 
 class BizStageHandler : public zrsocket::SedaStageHandler
@@ -158,6 +161,7 @@ public:
 
     int do_signal(int signum)
     {
+        udp_source_.close();
         sub_event_loop_.loop_thread_stop();
         printf("do_signal signum:%d\n", signum);
         return 0;

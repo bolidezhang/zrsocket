@@ -19,7 +19,7 @@
     #pragma once
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG
     #define ZRSOCKET_DEBUG
 #else
     #define ZRSOCKET_NDEBUG

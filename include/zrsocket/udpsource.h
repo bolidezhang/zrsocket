@@ -37,10 +37,12 @@ public:
         return &local_addr_;
     }
 
-    int set_config(bool is_recv_thread = false, uint_t recvbuffer_size = 2048)
+    int set_config(bool is_recv_thread = false, uint_t recvbuffer_size = 2048, uint_t recv_msgs_count = 16, uint_t recv_timeout = 2000000)
     {
         is_recv_thread_  = is_recv_thread;
         recvbuffer_size_ = recvbuffer_size;
+        recv_msgs_count_ = recv_msgs_count;
+        recv_timeout_    = recv_timeout;
         return 0;
     }
 
@@ -62,12 +64,17 @@ public:
         if (ZRSOCKET_INVALID_SOCKET == fd) {
             return -1;
         }
+
         if (is_bind_localaddr) {
             ret = local_addr_.set(local_name, local_port, is_ipv6);
             if (ret < 0) {
                 ret = -2;
                 goto EXCEPTION_EXIT_PROC;
             }
+            if (nullptr == event_loop_) {
+                is_recv_thread_ = true;
+            }
+
             OSApi::socket_set_reuseaddr(fd, 1);
             OSApi::socket_set_reuseport(fd, 1);
             ret = OSApi::socket_bind(fd, local_addr_.get_addr(), local_addr_.get_addr_size());
@@ -118,14 +125,15 @@ EXCEPTION_EXIT_PROC:
     int close()
     {
         if (nullptr != handler_) {
+            recv_thread_group_.stop();
             if (is_recv_thread_) {
-                recv_thread_group_.stop();
                 udpsource_handler_.handle_close();
             }
-            else {
+            if (nullptr != event_loop_) {
                 event_loop_->delete_handler(&udpsource_handler_, 0);
             }
             udpsource_handler_.close();
+            recv_thread_group_.join();
             handler_ = nullptr;
         }
         return 0;
@@ -144,6 +152,52 @@ private:
         ZRSOCKET_SOCKET fd = udpsource->udpsource_handler_.socket();
         Thread *thread = udpsource->recv_thread_group_.get_thread(thread_index);
 
+#ifdef ZRSOCKET_HAVE_RECVSENDMMSG
+        int max_udpmsg_size = udpsource_handler->get_max_udpmsg_size();
+        int msgs_count = udpsource->recv_msgs_count_;
+        ByteBuffer recv_buf(max_udpmsg_size * msgs_count);
+        std::vector<struct mmsghdr> msgs(msgs_count);
+        std::vector<ZRSOCKET_IOVEC> iovecs(msgs_count);
+        std::vector<InetAddr> from_addrs(msgs_count);
+
+        for (int i = 0; i < msgs_count; ++i) {
+            iovecs[i].iov_base          = recv_buf.data() + max_udpmsg_size * i;
+            iovecs[i].iov_len           = max_udpmsg_size;
+            msgs[i].msg_hdr.msg_iov     = &iovecs[i];
+            msgs[i].msg_hdr.msg_iovlen  = 1;
+            msgs[i].msg_hdr.msg_name    = from_addrs[i].get_addr();
+            msgs[i].msg_hdr.msg_namelen = from_addrs[i].get_addr_size();
+            msgs[i].msg_hdr.msg_control = nullptr;
+            msgs[i].msg_hdr.msg_controllen = 0;
+            msgs[i].msg_hdr.msg_flags = 0;
+        }
+
+        int retval = 0;
+        struct timespec timeout;
+        timeout.tv_sec  = udpsource->recv_timeout_ / 1000000000;
+        timeout.tv_nsec = udpsource->recv_timeout_ - timeout.tv_sec * 1000000000;
+        while (thread->state() == Thread::State::RUNNING) {
+            retval = ::recvmmsg(fd, msgs.data(), msgs.size(), 0, &timeout);
+            if (retval > 0) {
+
+#ifdef ZRSOCKET_DEBUG
+                printf("msgs_count:%d, recvmmsg_return_value:%d\n", msgs_count, retval);
+#endif // DEBUG
+
+                for (int i = 0; i < retval; ++i) {
+
+#ifdef ZRSOCKET_DEBUG
+                    printf("recvmmsg: id:%d, recvbytes:%d\n", i, msgs[i].msg_len);
+#endif // DEBUG
+
+                    udpsource_handler->handle_read((const char *)iovecs[i].iov_base, msgs[i].msg_len, false, from_addrs[i]);
+                }
+            }
+            else if (retval < 0) {
+                return retval;
+            }
+        }
+#else
         InetAddr    from_addr(udpsource->local_addr()->is_ipv6());
         sockaddr   *addr    = from_addr.get_addr();
         int         addrlen = from_addr.get_addr_size();
@@ -151,9 +205,9 @@ private:
         int         buf_size = udpsource->recvbuffer_size();
         ByteBuffer  source_buf(buf_size);
 
-        int     ret     = 0;
-        int     error   = 0;
-        char   *buf     = nullptr;
+        int     ret      = 0;
+        int     error_id = 0;
+        char   *buf      = nullptr;
         bool    is_alloc_buffer = false;
 
         while (thread->state() == Thread::State::RUNNING) {
@@ -165,17 +219,24 @@ private:
                 is_alloc_buffer = false;
                 buf = source_buf.buffer();
             }
-            ret = OSApi::socket_recvfrom(fd, buf, buf_size, 0, addr, &addrlen, nullptr, error);
+            ret = OSApi::socket_recvfrom(fd, buf, buf_size, 0, addr, &addrlen, nullptr, error_id);
             if (ret > 0) {
                 udpsource_handler->handle_read(buf, ret, is_alloc_buffer, from_addr);
             }
+            else {
+                return ret;
+            }
         }
+#endif
+
         return 0;
     }
 
 protected:
-    bool                is_recv_thread_ = false;
-    ThreadGroup         recv_thread_group_;     //多线程接收数据,提高并发性
+    uint_t              recv_msgs_count_ = 16;
+    uint_t              recv_timeout_    = 2000000; //2 ms
+    bool                is_recv_thread_  = false;
+    ThreadGroup         recv_thread_group_;         //多线程接收数据,提高并发性
     InetAddr            local_addr_;
     TUdpSourceHandler   udpsource_handler_;
 };

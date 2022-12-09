@@ -13,6 +13,7 @@
 #include "event_source.h"
 #include <stdlib.h>
 #include <algorithm>
+#include <vector>
 #include <deque>
 
 ZRSOCKET_NAMESPACE_BEGIN
@@ -22,6 +23,7 @@ class UdpSourceHandler : public EventHandler
 {
 public:
     UdpSourceHandler()
+        : max_udpmsg_size_(MAX_UDPMSG_SIZE)
     {
         queue_active_  = &queue1_;
         queue_standby_ = &queue2_;
@@ -38,14 +40,11 @@ public:
         from_addr_.set(source->local_addr()->is_ipv6());
 
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
-        if (nullptr != send_mmsgs_) {
-            free(send_mmsgs_);
-        }
-        int iovecs_count = 0;
-        loop->iovecs(iovecs_count);
-        send_mmsgs_ = (SENDMMSG *)calloc(iovecs_count, sizeof(SENDMMSG));
-
         if (loop != nullptr) {
+            int iovecs_count = 0;
+            loop->iovecs(iovecs_count);
+            send_mmsgs_.resize(iovecs_count);
+
             if (nullptr != recv_mmsgs_) {
                 delete recv_mmsgs_;
             }
@@ -73,15 +72,16 @@ public:
     {
         EventHandler::close();
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
-        if (nullptr != send_mmsgs_) {
-            free(send_mmsgs_);
-            send_mmsgs_ = nullptr;
-        }
         if (nullptr != recv_mmsgs_) {
             delete recv_mmsgs_;
             recv_mmsgs_ = nullptr;
         }
 #endif
+    }
+
+    int get_max_udpmsg_size()
+    {
+        return max_udpmsg_size_;
     }
 
     virtual int handle_read(const char *data, int len, bool is_alloc_buffer, InetAddr &from_addr)
@@ -313,7 +313,7 @@ protected:
                     msg.msg_hdr.msg_control = nullptr;
                     msg.msg_hdr.msg_controllen = 0;
                     msg.msg_hdr.msg_flags = flags;
-                    msgs.push_back(msg);
+                    msgs.push_back(std::move(msg));
                     ++i;
                 }
 
@@ -367,12 +367,12 @@ protected:
                 msg.msg_hdr.msg_iovlen  = iovecs_count;
                 msg.msg_hdr.msg_control = nullptr;
                 msg.msg_hdr.msg_controllen = 0;
-                msg.msg_hdr.msg_flags = 0;
-                msgs.push_back(msg);
+                msg.msg_hdr.msg_flags = flags;
+                msgs.push_back(std::move(msg));
                 ++i;
             }
 
-            int sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), 0);
+            int sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), flags);
             if (sendmsg_count <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 last_errno_  = -error_id;
@@ -444,7 +444,42 @@ protected:
 
     inline int handle_read()
     {
-#ifndef ZRSOCKET_HAVE_RECVSENDMMSG
+#ifdef ZRSOCKET_HAVE_RECVSENDMMSG
+        int retval = 0;
+        do {
+            retval = ::recvmmsg(socket_, recv_mmsgs_->msgs, recv_mmsgs_->msgs_count, 0, nullptr);
+            if (retval <= 0) {
+                int error_id = OSApi::socket_get_lasterror();
+                last_errno_  = -error_id;
+                if ((ZRSOCKET_EAGAIN == error_id) ||
+                    (ZRSOCKET_EWOULDBLOCK == error_id) ||
+                    (ZRSOCKET_IO_PENDING == error_id) ||
+                    (ZRSOCKET_ENOBUFS == error_id)) {
+                    //非阻塞模式下正常情况
+                    return 0;
+                }
+                else {
+                    //非阻塞模式下异常情况
+                    return last_errno_;
+                }
+            }
+
+#ifdef ZRSOCKET_DEBUG
+            printf("msgs_count:%d, recvmmsg_return_value:%d\n", recv_mmsgs_->msgs_count, retval);
+#endif // DEBUG
+
+            for (int i = 0; i < retval; ++i) {
+
+#ifdef ZRSOCKET_DEBUG
+                printf("recvmmsg: id:%d, recvbytes:%d\n", i, recv_mmsgs_->msgs[i].msg_len);
+#endif // DEBUG
+
+                handle_read((const char*)recv_mmsgs_->iovecs[i].iov_base, recv_mmsgs_->msgs[i].msg_len, false, recv_mmsgs_->from_addrs[i]);
+            }
+        } while (1);
+
+#else
+
         sockaddr   *addr = from_addr_.get_addr();
         int         addrlen = from_addr_.get_addr_size();
         ByteBuffer *recv_buffer = event_loop_->get_recv_buffer();
@@ -475,7 +510,7 @@ protected:
                 handle_read(buf, ret, is_alloc_buf, from_addr_);
             }
             else {
-                int error_id = OSApi::socket_get_lasterror();
+                error_id = OSApi::socket_get_lasterror();
                 last_errno_ = -error_id;
                 if ((ZRSOCKET_EAGAIN == error_id) || (ZRSOCKET_EWOULDBLOCK == error_id) || (ZRSOCKET_EINTR == error_id)) {
                     //非阻塞模式下正常情况
@@ -484,40 +519,6 @@ protected:
                 return last_errno_;
             }
         } while (1);
-#else
-        int retval = 0;
-        do {
-            retval = ::recvmmsg(socket_, recv_mmsgs_->msgs, recv_mmsgs_->msgs_count, 0, nullptr);
-            if (retval <= 0) {
-                int error_id = OSApi::socket_get_lasterror();
-                last_errno_  = -error_id;
-                if ((ZRSOCKET_EAGAIN == error_id) ||
-                    (ZRSOCKET_EWOULDBLOCK == error_id) ||
-                    (ZRSOCKET_IO_PENDING == error_id) ||
-                    (ZRSOCKET_ENOBUFS == error_id)) {
-                    //非阻塞模式下正常情况
-                    return 0;
-                }
-                else {
-                    //非阻塞模式下异常情况
-                    return last_errno_;
-                }
-            }
-
-#ifdef ZRSOCKET_DEBUG
-            printf("msgs_count:%d, recvmmsg_return_value:%d\n", recv_mmsgs_->msgs_count, retval);
-#endif // DEBUG
-
-            for (int i = 0; i < retval; ++i) {
-
-#ifdef ZRSOCKET_DEBUG
-                printf("recvmmsg: id:%d, recvbytes:%d\n", i, recv_mmsgs_->msgs[i].msg_len);
-#endif // DEBUG
-
-                handle_read((const char *)recv_mmsgs_->iovecs[i].iov_base, recv_mmsgs_->msgs[i].msg_len, false, recv_mmsgs_->from_addrs[i]);
-            }
-        } while (1);
-
 #endif
 
         return 0;
@@ -566,7 +567,7 @@ protected:
     START_SENDMMSG:
         ++msgs_count;
         if (msgs_count > 0) {
-            int retval = ::sendmmsg(socket_, send_mmsgs_, msgs_count, 0);
+            int retval = ::sendmmsg(socket_, send_mmsgs_.data(), send_mmsgs_.size(), 0);
             if (retval <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 if ((ZRSOCKET_EAGAIN == error_id) ||
@@ -651,6 +652,7 @@ protected:
     }
 
 private:
+    int      max_udpmsg_size_ = 2048;
     InetAddr from_addr_;
 
     class UdpBuffer
@@ -714,7 +716,7 @@ private:
 
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
     typedef struct mmsghdr SENDMMSG;
-    SENDMMSG *send_mmsgs_ = nullptr;
+    std::vector<SENDMMSG> send_mmsgs_;
 
     //const int MAX_UDPMSG_SIZE = 2048;
     //const int MTU_SIZE = 2048;
