@@ -101,18 +101,16 @@ public:
 
     int64_t min_interval()
     {
-        int64_t min_value = 0;
+        int64_t min_value = -1;
 
         mutex_.lock();
         if (!interval_timers_.empty()) {
             auto iter = interval_timers_.begin();
-            TimerList *tl = &iter->second;
-            min_value = tl->interval();
+            min_value = iter->first;
             ++iter;
             std::for_each(iter, interval_timers_.end(), [&](std::map<int64_t, TimerList>::value_type &i) {
-                tl = &(i.second);
-                if (min_value > tl->interval()) {
-                    min_value = tl->interval();
+                if (min_value > i.first) {
+                    min_value = i.first;
                 }
             });
         }

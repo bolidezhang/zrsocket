@@ -60,6 +60,7 @@ public:
         else if (ret < 0) {
             event_loop_->delete_handler(this, 0);
         }
+
         return ret;
     }
 
@@ -90,6 +91,7 @@ public:
         else if (ret < 0) {
             event_loop_->delete_handler(this, 0);
         }
+
         return ret;
     }
 

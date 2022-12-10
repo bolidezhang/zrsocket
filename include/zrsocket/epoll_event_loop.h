@@ -315,9 +315,9 @@ public:
     {
         timer_queue_.loop(Time::instance().current_timestamp_us());
 
-        int64_t min_interval = timer_queue_.min_interval();
-        if (min_interval >= 1000) {
-            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
+            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
 
         int timeout_ms = timeout_us / 1000;
@@ -654,9 +654,9 @@ public:
     {
         timer_queue_.loop(Time::instance().current_timestamp_us());
 
-        int64_t min_interval = timer_queue_.min_interval();
-        if (min_interval >= 1000) {
-            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
+            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
 
         int timeout_ms = timeout_us / 1000;
@@ -736,7 +736,7 @@ private:
     int64_t max_timeout_us_ = 10000;
 
     int epoll_mode_ = (int)EPOLL_MODE::ET;
-    int epoll_fd_ = -1;
+    int epoll_fd_   = -1;
     struct epoll_event *events_ = nullptr;
 
     ZRSOCKET_IOVEC     *iovecs_ = nullptr;

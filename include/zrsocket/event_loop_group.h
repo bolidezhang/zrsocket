@@ -187,7 +187,7 @@ public:
 
 protected:
     int next_index_;
-    std::vector<TEventLoop * > event_loops_;
+    std::vector<TEventLoop *> event_loops_;
 };
 
 ZRSOCKET_NAMESPACE_END

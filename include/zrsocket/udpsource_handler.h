@@ -40,7 +40,7 @@ public:
         from_addr_.set(source->local_addr()->is_ipv6());
 
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
-        if (loop != nullptr) {
+        if (nullptr != loop) {
             int iovecs_count = 0;
             loop->iovecs(iovecs_count);
             send_mmsgs_.resize(iovecs_count);
@@ -100,12 +100,15 @@ public:
         int ret = send_i(data, len, to_addr, direct_send, priority, flags);
         mutex_.unlock();
 
-        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
-            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        if (nullptr != event_loop_) {
+            if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            }
+            else if (ret < 0) {
+                event_loop_->delete_handler(this, 0);
+            }
         }
-        else if (ret < 0) {
-            event_loop_->delete_handler(this, 0);
-        }
+
         return ret;
     }
 
@@ -115,12 +118,15 @@ public:
         int ret = send_i(msg, to_addr, direct_send, priority, flags);
         mutex_.unlock();
 
-        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
-            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        if (nullptr != event_loop_) {
+            if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            }
+            else if (ret < 0) {
+                event_loop_->delete_handler(this, 0);
+            }
         }
-        else if (ret < 0) {
-            event_loop_->delete_handler(this, 0);
-        }
+
         return ret;
     }
 
@@ -130,12 +136,15 @@ public:
         int ret = send_i(iovecs, iovecs_count, to_addr, direct_send, priority, flags);
         mutex_.unlock();
 
-        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
-            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        if (nullptr != event_loop_) {
+            if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            }
+            else if (ret < 0) {
+                event_loop_->delete_handler(this, 0);
+            }
         }
-        else if (ret < 0) {
-            event_loop_->delete_handler(this, 0);
-        }
+
         return ret;
     }
 
@@ -147,12 +156,15 @@ public:
         int ret = send_i(iovecs, iovecs_count, addrs_first, addrs_last, get_addr, direct_send, priority, flags);
         mutex_.unlock();
 
-        if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
-            event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+        if (nullptr != event_loop_) {
+            if (static_cast<int>(SendResult::PUSH_QUEUE) == ret) {
+                event_loop_->add_event(this, EventHandler::WRITE_EVENT_MASK);
+            }
+            else if (ret < 0) {
+                event_loop_->delete_handler(this, 0);
+            }
         }
-        else if (ret < 0) {
-            event_loop_->delete_handler(this, 0);
-        }
+
         return ret;
     }   
 
@@ -479,7 +491,6 @@ protected:
         } while (1);
 
 #else
-
         sockaddr   *addr = from_addr_.get_addr();
         int         addrlen = from_addr_.get_addr_size();
         ByteBuffer *recv_buffer = event_loop_->get_recv_buffer();

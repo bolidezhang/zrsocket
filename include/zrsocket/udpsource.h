@@ -37,12 +37,12 @@ public:
         return &local_addr_;
     }
 
-    int set_config(bool is_recv_thread = false, uint_t recvbuffer_size = 2048, uint_t recv_msgs_count = 16, uint_t recv_timeout = 2000000)
+    int set_config(bool is_recv_thread = false, uint_t recvbuffer_size = 2048, uint_t recv_msgs_count = 16, uint_t recv_timeout_us = 2000000)
     {
         is_recv_thread_  = is_recv_thread;
         recvbuffer_size_ = recvbuffer_size;
         recv_msgs_count_ = recv_msgs_count;
-        recv_timeout_    = recv_timeout;
+        recv_timeout_us_ = recv_timeout_us;
         return 0;
     }
 
@@ -174,8 +174,8 @@ private:
 
         int retval = 0;
         struct timespec timeout;
-        timeout.tv_sec  = udpsource->recv_timeout_ / 1000000000;
-        timeout.tv_nsec = udpsource->recv_timeout_ - timeout.tv_sec * 1000000000;
+        timeout.tv_sec  = udpsource->recv_timeout_us_ / 1000000;
+        timeout.tv_nsec = (udpsource->recv_timeout_us_ - timeout.tv_sec * 1000000) * 1000;
         while (thread->state() == Thread::State::RUNNING) {
             retval = ::recvmmsg(fd, msgs.data(), msgs.size(), 0, &timeout);
             if (retval > 0) {
@@ -234,7 +234,7 @@ private:
 
 protected:
     uint_t              recv_msgs_count_ = 16;
-    uint_t              recv_timeout_    = 2000000; //2 ms
+    uint_t              recv_timeout_us_ = 2000;    //2 ms
     bool                is_recv_thread_  = false;
     ThreadGroup         recv_thread_group_;         //多线程接收数据,提高并发性
     InetAddr            local_addr_;

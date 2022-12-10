@@ -390,9 +390,9 @@ public:
         bool have_event = false;
 #endif
 
-        int64_t min_interval = timer_queue_.min_interval();
-        if (min_interval > 0) {
-            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
+            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
 
         //交换active/standby指针
@@ -436,32 +436,20 @@ public:
 
 #ifdef ZRSOCKET_OS_WINDOWS
         if (have_event) {
-            if (timeout_us >= 0) {
-                timeval tv;
-                tv.tv_sec  = (long)(timeout_us / 1000000LL);
-                tv.tv_usec = (long)(timeout_us - tv.tv_sec * 1000000LL);
-                ready = select(0, &fd_set_out_.read, &fd_set_out_.write, &fd_set_out_.except, &tv);
-            }
-            else {
-                ready = select(0, &fd_set_out_.read, &fd_set_out_.write, &fd_set_out_.except, nullptr);
-            }
+            timeval tv;
+            tv.tv_sec  = (long)(timeout_us / 1000000LL);
+            tv.tv_usec = (long)(timeout_us - tv.tv_sec * 1000000LL);
+            ready = select(0, &fd_set_out_.read, &fd_set_out_.write, &fd_set_out_.except, &tv);
         }
         else {
-            if (timeout_us > 0) {
-                OSApi::sleep_us(timeout_us);
-            }
+            OSApi::sleep_us(timeout_us);
             return 0;
         }
 #else
-        if (timeout_us >= 0) {
-            timeval tv;
-            tv.tv_sec  = timeout_us / 1000000LL;
-            tv.tv_usec = timeout_us - tv.tv_sec * 1000000LL;
-            ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, &tv);
-        }
-        else {
-            ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, nullptr);
-        }
+        timeval tv;
+        tv.tv_sec  = timeout_us / 1000000LL;
+        tv.tv_usec = timeout_us - tv.tv_sec * 1000000LL;
+        ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, &tv);
 #endif
 
         int num_events = 0;
