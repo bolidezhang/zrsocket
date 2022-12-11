@@ -214,7 +214,7 @@ int SedaLRUTimerQueue::clear()
     return 0;
 }
 
-SedaTimer * SedaLRUTimerQueue::set_timer(uint_t interval_ms, int64_t param)
+SedaTimer * SedaLRUTimerQueue::set_timer(uint_t interval_ms, SedaTimer::TimerParam param)
 {
     if (!free_list_.empty()) {
         SedaTimer *timer = free_list_.front();

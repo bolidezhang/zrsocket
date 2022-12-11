@@ -116,10 +116,10 @@ protected:
     bool        enabled_;
 
 private:
-    Timer       *next_;          //初始指向其自身this,防止因nullptr而出现异常
-    Timer       *prev_;          //初始指向其自身this,防止因nullptr而出现异常
-    ITimerQueue *timer_queue_;   //定时器队列
-    uint64_t     expire_time_;   //定时器触发时间点
+    Timer       *next_;         //初始指向其自身this,防止因nullptr而出现异常
+    Timer       *prev_;         //初始指向其自身this,防止因nullptr而出现异常
+    ITimerQueue *timer_queue_;  //定时器队列
+    uint64_t     expire_time_;  //定时器触发时间点
 
     friend class TimerList;
     template <class TMutex> friend class TimerQueue;
@@ -141,7 +141,7 @@ public:
     {
     }
 
-    TimerList(TimerList && tl)
+    TimerList(TimerList &&tl)
         : interval_(tl.interval_)
     {
     }
