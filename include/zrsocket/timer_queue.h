@@ -44,7 +44,7 @@ public:
         }
         mutex_.unlock();
 
-        return -1;
+        return 0;
     }
 
     int delete_timer(ITimer *itimer)
@@ -62,7 +62,7 @@ public:
         }
         mutex_.unlock();
 
-        return -1;
+        return 0;
     }
 
     int loop(uint64_t current_timestamp)
@@ -79,13 +79,13 @@ public:
                     tl.pop_front();
                 }
                 else {
-                    tl.interval(-difference);
                     break;
                 }
             }
         }
         mutex_.unlock();
 
+        auto ret_size = timeout_timers_.size();
         if (!timeout_timers_.empty()) {
             for (auto &timer : timeout_timers_) {
                 timer->handle_timeout();
@@ -96,7 +96,7 @@ public:
             timeout_timers_.clear();
         }
 
-        return 0;
+        return ret_size;
     }
 
     int64_t min_interval()
@@ -107,12 +107,6 @@ public:
         if (!interval_timers_.empty()) {
             auto iter = interval_timers_.begin();
             min_value = iter->first;
-            ++iter;
-            std::for_each(iter, interval_timers_.end(), [&](std::map<int64_t, TimerList>::value_type &i) {
-                if (min_value > i.first) {
-                    min_value = i.first;
-                }
-            });
         }
         mutex_.unlock();
 

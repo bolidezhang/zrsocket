@@ -383,24 +383,26 @@ public:
     {
         timer_queue_.loop(Time::instance().current_timestamp_us());
 
-        static int fd_set_size = sizeof(fd_set);
         EventHandler *handler;
         int ready;
 #ifdef ZRSOCKET_OS_WINDOWS
         bool have_event = false;
 #endif
 
-        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        int64_t min_interval = timer_queue_.min_interval();
+        if (min_interval > 0) {
+            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        }
         if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
             timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
 
         //交换active/standby指针
         mutex_.lock();
-        zrsocket_memcpy(&fd_set_out_.read, &fd_set_in_.read, fd_set_size);
-        zrsocket_memcpy(&fd_set_out_.write, &fd_set_in_.write, fd_set_size);
+        zrsocket_memcpy(&fd_set_out_.read, &fd_set_in_.read, sizeof(fd_set));
+        zrsocket_memcpy(&fd_set_out_.write, &fd_set_in_.write, sizeof(fd_set));
 #ifdef ZRSOCKET_OS_WINDOWS
-        zrsocket_memcpy(&fd_set_out_.except, &fd_set_in_.except, fd_set_size);
+        zrsocket_memcpy(&fd_set_out_.except, &fd_set_in_.except, sizeof(fd_set));
         if (read_size_ || write_size_ || except_size_) {
             have_event = true;
         }

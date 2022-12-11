@@ -315,7 +315,10 @@ public:
     {
         timer_queue_.loop(Time::instance().current_timestamp_us());
 
-        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        int64_t min_interval = timer_queue_.min_interval();
+        if (min_interval > 0) {
+            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        }
         if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
             timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
@@ -654,7 +657,10 @@ public:
     {
         timer_queue_.loop(Time::instance().current_timestamp_us());
 
-        timeout_us = std::min<int64_t>(timer_queue_.min_interval(), timeout_us);
+        int64_t min_interval = timer_queue_.min_interval();
+        if (min_interval > 0) {
+            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        }
         if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
             timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
         }
