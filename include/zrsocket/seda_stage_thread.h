@@ -123,7 +123,7 @@ public:
 
     inline int enable_lru_timers(SedaStageThreadLRUSlotInfo *slots, int slot_count)
     {
-        if ( (slot_count > 0) && lru_timer_managers_.empty() ) {
+        if ((slot_count > 0) && lru_timer_managers_.empty()) {
             lru_timer_managers_.resize(slot_count);
             for (int i=0; i<slot_count; ++i) {
                 int ret = lru_timer_managers_[i].init(slots[i].capacity, slots[i].interval_ms, &stage_handler_, i);
@@ -178,8 +178,7 @@ private:
     inline void check_timers(uint64_t current_clock_ms, SedaTimerExpireEvent *event)
     {
         int timer_size = (int)lru_timer_managers_.size();
-        for (int i = 0; i < timer_size; ++i)
-        {
+        for (int i = 0; i < timer_size; ++i) {
             lru_timer_managers_[i].expire(current_clock_ms, event);
         }
 
