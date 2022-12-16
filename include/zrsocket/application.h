@@ -8,6 +8,7 @@
 #include <signal.h>
 #include "atomic.h"
 #include "config.h"
+#include "global.h"
 #include "select_event_loop.h"
 #include "epoll_event_loop.h"
 #include "timer.h"
@@ -99,6 +100,7 @@ protected:
         OSApi::socket_init(2, 2);
         OSConstant::instance();
         Time::instance();
+        Global::instance();
         stop_flag_.store(false, std::memory_order_relaxed);
         ::signal(SIGTERM, Application<TApp, TMutex>::signal);
         ::signal(SIGINT,  Application<TApp, TMutex>::signal);
@@ -130,7 +132,7 @@ protected:
     AtomicBool stop_flag_;
 
     //超时间隔(us)
-    int64_t timeout_us_ = 10000;
+    int64_t timeout_us_ = -1;
 
     //Main EventLoop
 #ifdef ZRSOCKET_OS_WINDOWS

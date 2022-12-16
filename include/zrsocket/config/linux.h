@@ -31,6 +31,7 @@
 typedef int   ZRSOCKET_HANDLE;
 typedef int   ZRSOCKET_SOCKET;
 typedef void  ZRSOCKET_OVERLAPPED;
+typedef int   ZRSOCKET_FD;
 
 typedef iovec ZRSOCKET_IOVEC;
 #define ZRSOCKET_MAX_IOVCNT         1024

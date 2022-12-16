@@ -13,6 +13,7 @@
 #include "thread.h"
 #include "time.h"
 #include "timer_queue.h"
+#include "notify_handler.h"
 
 #ifdef ZRSOCKET_OS_LINUX
 #include <sys/epoll.h>
@@ -33,6 +34,7 @@ public:
     {
         buffer_size();
         timer_queue_.event_loop(this);
+        wakeup_handler_.open();
     }
 
     virtual ~EpollEventLoop()
@@ -75,7 +77,7 @@ public:
         return &loop_data_;
     }
 
-    int open(uint_t max_size = 100000, int iovecs_count = 1024, int64_t max_timeout_us = 10000, int flags = 0)
+    int open(uint_t max_size = 100000, int iovecs_count = 1024, int64_t max_timeout_us = -1, int flags = 0)
     {
         if (max_size <= 0) {
             return -1;
@@ -107,6 +109,7 @@ public:
             return -5;
         }
 
+        add_handler(&wakeup_handler_, EventHandler::READ_EVENT_MASK);
         return 0;
     }
 
@@ -146,14 +149,16 @@ public:
             ee.events |= EPOLLOUT;
             add_event_mask |= EventHandler::WRITE_EVENT_MASK;
         }
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, handler->socket_, &ee) < 0) {
+
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, handler->fd_, &ee) < 0) {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         ++current_handle_size_;
         handler->in_event_loop_ = true;
-        handler->event_mask_ = add_event_mask;
+        handler->event_loop_    = this;
+        handler->event_mask_    = add_event_mask;
         mutex_.unlock();
 
         return 0;
@@ -167,7 +172,7 @@ public:
             return -1;
         }
 
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->socket_, nullptr) >= 0) {
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->fd_, nullptr) >= 0) {
             handler->in_event_loop_ = false;
             handler->event_mask_ = EventHandler::NULL_EVENT_MASK;
             --current_handle_size_;
@@ -178,7 +183,7 @@ public:
         }
         else {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         return 0;
@@ -192,15 +197,16 @@ public:
             return -1;
         }
 
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->socket_, nullptr) >= 0) {
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->fd_, nullptr) >= 0) {
             handler->in_event_loop_ = false;
-            handler->event_mask_ = EventHandler::NULL_EVENT_MASK;
+            handler->event_loop_    = nullptr;
+            handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
             --current_handle_size_;
             mutex_.unlock();
         }
         else {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         return 0;
@@ -231,8 +237,8 @@ public:
             if (event_mask & EventHandler::WRITE_EVENT_MASK) {
                 ee.events |= EPOLLOUT;
             }
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-                return -1;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->fd_, &ee) < 0) {
+                return -2;
             }
             handler->event_mask_ = event_mask;
         }
@@ -264,8 +270,8 @@ public:
             if (event_mask & EventHandler::WRITE_EVENT_MASK) {
                 ee.events |= EPOLLOUT;
             }
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-                return -1;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->fd_, &ee) < 0) {
+                return -2;
             }
             handler->event_mask_ = event_mask;
         }
@@ -292,8 +298,8 @@ public:
         }
 
         if (set_event_mask != EventHandler::NULL_EVENT_MASK) {
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-                return -1;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->fd_, &ee) < 0) {
+                return -2;
             }
             handler->event_mask_ = set_event_mask;
         }
@@ -303,27 +309,25 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        return timer_queue_.add_timer(timer, Time::instance().current_timestamp_us());
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
+            return loop_wakeup();
+        }
+        return 0;
     }
 
     int delete_timer(ITimer *timer)
     {
         return timer_queue_.delete_timer(timer);
-    }
+   }
 
-    int loop(int64_t timeout_us = 10000)
-    {
-        timer_queue_.loop(Time::instance().current_timestamp_us());
-
+    int loop(int64_t timeout_us = -1)
+    {      
         int64_t min_interval = timer_queue_.min_interval();
         if (min_interval > 0) {
             timeout_us = std::min<int64_t>(min_interval, timeout_us);
         }
-        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
-            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
-        }
 
-        int timeout_ms = timeout_us / 1000;
+        int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
         if (ready > 0) {
             EventHandler *handler;
@@ -356,10 +360,16 @@ public:
             }
         }
 
+        timer_queue_.loop(Time::instance().current_timestamp_us());
         return ready;
     }
 
-    int loop_thread_start(int64_t timeout_us = 10000)
+    int loop_wakeup()
+    {
+        return wakeup_handler_.notify();
+    }
+
+    int loop_thread_start(int64_t timeout_us = -1)
     {
         max_timeout_us_ = timeout_us;
         return thread_.start(loop_thread_proc, this);
@@ -397,7 +407,7 @@ private:
     uint_t  max_size_ = 1000000;
     uint_t  max_events_ = 10000;
     uint_t  current_handle_size_ = 0;
-    int64_t max_timeout_us_ = 10000;
+    int64_t max_timeout_us_ = -1;
 
     int epoll_mode_ = (int)EPOLL_MODE::LT;
     int epoll_fd_   = -1;
@@ -411,6 +421,7 @@ private:
     TimerQueue<TMutex>  timer_queue_;
     Thread              thread_;
     TMutex              mutex_;
+    NotifyHandler       wakeup_handler_;
 
     TLoopData           loop_data_;
 };
@@ -424,6 +435,7 @@ public:
     {
         buffer_size();
         timer_queue_.event_loop(this);
+        wakeup_handler_.open();
     }
 
     virtual ~EpollETEventLoop()
@@ -466,7 +478,7 @@ public:
         return &loop_data_;
     }
 
-    int open(uint_t max_size = 100000, int iovecs_count = 1024, int64_t max_timeout_us = 10000, int flags = 0)
+    int open(uint_t max_size = 100000, int iovecs_count = 1024, int64_t max_timeout_us = -1, int flags = 0)
     {
         if (max_size <= 0) {
             return -1;
@@ -498,6 +510,7 @@ public:
             return -5;
         }
 
+        add_handler(&wakeup_handler_, EventHandler::READ_EVENT_MASK);
         return 0;
     }
 
@@ -538,14 +551,16 @@ public:
             ee.events |= EPOLLOUT;
             add_event_mask |= EventHandler::WRITE_EVENT_MASK;
         }
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, handler->socket_, &ee) < 0) {
+
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, handler->fd_, &ee) < 0) {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         ++current_handle_size_;
         handler->in_event_loop_ = true;
-        handler->event_mask_ = add_event_mask;
+        handler->event_loop_    = this;
+        handler->event_mask_    = add_event_mask;
         mutex_.unlock();
 
         return 0;
@@ -559,9 +574,10 @@ public:
             return -1;
         }
 
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->socket_, nullptr) >= 0) {
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->fd_, nullptr) >= 0) {
             handler->in_event_loop_ = false;
-            handler->event_mask_ = EventHandler::NULL_EVENT_MASK;
+            handler->event_loop_    = nullptr;
+            handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
             --current_handle_size_;
             mutex_.unlock();
 
@@ -570,7 +586,7 @@ public:
         }
         else {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         return 0;
@@ -584,15 +600,16 @@ public:
             return -1;
         }
 
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->socket_, nullptr) >= 0) {
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, handler->fd_, nullptr) >= 0) {
             handler->in_event_loop_ = false;
-            handler->event_mask_ = EventHandler::NULL_EVENT_MASK;
+            handler->event_loop_    = nullptr;
+            handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
             --current_handle_size_;
             mutex_.unlock();
         }
         else {
             mutex_.unlock();
-            return -1;
+            return -2;
         }
 
         return 0;
@@ -624,8 +641,8 @@ public:
             if (event_mask & EventHandler::WRITE_EVENT_MASK) {
                 ee.events |= EPOLLOUT;
             }
-            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->socket_, &ee) < 0) {
-                return -1;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, handler->fd_, &ee) < 0) {
+                return -2;
             }
             handler->event_mask_ = event_mask;
         }
@@ -645,7 +662,10 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        return timer_queue_.add_timer(timer, Time::instance().current_timestamp_us());
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
+            return loop_wakeup();
+        }
+        return 0;
     }
 
     int delete_timer(ITimer *timer)
@@ -653,19 +673,14 @@ public:
         return timer_queue_.delete_timer(timer);
     }
 
-    int loop(int64_t timeout_us = 10000)
+    int loop(int64_t timeout_us = -1)
     {
-        timer_queue_.loop(Time::instance().current_timestamp_us());
-
         int64_t min_interval = timer_queue_.min_interval();
         if (min_interval > 0) {
             timeout_us = std::min<int64_t>(min_interval, timeout_us);
         }
-        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
-            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
-        }
 
-        int timeout_ms = timeout_us / 1000;
+        int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
         if (ready > 0) {
             EventHandler *handler;
@@ -698,10 +713,16 @@ public:
             }
         }
 
+        timer_queue_.loop(Time::instance().current_timestamp_us());
         return ready;
     }
 
-    int loop_thread_start(int64_t timeout_us = 10000)
+    int loop_wakeup()
+    {
+        return wakeup_handler_.notify();
+    }
+
+    int loop_thread_start(int64_t timeout_us = -1)
     {
         max_timeout_us_ = timeout_us;
         return thread_.start(loop_thread_proc, this);
@@ -739,7 +760,7 @@ private:
     uint_t  max_size_ = 1000000;
     uint_t  max_events_ = 10000;
     uint_t  current_handle_size_ = 0;
-    int64_t max_timeout_us_ = 10000;
+    int64_t max_timeout_us_ = -1;
 
     int epoll_mode_ = (int)EPOLL_MODE::ET;
     int epoll_fd_   = -1;
@@ -753,6 +774,7 @@ private:
     TimerQueue<TMutex>  timer_queue_;
     Thread              thread_;
     TMutex              mutex_;
+    NotifyHandler       wakeup_handler_;
 
     TLoopData           loop_data_;
 };

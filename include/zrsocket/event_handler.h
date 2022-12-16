@@ -80,7 +80,7 @@ public:
     inline EventHandler()
         : source_(nullptr)
         , event_loop_(nullptr)
-        , socket_(ZRSOCKET_INVALID_SOCKET)
+        , fd_(ZRSOCKET_INVALID_SOCKET)
         , last_update_time_(0)
         , last_errno_(0)
         , event_mask_(READ_EVENT_MASK)
@@ -96,7 +96,12 @@ public:
 
     inline ZRSOCKET_SOCKET socket() const
     {
-        return socket_;
+        return fd_;
+    }
+
+    inline ZRSOCKET_FD fd() const
+    {
+        return fd_;
     }
 
     inline EventSource * source() const
@@ -114,16 +119,15 @@ public:
         return state_;
     }
 
-    int event_mask() const
+    inline int event_mask() const
     {
         return event_mask_;
     }
 
     void init(ZRSOCKET_SOCKET fd, EventSource *source, EventLoop *event_loop, HANDLER_STATE state)
     {
-        socket_ = fd;
+        fd_ = fd;
         source_ = source;
-        event_loop_ = event_loop;
         last_errno_ = 0;
         state_ = state;
 #ifndef ZRSOCKET_HAVE_ACCEPT4
@@ -159,17 +163,17 @@ public:
 
     virtual void close()
     {
-        if (ZRSOCKET_INVALID_SOCKET != socket_) {
-            OSApi::socket_close(socket_);
-            socket_ = ZRSOCKET_INVALID_SOCKET;
+        if (ZRSOCKET_INVALID_SOCKET != fd_) {
+            OSApi::socket_close(fd_);
+            fd_ = ZRSOCKET_INVALID_SOCKET;
             state_ = STATE_CLOSED;
         }
     }
 
- protected:
+protected:
     EventSource    *source_;
     EventLoop      *event_loop_;
-    ZRSOCKET_SOCKET socket_;
+    ZRSOCKET_FD     fd_;
 
     uint64_t        last_update_time_;
     int             last_errno_;        //最后错误号
@@ -177,7 +181,11 @@ public:
 private:
     int             event_mask_;        //事件码(上层不能修改)
     int8_t          state_;             //当前状态
+
+protected:
     bool            in_event_loop_;     //是否加入event_loop_中(上层不能修改)
+
+private:
     bool            in_object_pool_;    //是否在object_pool中(上层不能修改)
 
     template <class TMutex, class TLoopData> friend class SelectEventLoop;

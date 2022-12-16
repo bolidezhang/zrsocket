@@ -9,17 +9,17 @@ public:
     int do_open()
     {
         //printf("tcp do_open:%d, recv_buffer_size:%d, send_buffer_size:%d\n",
-        //    socket_,
-        //    OSApi::socket_get_recv_buffer_size(socket_),
-        //    OSApi::socket_get_send_buffer_size(socket_));
+        //    fd_,
+        //    OSApi::socket_get_recv_buffer_size(fd_),
+        //    OSApi::socket_get_send_buffer_size(fd_));
 
-        printf("http tcp do_open:%d\n", socket_);
+        printf("http tcp do_open:%d\n", fd_);
         return 0;
     }
 
     int do_close()
     {
-        printf("http tcp do_close:%d\n", socket_);
+        printf("http tcp do_close:%d\n", fd_);
         return 0;
     }
 

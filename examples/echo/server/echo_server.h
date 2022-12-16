@@ -12,17 +12,17 @@ public:
     int do_open()
     {
         //printf("tcp do_open:%d, recv_buffer_size:%d, send_buffer_size:%d\n",
-        //    socket_,
-        //    OSApi::socket_get_recv_buffer_size(socket_),
-        //    OSApi::socket_get_send_buffer_size(socket_));
+        //    fd_,
+        //    OSApi::socket_get_recv_buffer_size(fd_),
+        //    OSApi::socket_get_send_buffer_size(fd_));
 
-        printf("tcp do_open:%d\n", socket_);
+        printf("tcp do_open:%d\n", fd_);
         return 0;
     }
 
     int do_close()
     {
-        printf("tcp do_close:%d\n", socket_);
+        printf("tcp do_close:%d\n", fd_);
         return 0;
     }
 
@@ -41,13 +41,13 @@ class UdpHandler : public UdpSourceHandler<ByteBuffer, NullMutex>
 public:
     int handle_open()
     {
-        printf("udp handle_open:%d\n", socket_);
+        printf("udp handle_open:%d\n", fd_);
         return 0;
     }
 
     int handle_close()
     {
-        printf("udp handle_close:%d\n", socket_);
+        printf("udp handle_close:%d\n", fd_);
         return 0;
     }
 
@@ -150,19 +150,28 @@ public:
 
     int do_fini()
     {
+        printf("do_fini start1\n");
         tcp_server_.close();
+        printf("do_fini start2\n");
         udp_source_.close();
+        printf("do_fini start3\n");
         stage_.close();
+        printf("do_fini start4\n");
         stage2_.close();
+        printf("do_fini start5\n");
         sub_event_loop_.close();
-        printf("do_fini\n");
+        printf("do_fini end\n");
         return 0;
     }
 
     int do_signal(int signum)
     {
-        udp_source_.close();
+        stop_flag_.store(true, std::memory_order_relaxed);
+        //stop_flag_.store(true);
+        main_event_loop_.loop_wakeup();
         sub_event_loop_.loop_thread_stop();
+        sub_event_loop_.loop_wakeup();
+        udp_source_.close();
         printf("do_signal signum:%d\n", signum);
         return 0;
     }

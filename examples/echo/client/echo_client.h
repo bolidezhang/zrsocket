@@ -22,23 +22,23 @@ public:
     int do_open()
     {
         //printf("client tcp do_open:%d, recv_buffer_size:%d, send_buffer_size:%d\n",
-        //    socket_,
-        //    OSApi::socket_get_recv_buffer_size(socket_),
-        //    OSApi::socket_get_send_buffer_size(socket_));
+        //    fd_,
+        //    OSApi::socket_get_recv_buffer_size(fd_),
+        //    OSApi::socket_get_send_buffer_size(fd_));
 
-        printf("client tcp do_open:%d\n", socket_);
+        printf("client tcp do_open:%d\n", fd_);
         return 0;
     }
 
     int do_close()
     {
-        printf("client do_close:%d\n", socket_);
+        printf("client do_close:%d\n", fd_);
         return 0;
     }
 
     int do_connect()
     {
-        printf("client do_connect:%d\n", socket_);
+        printf("client do_connect:%d\n", fd_);
         return 0;
     }
 
@@ -51,13 +51,13 @@ class ClientUdpHandler : public UdpSourceHandler<ByteBuffer, NullMutex>
 public:
     int handle_open()
     {
-        printf("udp handle_open:%d\n", socket_);
+        printf("udp handle_open:%d\n", fd_);
         return 0;
     }
 
     int handle_close()
     {
-        printf("udp handle_close:%d\n", socket_);
+        printf("udp handle_close:%d\n", fd_);
         return 0;
     }
 

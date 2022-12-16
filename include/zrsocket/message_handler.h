@@ -130,7 +130,7 @@ protected:
         int   ret;
 
         do {
-            ret = OSApi::socket_recv(socket_, recv_buf, recv_buf_size, 0, nullptr, error_id);
+            ret = OSApi::socket_recv(fd_, recv_buf, recv_buf_size, 0, nullptr, error_id);
             if (ret > 0) {
                 ret = decode(recv_buf, ret);
                 if (ret < 0) {
@@ -163,7 +163,7 @@ protected:
         if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
             //直接发送数据
             int error_id = 0;
-            int send_bytes = OSApi::socket_send(socket_, data, len, flags, nullptr, &error_id);
+            int send_bytes = OSApi::socket_send(fd_, data, len, flags, nullptr, &error_id);
             if (send_bytes > 0) {
                 if ((uint_t)send_bytes == len) {
                     return static_cast<int>(SendResult::SUCCESS);
@@ -196,7 +196,7 @@ protected:
             char *data = msg.data();
             uint_t len = msg.data_size();
             int error_id = 0;
-            int send_bytes = OSApi::socket_send(socket_, data, len, flags, nullptr, &error_id);
+            int send_bytes = OSApi::socket_send(fd_, data, len, flags, nullptr, &error_id);
             if (send_bytes > 0) {
                 if ((uint_t)send_bytes == len) {
                     return static_cast<int>(SendResult::SUCCESS);
@@ -227,7 +227,7 @@ protected:
     {
         if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendv(socket_, iovecs, iovecs_count, flags, nullptr, error_id);
+            int send_bytes = OSApi::socket_sendv(fd_, iovecs, iovecs_count, flags, nullptr, error_id);
             if (send_bytes > 0) {
                 int i = 0;
                 int iovec_remain_bytes = 0;
@@ -309,7 +309,7 @@ protected:
 
         //发送数据
         int error_id = 0;
-        int send_bytes = OSApi::socket_sendv(socket_, iovecs, iovecs_count, 0, nullptr, error_id);
+        int send_bytes = OSApi::socket_sendv(fd_, iovecs, iovecs_count, 0, nullptr, error_id);
         if (send_bytes > 0) {
             int data_size = 0;
             int i = 1;

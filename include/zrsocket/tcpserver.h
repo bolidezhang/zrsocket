@@ -192,7 +192,7 @@ private:
                 }
             }
             else {
-                //关闭TcpServer::socket_,进而促使accept线程退出
+                //关闭TcpServer::fd_,进而促使accept线程退出
                 break;
             }
         }

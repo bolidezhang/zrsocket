@@ -64,7 +64,7 @@ int ServerHttpApp::init()
 
     timer1_.interval(1000000);
     timer1_.data_.id = 1;
-    main_event_loop_.add_timer(&timer1_);
+    //main_event_loop_.add_timer(&timer1_);
 
     //timer2_.interval(100000);
     //timer2_.data_.id = 2;

@@ -34,7 +34,7 @@ public:
         EventHandler *handler;
         EventLoop *event_loop;
         for (;;) {
-            client_fd = OSApi::socket_accept(socket_, addr.get_addr(), &addrlen, ZRSOCKET_SOCK_NONBLOCK);
+            client_fd = OSApi::socket_accept(fd_, addr.get_addr(), &addrlen, ZRSOCKET_SOCK_NONBLOCK);
             if (ZRSOCKET_INVALID_SOCKET != client_fd) {
                 handler = source_->alloc_handler();
                 if (nullptr != handler) {

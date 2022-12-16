@@ -75,6 +75,7 @@ int TestClientApp::send_proc(void *arg)
 
     printf("clients send_data tacktime:%lld ms\n", OSApi::timestamp_ms() - app->send_start_time_);
 
+    /*
     //udp send
     zrsocket::InetAddr server_addr;
     server_addr.set(app->server_.c_str(), app->port_);
@@ -82,6 +83,7 @@ int TestClientApp::send_proc(void *arg)
     for (int i = 0; i < 10; ++i) {
         app->udp_source_.send(strudp.c_str(), strudp.length(), server_addr);
     }
+    */
 
     return 0;
 }

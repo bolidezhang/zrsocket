@@ -20,7 +20,6 @@ int TestTimer::handle_timeout()
         now, 
         TestAppServer::instance().recv_messge_count_.load(std::memory_order_relaxed));
 
-
     ////
     //TestAppServer &app = TestAppServer::instance();
     //zrsocket::InetAddr remote_addr;
@@ -37,16 +36,16 @@ int TestAppServer::init()
     decoder_config_.max_message_length_ = 16384;
     decoder_config_.update();
     main_event_loop_.buffer_size();
-    main_event_loop_.open(1024, 1024);
+    main_event_loop_.open(1024, 1024, -1);
     recv_messge_count_.store(0, std::memory_order_relaxed);
     sub_event_loop_.init(std::thread::hardware_concurrency(), 10000, 2);
-    //sub_event_loop_.init(1, 10000, 2);
-    sub_event_loop_.open(1024, 1024);
-    sub_event_loop_.loop_thread_start();
+    sub_event_loop_.open(1024, 1024, -1);
+    sub_event_loop_.loop_thread_start(-1);
 
     handler_object_pool_.init(10000, 100, 10);
     tcp_server_.set_config(std::thread::hardware_concurrency(), 1000000, 4096);
     tcp_server_.set_interface(&handler_object_pool_, &sub_event_loop_, &decoder_config_, &main_event_loop_);
+    //tcp_server_.set_interface(&handler_object_pool_, &main_event_loop_, &decoder_config_, &main_event_loop_);
     tcp_server_.open(port_, 1024, nullptr);
 
     udp_source_.set_config();
@@ -57,7 +56,7 @@ int TestAppServer::init()
 
     timer1_.interval(1000000);
     timer1_.data_.id = 1;
-    main_event_loop_.add_timer(&timer1_);
+    //main_event_loop_.add_timer(&timer1_);
 
     /*
     timer2_.interval(100000);
@@ -73,8 +72,8 @@ int TestAppServer::init()
     main_event_loop_.add_timer(&timer4_);
     */
 
-    stage_.open(1, 100000, 64);
-    stage2_.open(1, 100000, 64);
+    //stage_.open(1, 100000, 64);
+    //stage2_.open(1, 100000, 64);
     init_flag_ = true;
 
     return 0;
@@ -82,7 +81,7 @@ int TestAppServer::init()
 
 int main(int argc, char *argv[])
 {
-#define TEST 1
+#define TEST 0
 #ifdef TEST
     {
         //std::stable_sort()
@@ -90,6 +89,12 @@ int main(int argc, char *argv[])
         //v1.erase()
         //std::sort()
         //std::for_each()
+        //signal()
+        //select()
+
+        bool t = true;
+        bool f = false;
+        printf("true:%d, false:%d\n", t, f);
     }
 #endif
 

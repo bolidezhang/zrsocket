@@ -117,7 +117,7 @@ public:
         return 0;
 
 EXCEPTION_EXIT_PROC:
-        udpsource_handler_.socket_ = ZRSOCKET_INVALID_SOCKET;
+        udpsource_handler_.fd_ = ZRSOCKET_INVALID_SOCKET;
         OSApi::socket_close(fd);
         return ret;
     }

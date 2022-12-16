@@ -176,7 +176,7 @@ protected:
                 if (queue_standby_->empty() && queue_active_->empty()) {
                     //直接发送数据
                     int error_id = 0;
-                    int send_bytes = OSApi::socket_sendto(socket_, data, len, flags, 
+                    int send_bytes = OSApi::socket_sendto(fd_, data, len, flags, 
                         to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
                     if (send_bytes > 0) {
                         return static_cast<int>(SendResult::SUCCESS);
@@ -201,7 +201,7 @@ protected:
         }
         else {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendto(socket_, data, len, flags, 
+            int send_bytes = OSApi::socket_sendto(fd_, data, len, flags, 
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
                 return static_cast<int>(SendResult::SUCCESS);
@@ -218,7 +218,7 @@ protected:
         if (nullptr != event_loop_) {
             if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
                 int error_id = 0;
-                int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags, 
+                int send_bytes = OSApi::socket_sendto(fd_, msg.data(), msg.data_size(), flags, 
                     to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
                 if (send_bytes > 0) {
                     return static_cast<int>(SendResult::SUCCESS);
@@ -243,7 +243,7 @@ protected:
         }
         else {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendto(socket_, msg.data(), msg.data_size(), flags, 
+            int send_bytes = OSApi::socket_sendto(fd_, msg.data(), msg.data_size(), flags, 
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
                 return static_cast<int>(SendResult::SUCCESS);
@@ -260,7 +260,7 @@ protected:
         if (nullptr != event_loop_) {
             if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
                 int error_id = 0;
-                int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                int send_bytes = OSApi::socket_sendtov(fd_, iovecs, iovecs_count, flags, 
                     to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
                 if (send_bytes > 0) {
                     return static_cast<int>(SendResult::SUCCESS);
@@ -291,7 +291,7 @@ protected:
         }
         else {
             int error_id = 0;
-            int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags,
+            int send_bytes = OSApi::socket_sendtov(fd_, iovecs, iovecs_count, flags,
                 to_addr.get_addr(), to_addr.get_addr_size(), nullptr, &error_id);
             if (send_bytes > 0) {
                 return static_cast<int>(SendResult::SUCCESS);
@@ -329,7 +329,7 @@ protected:
                     ++i;
                 }
 
-                sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), flags);
+                sendmsg_count = ::sendmmsg(fd_, msgs.data(), msgs.size(), flags);
                 if (static_cast<size_t>(sendmsg_count) == msgs.size()) {
                     return sendmsg_count;
                 }
@@ -384,7 +384,7 @@ protected:
                 ++i;
             }
 
-            int sendmsg_count = ::sendmmsg(socket_, msgs.data(), msgs.size(), flags);
+            int sendmsg_count = ::sendmmsg(fd_, msgs.data(), msgs.size(), flags);
             if (sendmsg_count <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 last_errno_  = -error_id;
@@ -400,7 +400,7 @@ protected:
                 for (; iter != addrs_last; ++iter) {
                     InetAddr *addr = get_addr(*iter);
                     int error_id = 0;
-                    int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                    int send_bytes = OSApi::socket_sendtov(fd_, iovecs, iovecs_count, flags, 
                         addr->get_addr(), addr->get_addr_size(), nullptr, &error_id);
                     if (send_bytes <= 0) {
                         last_errno_ = -error_id;
@@ -420,16 +420,17 @@ protected:
                 }
             }
 
-
-            UdpBuffer buffer;
-            buffer.buf_.reserve(1024);
-            for (int i = 0; i < iovecs_count; ++i) {
-                buffer.buf_.write(static_cast<const char *>(iovecs[i].iov_base), iovecs[i].iov_len);
+            if (iter != addrs_last) {
+                UdpBuffer buffer;
+                buffer.buf_.reserve(1024);
+                for (int i = 0; i < iovecs_count; ++i) {
+                    buffer.buf_.write(static_cast<const char*>(iovecs[i].iov_base), iovecs[i].iov_len);
+                }
+                for (; iter != addrs_last; ++iter) {
+                    buffer.to_addrs_.push_back(*get_addr(*iter));
+                }
+                queue_standby_->push_back(std::move(buffer));
             }
-            for (; iter != addrs_last; ++iter) {
-                buffer.to_addrs_.push_back(*get_addr(*iter));
-            }
-            queue_standby_->push_back(std::move(buffer));
 
             return sendmsg_count;
 
@@ -438,7 +439,7 @@ protected:
             for (auto iter = addrs_first; iter != addrs_last; ++iter) {
                 InetAddr *addr = get_addr(*iter);
                 int error_id = 0;
-                int send_bytes = OSApi::socket_sendtov(socket_, iovecs, iovecs_count, flags, 
+                int send_bytes = OSApi::socket_sendtov(fd_, iovecs, iovecs_count, flags, 
                     addr->get_addr(), addr->get_addr_size(), nullptr, &error_id);
                 if (send_bytes <= 0) {
                     last_errno_ = -error_id;
@@ -459,7 +460,7 @@ protected:
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
         int retval = 0;
         do {
-            retval = ::recvmmsg(socket_, recv_mmsgs_->msgs, recv_mmsgs_->msgs_count, 0, nullptr);
+            retval = ::recvmmsg(fd_, recv_mmsgs_->msgs, recv_mmsgs_->msgs_count, 0, nullptr);
             if (retval <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 last_errno_  = -error_id;
@@ -516,7 +517,7 @@ protected:
                 buf_size = source_buf_size;
             }
 
-            ret = OSApi::socket_recvfrom(socket_, buf, buf_size, 0, addr, &addrlen, nullptr, error_id);
+            ret = OSApi::socket_recvfrom(fd_, buf, buf_size, 0, addr, &addrlen, nullptr, error_id);
             if (ret > 0) {
                 handle_read(buf, ret, is_alloc_buf, from_addr_);
             }
@@ -578,7 +579,7 @@ protected:
     START_SENDMMSG:
         ++msgs_count;
         if (msgs_count > 0) {
-            int retval = ::sendmmsg(socket_, send_mmsgs_.data(), send_mmsgs_.size(), 0);
+            int retval = ::sendmmsg(fd_, send_mmsgs_.data(), send_mmsgs_.size(), 0);
             if (retval <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 if ((ZRSOCKET_EAGAIN == error_id) ||
@@ -635,7 +636,7 @@ protected:
 
             auto iter_addr = buf.to_addrs_.begin();
             while (iter_addr != buf.to_addrs_.end()) {
-                if (OSApi::socket_sendto(socket_, buf.buf_.data(), buf.buf_.data_size(), 0, 
+                if (OSApi::socket_sendto(fd_, buf.buf_.data(), buf.buf_.data_size(), 0, 
                     (*iter_addr).get_addr(), (*iter_addr).get_addr_size(), nullptr, &error_id) > 0) {
                     iter_addr = buf.to_addrs_.erase(iter_addr);
                 }

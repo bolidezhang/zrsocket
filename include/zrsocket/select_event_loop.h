@@ -34,6 +34,7 @@ public:
         temp_handlers_standby_  = &temp2_handlers_;
         buffer_size();
         timer_queue_.event_loop(this);
+        wakeup_handler_.open();
     }
 
     virtual ~SelectEventLoop()
@@ -69,13 +70,13 @@ public:
         return &loop_data_;
     }
 
-    int open(uint_t max_size = 1024, int iovecs_count = 1024, int64_t max_timeout_us = 10000, int flags = 0)
+    int open(uint_t max_size = 1024, int iovecs_count = 1024, int64_t max_timeout_us = -1, int flags = 0)
     {
         if (max_size <= 0) {
             return -1;
         }
         if (iovecs_count <= 0) {
-            return -1;
+            return -2;
         }
 
         if (max_size > FD_SETSIZE) {
@@ -104,6 +105,8 @@ public:
         FD_ZERO(&fd_set_in_.except);
         FD_ZERO(&fd_set_out_.except);
 #endif
+
+        add_handler(&wakeup_handler_, EventHandler::READ_EVENT_MASK);
         return 0;
     }
 
@@ -131,46 +134,48 @@ public:
 
         if ( (read_size_ >= max_size_) && (event_mask & EventHandler::READ_EVENT_MASK) ){
             mutex_.unlock();
-            return -1;
+            return -2;
         }
         if ((write_size_ >= max_size_) && (event_mask & EventHandler::WRITE_EVENT_MASK)) {
             mutex_.unlock();
-            return -1;
+            return -3;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if ((except_size_ >= max_size_) && (event_mask & EventHandler::EXCEPT_EVENT_MASK)) {
             mutex_.unlock();
-            return -1;
+            return -4;
         }
 #endif
 
         int add_event_mask = EventHandler::NULL_EVENT_MASK;
         if (event_mask & EventHandler::READ_EVENT_MASK) {
-            FD_SET(handler->socket_, &fd_set_in_.read);
+            FD_SET(handler->fd_, &fd_set_in_.read);
             add_event_mask |= EventHandler::READ_EVENT_MASK;
             ++read_size_;
         }
         if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-            FD_SET(handler->socket_, &fd_set_in_.write);
+            FD_SET(handler->fd_, &fd_set_in_.write);
             add_event_mask |= EventHandler::WRITE_EVENT_MASK;
             ++write_size_;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
-            FD_SET(handler->socket_, &fd_set_in_.except);
+            FD_SET(handler->fd_, &fd_set_in_.except);
             add_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
             ++except_size_;
         }
 #else
-        if (max_fd_ < handler->socket_) {
-            max_fd_ = handler->socket_;
+        if (max_fd_ < handler->fd_) {
+            max_fd_ = handler->fd_;
         }
 #endif
         handler->in_event_loop_ = true;
-        handler->event_mask_ = add_event_mask;
-        temp_handlers_standby_->emplace(std::move(handler), ADD_HANDLER);
+        handler->event_loop_    = this;
+        handler->event_mask_    = add_event_mask;
+        temp_handlers_standby_->emplace(handler, ADD_HANDLER);
         mutex_.unlock();
 
+        loop_wakeup();
         return 0;
     }
 
@@ -184,28 +189,30 @@ public:
 
         event_mask = handler->event_mask_;
         if (event_mask & EventHandler::READ_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.read);
+            FD_CLR(handler->fd_, &fd_set_in_.read);
             --read_size_;
         }
         if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.write);
+            FD_CLR(handler->fd_, &fd_set_in_.write);
             --write_size_;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.except);
+            FD_CLR(handler->fd_, &fd_set_in_.except);
             --except_size_;
         }
 #else
-        if (max_fd_ == handler->socket_) {
+        if (max_fd_ == handler->fd_) {
             --max_fd_;
         }
 #endif
-        handler->in_event_loop_  = false;
-        handler->event_mask_  = EventHandler::NULL_EVENT_MASK;
-        temp_handlers_standby_->emplace(std::move(handler), DEL_HANDLER);
+        handler->in_event_loop_ = false;
+        handler->event_loop_    = nullptr;
+        handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
+        temp_handlers_standby_->emplace(handler, DEL_HANDLER);
         mutex_.unlock();
 
+        loop_wakeup();
         return 0;
     }
 
@@ -219,26 +226,27 @@ public:
 
         event_mask = handler->event_mask_;
         if (event_mask & EventHandler::READ_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.read);
+            FD_CLR(handler->fd_, &fd_set_in_.read);
             --read_size_;
         }
         if (event_mask & EventHandler::WRITE_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.write);
+            FD_CLR(handler->fd_, &fd_set_in_.write);
             --write_size_;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.except);
+            FD_CLR(handler->fd_, &fd_set_in_.except);
             --except_size_;
         }
 #else
-        if (max_fd_ == handler->socket_) {
+        if (max_fd_ == handler->fd_) {
             --max_fd_;
         }
 #endif
         handler->in_event_loop_ = false;
-        handler->event_mask_ = EventHandler::NULL_EVENT_MASK;
-        temp_handlers_standby_->emplace(std::move(handler), REMOVE_HANDLER);
+        handler->event_loop_    = nullptr;
+        handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
+        temp_handlers_standby_->emplace(handler, REMOVE_HANDLER);
         mutex_.unlock();
 
         return 0;
@@ -255,20 +263,20 @@ public:
         int add_event_mask = EventHandler::NULL_EVENT_MASK;
         if ( (event_mask & EventHandler::READ_EVENT_MASK) && 
              !(handler->event_mask_ & EventHandler::READ_EVENT_MASK) ) {
-            FD_SET(handler->socket_, &fd_set_in_.read);
+            FD_SET(handler->fd_, &fd_set_in_.read);
             add_event_mask |= EventHandler::READ_EVENT_MASK;
             ++read_size_;
         }
         if ( (event_mask & EventHandler::WRITE_EVENT_MASK) && 
             !(handler->event_mask_ & EventHandler::WRITE_EVENT_MASK) ) {
-            FD_SET(handler->socket_, &fd_set_in_.write);
+            FD_SET(handler->fd_, &fd_set_in_.write);
             add_event_mask |= EventHandler::WRITE_EVENT_MASK;
             ++write_size_;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if ( (event_mask & EventHandler::EXCEPT_EVENT_MASK) &&
              !(handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK) ) {
-            FD_SET(handler->socket_, &fd_set_in_.except);
+            FD_SET(handler->fd_, &fd_set_in_.except);
             add_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
             ++except_size_;
         }
@@ -289,18 +297,18 @@ public:
 
         int del_event_mask = EventHandler::NULL_EVENT_MASK;
         if (handler->event_mask_ & event_mask & EventHandler::READ_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.read);
+            FD_CLR(handler->fd_, &fd_set_in_.read);
             del_event_mask |= EventHandler::READ_EVENT_MASK;
             --read_size_;
         }
         if (handler->event_mask_ & event_mask & EventHandler::WRITE_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.write);
+            FD_CLR(handler->fd_, &fd_set_in_.write);
             del_event_mask |= EventHandler::WRITE_EVENT_MASK;
             --write_size_;
         }
 #ifdef ZRSOCKET_OS_WINDOWS
         if (handler->event_mask_ & event_mask & EventHandler::EXCEPT_EVENT_MASK) {
-            FD_CLR(handler->socket_, &fd_set_in_.except);
+            FD_CLR(handler->fd_, &fd_set_in_.except);
             del_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
             --except_size_;
         }
@@ -322,28 +330,28 @@ public:
         int set_event_mask = EventHandler::NULL_EVENT_MASK;
         if (event_mask & EventHandler::READ_EVENT_MASK) {
             if (!(handler->event_mask_ & EventHandler::READ_EVENT_MASK)) {
-                FD_SET(handler->socket_, &fd_set_in_.read);
+                FD_SET(handler->fd_, &fd_set_in_.read);
                 set_event_mask |= EventHandler::READ_EVENT_MASK;
                 ++read_size_;
             }
         }
         else {
             if (handler->event_mask_ & EventHandler::READ_EVENT_MASK) {
-                FD_CLR(handler->socket_, &fd_set_in_.read);
+                FD_CLR(handler->fd_, &fd_set_in_.read);
                 --read_size_;
             }
         }
 
         if (event_mask & EventHandler::WRITE_EVENT_MASK) {
             if (!(handler->event_mask_ & EventHandler::WRITE_EVENT_MASK)) {
-                FD_SET(handler->socket_, &fd_set_in_.write);
+                FD_SET(handler->fd_, &fd_set_in_.write);
                 set_event_mask |= EventHandler::WRITE_EVENT_MASK;
                 ++write_size_;
             }
         }
         else {
             if (handler->event_mask_ & EventHandler::WRITE_EVENT_MASK) {
-                FD_CLR(handler->socket_, &fd_set_in_.write);
+                FD_CLR(handler->fd_, &fd_set_in_.write);
                 --write_size_;
             }
         }
@@ -351,14 +359,14 @@ public:
 #ifdef ZRSOCKET_OS_WINDOWS
         if (event_mask & EventHandler::EXCEPT_EVENT_MASK) {
             if (!(handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK)) {
-                FD_SET(handler->socket_, &fd_set_in_.except);
+                FD_SET(handler->fd_, &fd_set_in_.except);
                 set_event_mask |= EventHandler::EXCEPT_EVENT_MASK;
                 ++except_size_;
             }
         }
         else {
             if (handler->event_mask_ & EventHandler::EXCEPT_EVENT_MASK) {
-                FD_CLR(handler->socket_, &fd_set_in_.except);
+                FD_CLR(handler->fd_, &fd_set_in_.except);
                 --except_size_;
             }
         }
@@ -371,7 +379,10 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        return timer_queue_.add_timer(timer, Time::instance().current_timestamp_us());
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
+            return loop_wakeup();
+        }
+        return 0;
     }
 
     int delete_timer(ITimer *timer)
@@ -379,23 +390,13 @@ public:
         return timer_queue_.delete_timer(timer);
     }
 
-    int loop(int64_t timeout_us = 10000)
+    int loop(int64_t timeout_us = -1)
     {
-        timer_queue_.loop(Time::instance().current_timestamp_us());
-
         EventHandler *handler;
         int ready;
 #ifdef ZRSOCKET_OS_WINDOWS
         bool have_event = false;
 #endif
-
-        int64_t min_interval = timer_queue_.min_interval();
-        if (min_interval > 0) {
-            timeout_us = std::min<int64_t>(min_interval, timeout_us);
-        }
-        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
-            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
-        }
 
         //交换active/standby指针
         mutex_.lock();
@@ -415,19 +416,19 @@ public:
             for (auto &iter : *temp_handlers_active_) {
                 handler = iter.first;
                 switch (iter.second) {
-                    case ADD_HANDLER:
-                        handlers_.emplace(std::move(handler));
-                        break;
-                    case DEL_HANDLER:
-                        handlers_.erase(handler);
-                        handler->handle_close();
-                        handler->source_->free_handler(handler);
-                        break;
-                    case REMOVE_HANDLER:
-                        handlers_.erase(handler);
-                        break;
-                    default:
-                        break;
+                case ADD_HANDLER:
+                    handlers_.emplace(std::move(handler));
+                    break;
+                case DEL_HANDLER:
+                    handlers_.erase(handler);
+                    handler->handle_close();
+                    handler->source_->free_handler(handler);
+                    break;
+                case REMOVE_HANDLER:
+                    handlers_.erase(handler);
+                    break;
+                default:
+                    break;
                 }
             }
             temp_handlers_active_->clear();
@@ -436,22 +437,37 @@ public:
             mutex_.unlock();
         }
 
+        int64_t min_interval = timer_queue_.min_interval();
+        if (min_interval > 0) {
+            timeout_us = std::min<int64_t>(min_interval, timeout_us);
+        }
+
 #ifdef ZRSOCKET_OS_WINDOWS
+        if (timeout_us < ZRSOCKET_TIMER_MIN_INTERVAL) {
+            timeout_us = ZRSOCKET_TIMER_MIN_INTERVAL;
+        }
         if (have_event) {
             timeval tv;
-            tv.tv_sec  = (long)(timeout_us / 1000000LL);
+            tv.tv_sec = (long)(timeout_us / 1000000LL);
             tv.tv_usec = (long)(timeout_us - tv.tv_sec * 1000000LL);
             ready = select(0, &fd_set_out_.read, &fd_set_out_.write, &fd_set_out_.except, &tv);
         }
         else {
             OSApi::sleep_us(timeout_us);
+            timer_queue_.loop(Time::instance().current_timestamp_us());
             return 0;
         }
 #else
-        timeval tv;
-        tv.tv_sec  = timeout_us / 1000000LL;
-        tv.tv_usec = timeout_us - tv.tv_sec * 1000000LL;
-        ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, &tv);
+        timeval tv, *tvp;
+        if (timeout_us < 0) {
+            tvp = nullptr;
+        }
+        else {
+            tv.tv_sec = timeout_us / 1000000LL;
+            tv.tv_usec = timeout_us - tv.tv_sec * 1000000LL;
+            tvp = &tv;
+        }
+        ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, tvp);
 #endif
 
         int num_events = 0;
@@ -459,7 +475,7 @@ public:
             num_events = ready;
             EventSource *source;
             for (auto &handler : handlers_) {
-                if (FD_ISSET(handler->socket_, &fd_set_out_.read)) {
+                if (FD_ISSET(handler->fd_, &fd_set_out_.read)) {
                     if (handler->handle_read() < 0) {
                         delete_handler(handler, 0);
 
@@ -474,7 +490,7 @@ public:
                     }
                 }
 
-                if (FD_ISSET(handler->socket_, &fd_set_out_.write)) {
+                if (FD_ISSET(handler->fd_, &fd_set_out_.write)) {
                     source = handler->source_;
                     if (source->source_state() != EventSource::STATE_CONNECTING) {
                         if (handler->handle_write() < 0) {
@@ -499,7 +515,7 @@ public:
                 }
 
 #ifdef ZRSOCKET_OS_WINDOWS
-                if (FD_ISSET(handler->socket_, &fd_set_out_.except)) {
+                if (FD_ISSET(handler->fd_, &fd_set_out_.except)) {
                     delete_handler(handler, 0);
                     if (--ready <= 0) {
                         break;
@@ -509,10 +525,16 @@ public:
             }
         }
 
+        timer_queue_.loop(Time::instance().current_timestamp_us());
         return num_events;
     }
 
-    int loop_thread_start(int64_t timeout_us = 10000)
+    int loop_wakeup()
+    {
+        return wakeup_handler_.notify();
+    }
+
+    int loop_thread_start(int64_t timeout_us = -1)
     {
         max_timeout_us_ = timeout_us;
         return thread_.start(loop_thread_proc, this);
@@ -578,7 +600,7 @@ private:
 #ifdef ZRSOCKET_OS_WINDOWS
     uint_t  except_size_ = 0;
 #endif
-    int64_t max_timeout_us_ = 20000;
+    int64_t max_timeout_us_ = -1;
 #ifndef ZRSOCKET_OS_WINDOWS
     int     max_fd_ = 0;
 #endif
@@ -600,6 +622,7 @@ private:
     TMutex              mutex_;
     TimerQueue<TMutex>  timer_queue_;
     Thread              thread_;
+    NotifyHandler       wakeup_handler_;
 
     TLoopData           loop_data_;
 };

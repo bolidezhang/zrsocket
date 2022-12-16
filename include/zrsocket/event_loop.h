@@ -77,11 +77,13 @@ public:
     virtual int delete_timer(ITimer *timer) = 0;
 
     virtual int loop(int64_t timeout_us) = 0;
+    virtual int loop_wakeup() = 0;
     virtual int loop_thread_start(int64_t timeout_us) = 0;
     virtual int loop_thread_join() = 0;
     virtual int loop_thread_stop() = 0;
 
     virtual size_t handler_size() = 0;
+
 };
 
 ZRSOCKET_NAMESPACE_END

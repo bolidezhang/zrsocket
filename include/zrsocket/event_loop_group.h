@@ -77,7 +77,7 @@ public:
         return 0; 
     }
 
-    int open(uint_t max_size = 1024, uint_t iovec_count = 1024, int64_t max_timeout_us = 10000, int flags = 0)
+    int open(uint_t max_size = 1024, uint_t iovec_count = 1024, int64_t max_timeout_us = -1, int flags = 0)
     { 
         for (auto &loop : event_loops_) {
             loop->open(max_size, iovec_count, max_timeout_us, flags);
@@ -100,7 +100,6 @@ public:
         for (size_t i = 0; i < size; ++i) {
             loop = assign_event_loop();
             if (nullptr != loop) {
-                handler->event_loop_ = loop;
                 if (loop->add_handler(handler, event_mask) >= 0) {
                     return 0;
                 }
@@ -146,13 +145,18 @@ public:
 
     int loop(int64_t timeout_us)
     {
+        return 0;
+    }
+
+    int loop_wakeup()
+    {
         for (auto &loop : event_loops_) {
-            loop->loop(timeout_us);
+            loop->loop_wakeup();
         }
         return 0;
     }
 
-    int loop_thread_start(int64_t timeout_us = 10000)
+    int loop_thread_start(int64_t timeout_us = -1)
     {
         for (auto &loop : event_loops_) {
             loop->loop_thread_start(timeout_us);

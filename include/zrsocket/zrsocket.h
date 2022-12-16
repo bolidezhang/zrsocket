@@ -20,6 +20,7 @@
 #include "event_handler.h"
 #include "message_common.h"
 #include "message_handler.h"
+#include "notify_handler.h"
 #include "fixed_length_message_handler.h"
 #include "length_field_message_handler.h"
 #include "event_loop.h"
@@ -48,6 +49,7 @@
 #include "seda_stage_thread.h"
 #include "seda_stage2.h"
 #include "seda_stage2_thread.h"
+#include "global.h"
 #include "application.h"
 
 #ifdef ZRSOCKET_OS_WINDOWS
