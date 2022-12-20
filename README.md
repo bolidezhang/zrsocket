@@ -6,7 +6,7 @@ socket event demultiplexing, concurrency.
 zrsockert is targeted for developers of high-performance socket network communication services 
 and applications on Window, Linux platforms.
 
-http test result(with wrk):
+http test result:
           4 threads and 100 connections
           Thread Stats   Avg      Stdev     Max   +/- Stdev
             Latency   321.46us    0.98ms  17.40ms   97.08%
