@@ -1,6 +1,6 @@
 #****************************************************************************
 #
-# Makefile for zrsocket
+# Makefile for echo_server
 # bolide zhang
 # bolidezhang@gmail.com
 #

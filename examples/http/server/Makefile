@@ -1,6 +1,6 @@
 #****************************************************************************
 #
-# Makefile for zrsocket
+# Makefile for http_server
 # bolide zhang
 # bolidezhang@gmail.com
 #
@@ -89,7 +89,7 @@ CXXFLAGS := ${CXXFLAGS} ${DEFS}
 # Targets of the build
 #****************************************************************************
 
-OUTPUT := echo_server
+OUTPUT := http_server
 
 all: ${OUTPUT}
 
@@ -98,7 +98,7 @@ all: ${OUTPUT}
 # Source files
 #****************************************************************************
 
-SRCS := echo_server.cpp 
+SRCS := http_server.cpp
 
 # Add on the sources for libraries
 SRCS := ${SRCS}
