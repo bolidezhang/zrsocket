@@ -534,7 +534,7 @@ public:
 
     inline uint_t use_count()
     {
-        return buffer_->refcount_.load(std::memory_order::memory_order_relaxed);
+        return buffer_->refcount_.load(std::memory_order_relaxed);
     }
 
     inline bool empty() const
@@ -735,14 +735,14 @@ private:
             , use_size_(0)
             , owner_(true)
         {
-            refcount_.store(1, std::memory_order::memory_order_relaxed);
+            refcount_.store(1, std::memory_order_relaxed);
         }
 
         inline Buffer_(uint_t buffer_size)
             : use_size_(0)
             , owner_(true)
         {
-            refcount_.store(1, std::memory_order::memory_order_relaxed);
+            refcount_.store(1, std::memory_order_relaxed);
             char *new_buffer = (char *)zrsocket_malloc(buffer_size);
             if (nullptr != new_buffer) {
                 buffer_      = new_buffer;
@@ -757,7 +757,7 @@ private:
         inline Buffer_(const char *data, uint_t size)
             : owner_(true)
         {
-            refcount_.store(1, std::memory_order::memory_order_relaxed);
+            refcount_.store(1, std::memory_order_relaxed);
             char *new_buffer = (char *)zrsocket_malloc(size);
             if (nullptr != new_buffer) {
                 zrsocket_memcpy(new_buffer, data, size);
@@ -792,13 +792,13 @@ private:
         //加1, 返回变化后值
         inline int increment_refcount()
         {
-            return refcount_.fetch_add(1, std::memory_order::memory_order_relaxed) + 1;
+            return refcount_.fetch_add(1, std::memory_order_relaxed) + 1;
         }
 
         //减1, 返回变化后值
         inline int decrement_refcount()
         {
-            return refcount_.fetch_sub(1, std::memory_order::memory_order_relaxed) - 1;
+            return refcount_.fetch_sub(1, std::memory_order_relaxed) - 1;
         }
 
         inline void clear()

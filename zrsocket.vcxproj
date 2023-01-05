@@ -163,6 +163,11 @@
     <ClInclude Include="include\zrsocket\config.h" />
     <ClInclude Include="include\zrsocket\config\linux.h" />
     <ClInclude Include="include\zrsocket\config\windows.h" />
+    <ClInclude Include="include\zrsocket\event_base.h" />
+    <ClInclude Include="include\zrsocket\event_loop_queue.h" />
+    <ClInclude Include="include\zrsocket\event_type_handler.h" />
+    <ClInclude Include="include\zrsocket\event_type_queue.h" />
+    <ClInclude Include="include\zrsocket\event_type.h" />
     <ClInclude Include="include\zrsocket\global.h" />
     <ClInclude Include="include\zrsocket\data_convert.h" />
     <ClInclude Include="include\zrsocket\epoll_event_loop.h" />

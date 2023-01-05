@@ -1,4 +1,8 @@
-﻿#ifndef SOCKETLITE_SOCKET_INET_ADDR_H
+﻿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
+
+#ifndef SOCKETLITE_SOCKET_INET_ADDR_H
 #define SOCKETLITE_SOCKET_INET_ADDR_H
 #include "config.h"
 #include "base_type.h"

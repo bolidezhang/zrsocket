@@ -14,6 +14,7 @@
 #include "time.h"
 #include "timer_queue.h"
 #include "notify_handler.h"
+#include "event_loop_queue.h"
 
 #ifdef ZRSOCKET_OS_LINUX
 #include <sys/epoll.h>
@@ -26,7 +27,7 @@ enum class EPOLL_MODE
     ET = 2,
 };
 
-template <class TMutex, class TLoopData = nullptr_t>
+template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler>
 class EpollEventLoop : public EventLoop
 {
 public:
@@ -35,6 +36,7 @@ public:
         buffer_size();
         timer_queue_.event_loop(this);
         wakeup_handler_.open();
+        wakeup_flag_.store(true, std::memory_order_relaxed);
     }
 
     virtual ~EpollEventLoop()
@@ -42,11 +44,11 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT, uint_t event_queue_max_size = 10000, uint_t event_type_len = 64)
     {
         max_events_ = max_events;
         epoll_mode_ = event_mode;
-        return 0;
+        return event_queue_.init(event_queue_max_size, event_type_len);
     }
 
     int buffer_size(int recv_buffer_size = 65536, int send_buffer_size = 65536)
@@ -309,8 +311,9 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
-            return loop_wakeup();
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us())) {
+            loop_wakeup();
+            return 1;
         }
         return 0;
     }
@@ -320,15 +323,25 @@ public:
         return timer_queue_.delete_timer(timer);
    }
 
+    int push_event(const EventType *event)
+    {
+        if (event_queue_.push_event(event)) {
+            loop_wakeup();
+            return 1;
+        }
+        return 0;
+    }
+
     int loop(int64_t timeout_us = -1)
-    {      
+    {   
         int64_t min_interval = timer_queue_.min_interval();
         if (min_interval > 0) {
             timeout_us = std::min<int64_t>(min_interval, timeout_us);
         }
-
         int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
+
+        wakeup_flag_.store(false, std::memory_order_relaxed);
         if (ready > 0) {
             EventHandler *handler;
             EventSource  *source;
@@ -359,14 +372,19 @@ public:
                 }
             }
         }
-
+        event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
+        wakeup_flag_.store(true, std::memory_order_relaxed);
+
         return ready;
     }
 
     int loop_wakeup()
     {
-        return wakeup_handler_.notify();
+        if (wakeup_flag_.exchange(false, std::memory_order_relaxed)) {
+            return wakeup_handler_.notify();
+        }
+        return 0;
     }
 
     int loop_thread_start(int64_t timeout_us = -1)
@@ -395,7 +413,7 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollEventLoop<TMutex, TLoopData> *event_loop = static_cast<EpollEventLoop<TMutex, TLoopData> *>(arg);
+        EpollEventLoop<TMutex, TLoopData, TEventTypeHandler> *event_loop = static_cast<EpollEventLoop<TMutex, TLoopData, TEventTypeHandler> *>(arg);
         Thread &thread = event_loop->thread_;
         while (thread.state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -422,12 +440,14 @@ private:
     Thread              thread_;
     TMutex              mutex_;
     NotifyHandler       wakeup_handler_;
+    AtomicBool          wakeup_flag_;
 
-    TLoopData           loop_data_;
+    EventLoopQueue<TMutex, EventTypeHandler> event_queue_;
+    TLoopData loop_data_;
 };
 
 //only support epoll mode: ET
-template <class TMutex, class TLoopData = nullptr_t>
+template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler>
 class EpollETEventLoop : public EventLoop
 {
 public:
@@ -436,6 +456,7 @@ public:
         buffer_size();
         timer_queue_.event_loop(this);
         wakeup_handler_.open();
+        wakeup_flag_.store(true, std::memory_order_relaxed);
     }
 
     virtual ~EpollETEventLoop()
@@ -443,11 +464,11 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::ET)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::ET, uint_t event_queue_max_size = 10000, uint_t event_type_len = 64)
     {
         max_events_ = max_events;
         epoll_mode_ = event_mode;
-        return 0;
+        return event_queue_.init(event_queue_max_size, event_type_len);
     }
 
     int buffer_size(int recv_buffer_size = 65536, int send_buffer_size = 65536)
@@ -662,8 +683,9 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
-            return loop_wakeup();
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us())) {
+            loop_wakeup();
+            return 1;
         }
         return 0;
     }
@@ -673,15 +695,25 @@ public:
         return timer_queue_.delete_timer(timer);
     }
 
+    int push_event(const EventType *event)
+    {
+        if (event_queue_.push_event(event)) {
+            loop_wakeup();
+            return 1;
+        }
+        return 0;
+    }
+
     int loop(int64_t timeout_us = -1)
     {
         int64_t min_interval = timer_queue_.min_interval();
         if (min_interval > 0) {
             timeout_us = std::min<int64_t>(min_interval, timeout_us);
         }
-
         int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
+
+        wakeup_flag_.store(false, std::memory_order_relaxed);
         if (ready > 0) {
             EventHandler *handler;
             EventSource  *source;
@@ -712,14 +744,19 @@ public:
                 }
             }
         }
-
+        event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
+        wakeup_flag_.store(true, std::memory_order_relaxed);
+
         return ready;
     }
 
     int loop_wakeup()
     {
-        return wakeup_handler_.notify();
+        if (wakeup_flag_.exchange(false, std::memory_order_relaxed)) {
+            return wakeup_handler_.notify();
+        }
+        return 0;
     }
 
     int loop_thread_start(int64_t timeout_us = -1)
@@ -748,7 +785,7 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollETEventLoop<TMutex, TLoopData> *event_loop = static_cast<EpollETEventLoop<TMutex, TLoopData> *>(arg);
+        EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler> *event_loop = static_cast<EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler> *>(arg);
         Thread *thread = &(event_loop->thread_);
         while (thread->state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -775,8 +812,10 @@ private:
     Thread              thread_;
     TMutex              mutex_;
     NotifyHandler       wakeup_handler_;
+    AtomicBool          wakeup_flag_;
 
-    TLoopData           loop_data_;
+    EventLoopQueue<TMutex, EventTypeHandler> event_queue_;
+    TLoopData loop_data_;
 };
 
 ZRSOCKET_NAMESPACE_END

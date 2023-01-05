@@ -1,5 +1,4 @@
-﻿
-// Some compilers (e.g. VC++) benefit significantly from using this. 
+﻿// Some compilers (e.g. VC++) benefit significantly from using this. 
 // We've measured 3-4% build speed improvements in apps as a result 
 #pragma once
 
@@ -44,7 +43,7 @@ public:
         return nullptr;
     }
 
-    int init(uint_t num = 2, uint_t max_events = 10000, int event_mode = 1)
+    int init(uint_t num = 2, uint_t max_events = 10000, int event_mode = 1, uint_t event_queue_max_size = 10000, uint_t event_type_len = 64)
     {
         if (num < 1) {
             num = 1;
@@ -54,7 +53,7 @@ public:
         TEventLoop *loop;
         for (uint_t i = 0; i < num; ++i) {
             loop = new TEventLoop();
-            loop->init(num, max_events, event_mode);
+            loop->init(num, max_events, event_mode, event_queue_max_size, event_type_len);
             event_loops_.emplace_back(std::move(loop));
         }
         return 0;
@@ -139,6 +138,11 @@ public:
     }
 
     int delete_timer(ITimer *timer)
+    {
+        return 0;
+    }
+
+    int push_event(const EventType *event)
     {
         return 0;
     }

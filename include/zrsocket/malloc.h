@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Some compilers (e.g. VC++) benefit significantly from using this. 
+// We've measured 3-4% build speed improvements in apps as a result 
+#pragma once
 
 #ifndef ZRSOCKET_MALLOC_H
 #define ZRSOCKET_MALLOC_H

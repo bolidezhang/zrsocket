@@ -23,9 +23,9 @@ enum class SendResult
 
 class EventSource;
 class EventLoop;
-template <class TMutex, class TLoopData> class SelectEventLoop;
-template <class TMutex, class TLoopData> class EpollEventLoop;
-template <class TMutex, class TLoopData> class EpollETEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler> class SelectEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler> class EpollEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler> class EpollETEventLoop;
 template <class TEventLoop> class EventLoopGroup;
 template <class TClientHandler, class TObjectPool, class TServerHandler> class TcpServer;
 template <class TUdpSourceHandler> class UdpSource;
@@ -40,8 +40,7 @@ public:
         READ_EVENT_MASK         = 0x00000001,
         WRITE_EVENT_MASK        = 0x00000002,
         EXCEPT_EVENT_MASK       = 0x00000004,
-        TIMEOUT_EVENT_MASK      = 0x00000008,
-        ALL_EVENT_MASK          = READ_EVENT_MASK | WRITE_EVENT_MASK | EXCEPT_EVENT_MASK  | TIMEOUT_EVENT_MASK,
+        ALL_EVENT_MASK          = READ_EVENT_MASK | WRITE_EVENT_MASK | EXCEPT_EVENT_MASK,
     };
 
     enum HANDLER_STATE
@@ -188,9 +187,9 @@ protected:
 private:
     bool            in_object_pool_;    //是否在object_pool中(上层不能修改)
 
-    template <class TMutex, class TLoopData> friend class SelectEventLoop;
-    template <class TMutex, class TLoopData> friend class EpollEventLoop;
-    template <class TMutex, class TLoopData> friend class EpollETEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class SelectEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class EpollEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class EpollETEventLoop;
     template <class TEventLoop> friend class EventLoopGroup;
     template <class TClientHandler, class TObjectPool, class TServerHandler> friend class TcpServer;
     template <class TUdpSourceHandler> friend class UdpSource;

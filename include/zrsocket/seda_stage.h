@@ -53,8 +53,8 @@ public:
     int close()
     {
         StageThread *stage_thread;
-        typename std::vector<StageThread * >::iterator iter = stage_threads_.begin();
-        typename std::vector<StageThread * >::iterator iter_end = stage_threads_.end();
+        auto iter = stage_threads_.begin();
+        auto iter_end = stage_threads_.end();
         for (; iter != iter_end; ++iter) {
             stage_thread = *iter;
             stage_thread->stop();
@@ -67,8 +67,8 @@ public:
 
     int join()
     {
-        typename std::vector<StageThread * >::iterator iter = stage_threads_.begin();
-        typename std::vector<StageThread * >::iterator iter_end = stage_threads_.end();
+        auto iter = stage_threads_.begin();
+        auto iter_end = stage_threads_.end();
         for (; iter != iter_end; ++iter) {
             (*iter)->join();
         }

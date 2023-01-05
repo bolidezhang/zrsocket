@@ -33,7 +33,7 @@ public:
         Timer *timer = static_cast<Timer *>(itimer);
         mutex_.lock();
         if (timer->enabled_ && (nullptr == timer->timer_queue_)) {
-            int64_t interval = timer->interval_;
+            int64_t interval    = timer->interval_;
             timer->expire_time_ = current_timestamp + interval;
             timer->timer_queue_ = this;
             auto pair = interval_timers_.emplace(interval, interval);

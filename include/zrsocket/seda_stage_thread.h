@@ -65,9 +65,8 @@ public:
         event_queue_mutex_.lock();
         int ret = event_queue_standby_->push(event);
         event_queue_mutex_.unlock();
-        if ((1 == ret) && timedwait_signal_) {
-            if (timedwait_flag_.load(std::memory_order_relaxed) > 0) {
-                timedwait_flag_.store(0, std::memory_order_relaxed);
+        if ((ret > 0) && timedwait_signal_) {
+            if (timedwait_flag_.exchange(0, std::memory_order_relaxed)) {
                 timedwait_condition_.notify_one();
             }
         }
@@ -187,15 +186,16 @@ private:
     }
 
     //交换event_queue的 active/standby 指针
-    inline bool swap_event_queue()
+    inline bool swap_event_queue_ptr()
     {
+        bool ret = false;
+        event_queue_mutex_.lock();
         if (!event_queue_standby_->empty()) {
-            event_queue_mutex_.lock();
             std::swap(event_queue_standby_, event_queue_active_);
-            event_queue_mutex_.unlock();
-            return true;
+            ret = true;
         }
-        return false;
+        event_queue_mutex_.unlock();
+        return ret;
     }
 
     static int thread_proc(void *arg)
@@ -224,7 +224,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventType::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -232,14 +232,14 @@ private:
                         }
                     }
                     else {
-                        if (!stage_thread->swap_event_queue()) {
+                        if (!stage_thread->swap_event_queue_ptr()) {
                             stage_thread->timedwait_flag_.store(1, std::memory_order_relaxed);
                             {
                                 std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
                                 stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                             }
                             stage_thread->timedwait_flag_.store(0, std::memory_order_relaxed);
-                            stage_thread->swap_event_queue();
+                            stage_thread->swap_event_queue_ptr();
                         }
                     }
                 }
@@ -248,7 +248,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventType::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -262,14 +262,14 @@ private:
                             idle_last_clock_ms = current_clock_ms;
                         }
 
-                        if (!stage_thread->swap_event_queue()) {
+                        if (!stage_thread->swap_event_queue_ptr()) {
                             stage_thread->timedwait_flag_.store(1, std::memory_order_relaxed);
                             {
                                 std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
                                 stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                             }
                             stage_thread->timedwait_flag_.store(0, std::memory_order_relaxed);
-                            stage_thread->swap_event_queue();
+                            stage_thread->swap_event_queue_ptr();
                         }
                     }
                 }
@@ -281,7 +281,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventType::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;
@@ -300,14 +300,14 @@ private:
                         stage_thread->check_timers(current_clock_ms, &timer_expire_event);
                         timer_event_count = 0;
 
-                        if (!stage_thread->swap_event_queue()) {
+                        if (!stage_thread->swap_event_queue_ptr()) {
                             stage_thread->timedwait_flag_.store(1, std::memory_order_relaxed);
                             {
                                 std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
                                 stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                             }
                             stage_thread->timedwait_flag_.store(0, std::memory_order_relaxed);
-                            stage_thread->swap_event_queue();
+                            stage_thread->swap_event_queue_ptr();
                         }
                     }
                 }
@@ -316,7 +316,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventType::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;
@@ -338,14 +338,14 @@ private:
                             idle_last_clock_ms = current_clock_ms;
                         }
 
-                        if (!stage_thread->swap_event_queue()) {
+                        if (!stage_thread->swap_event_queue_ptr()) {
                             stage_thread->timedwait_flag_.store(1, std::memory_order_relaxed);
                             {
                                 std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
                                 stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                             }
                             stage_thread->timedwait_flag_.store(0, std::memory_order_relaxed);
-                            stage_thread->swap_event_queue();
+                            stage_thread->swap_event_queue_ptr();
                         }
                     }
                 }
@@ -380,7 +380,7 @@ private:
     ThreadMutex                     timedwait_mutex_;
     Condition                       timedwait_condition_;
     uint_t                          timedwait_interval_us_;
-    AtomicInt32                     timedwait_flag_;            //条件触发标识
+    AtomicInt                       timedwait_flag_;            //条件触发标识
     bool                            timedwait_signal_;          //用于控制是否触发条件信号(因触发条件信号比较耗时)
 };
 

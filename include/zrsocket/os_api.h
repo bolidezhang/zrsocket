@@ -599,7 +599,7 @@ public:
     static inline void sleep_us(uint64_t timeout_us)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            Sleep(timeout_us / 1000);
+            Sleep(static_cast<DWORD>(timeout_us / 1000));
         #else
             //方法1
             //select函数
@@ -619,7 +619,7 @@ public:
     static inline void sleep_ns(uint64_t timeout_ns)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            Sleep(timeout_ns / 1000000);
+            Sleep(static_cast<DWORD>(timeout_ns / 1000000));
         #else
             //方法1
             //select函数
@@ -1064,7 +1064,7 @@ public:
             return host_int64;
         #else
             #ifdef ZRSOCKET_OS_WINDOWS
-                return ( (((unsigned long long)htonl(host_int64)) << 32) + htonl(host_int64 >> 32) );
+                return (static_cast<uint64_t>(htonl(static_cast<ulong_t>(host_int64))) << 32) + htonl(host_int64 >> 32);
             #else
                 return bswap_64(host_int64);
             #endif
@@ -1078,7 +1078,7 @@ public:
             return net_int64;
         #else
             #ifdef ZRSOCKET_OS_WINDOWS
-                return ( (((unsigned long long)ntohl(net_int64)) << 32) + ntohl(net_int64 >> 32) );
+                return (static_cast<uint64_t>(ntohl(static_cast<ulong_t>(net_int64))) << 32) + ntohl(net_int64 >> 32);
             #else
                 return bswap_64(net_int64);
             #endif

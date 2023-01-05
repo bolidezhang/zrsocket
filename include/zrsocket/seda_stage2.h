@@ -75,8 +75,8 @@ public:
     int close()
     {
         StageThread *stage_thread;
-        typename std::vector<StageThread * >::iterator iter = stage_threads_.begin();
-        typename std::vector<StageThread * >::iterator iter_end = stage_threads_.end();
+        auto iter = stage_threads_.begin();
+        auto iter_end = stage_threads_.end();
         for (; iter != iter_end; ++iter) {
             stage_thread = *iter;
             stage_thread->stop();
@@ -89,8 +89,8 @@ public:
 
     int join()
     {
-        typename std::vector<StageThread * >::iterator iter = stage_threads_.begin();
-        typename std::vector<StageThread * >::iterator iter_end = stage_threads_.end();
+        auto iter = stage_threads_.begin();
+        auto iter_end = stage_threads_.end();
         for (; iter != iter_end; ++iter) {
             (*iter)->join();
         }
@@ -99,7 +99,7 @@ public:
 
     inline int push_event(const SedaEvent *event, int thread_index = -1, int priority = SedaPriority::UNKNOWN_PRIOITY)
     {
-        int ret = 0;
+        int ret;
         if (is_priority_ && (SedaPriority::HIGH_PRIORITY == priority)) {
             high_priority_mutex_.lock();
             ret = high_priority_queue_.push(event);

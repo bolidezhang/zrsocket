@@ -17,7 +17,7 @@ class ZRSOCKET_EXPORT Thread
 public:
     Thread()
     {
-        state_.store(static_cast<int>(State::READY), std::memory_order::memory_order_relaxed);
+        state_.store(static_cast<int>(State::READY), std::memory_order_relaxed);
     }
 
     ~Thread()
@@ -37,7 +37,7 @@ public:
     int start(TFunction &&f, TArgs &&... args)
     {
         if (state() == State::READY) {
-            state_.store((int)State::RUNNING, std::memory_order::memory_order_relaxed);
+            state_.store(static_cast<int>(State::RUNNING), std::memory_order_relaxed);
             thread_ = std::move(std::thread(f, std::forward<TArgs>(args)...));
             return 0;
         }
@@ -48,7 +48,7 @@ public:
     {
         State thread_state = state();
         if ( (thread_state == State::RUNNING) || (thread_state == State::STOPPED) ) {
-            state_.store((int)State::JOINED, std::memory_order::memory_order_relaxed);
+            state_.store(static_cast<int>(State::JOINED), std::memory_order_relaxed);
             thread_.join();
             return 0;
         }
@@ -58,7 +58,7 @@ public:
     inline int stop()
     {
         if (state() == State::RUNNING) {
-            state_.store((int)State::STOPPED, std::memory_order::memory_order_relaxed);
+            state_.store(static_cast<int>(State::STOPPED), std::memory_order_relaxed);
             return 0;
         }
         return -1;
@@ -66,7 +66,7 @@ public:
 
     inline State state()
     {
-        return static_cast<State>(state_.load(std::memory_order::memory_order_relaxed));
+        return static_cast<State>(state_.load(std::memory_order_relaxed));
     }
 
 private:
@@ -75,7 +75,7 @@ private:
 
 private:
     std::thread thread_;
-    AtomicInt state_;
+    AtomicInt   state_;
 };
 
 class ZRSOCKET_EXPORT ThreadGroup

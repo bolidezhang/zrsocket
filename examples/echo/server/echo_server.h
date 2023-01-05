@@ -116,7 +116,7 @@ public:
     int handle_event(const SedaEvent *event)
     {
         switch (event->type()) {
-            case SedaEventType::TIMER_EXPIRE: 
+            case SedaEventTypeId::TIMER_EXPIRE: 
             {
                 stage_thread_->set_lru_timer(TIMER_STAT, 0);
 
@@ -177,7 +177,7 @@ public:
     }
 
 public:
-    typedef zrsocket_default_event_loop<zrsocket::SpinMutex, LoopData> BASE_EVENT_LOOP;
+    typedef zrsocket_default_event_loop<zrsocket::SpinMutex, LoopData, EventTypeHandler> BASE_EVENT_LOOP;
     typedef zrsocket::ZRSocketObjectPool<TcpHandler, zrsocket::SpinMutex> TCP_OBJECT_POOL;
 
     TCP_OBJECT_POOL handler_object_pool_;

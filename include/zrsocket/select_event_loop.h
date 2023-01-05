@@ -17,6 +17,8 @@
 #include "event_loop.h"
 #include "time.h"
 #include "timer_queue.h"
+#include "event_loop_queue.h"
+#include "atomic.h"
 
 #ifndef ZRSOCKET_OS_WINDOWS
     #include <sys/select.h>
@@ -24,7 +26,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <class TMutex, class TLoopData = nullptr_t>
+template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler>
 class SelectEventLoop : public EventLoop
 {
 public:
@@ -34,12 +36,20 @@ public:
         temp_handlers_standby_  = &temp2_handlers_;
         buffer_size();
         timer_queue_.event_loop(this);
+#ifndef ZRSOCKET_OS_WINDOWS
         wakeup_handler_.open();
+        wakeup_flag_.store(true, std::memory_order_relaxed);
+#endif
     }
 
     virtual ~SelectEventLoop()
     {
         close();
+    }
+
+    int init(uint_t num, uint_t max_events, int event_mode, uint_t event_queue_max_size, uint_t event_type_len)
+    {
+        return event_queue_.init(event_queue_max_size, event_type_len);
     }
 
     int buffer_size(int recv_buffer_size = 65536, int send_buffer_size = 65536)
@@ -104,9 +114,9 @@ public:
 #ifdef ZRSOCKET_OS_WINDOWS
         FD_ZERO(&fd_set_in_.except);
         FD_ZERO(&fd_set_out_.except);
-#endif
-
+#else
         add_handler(&wakeup_handler_, EventHandler::READ_EVENT_MASK);
+#endif
         return 0;
     }
 
@@ -379,8 +389,9 @@ public:
 
     int add_timer(ITimer *timer)
     {
-        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us()) > 0) {
-            return loop_wakeup();
+        if (timer_queue_.add_timer(timer, Time::instance().current_timestamp_us())) {
+            loop_wakeup();
+            return 1;
         }
         return 0;
     }
@@ -388,6 +399,15 @@ public:
     int delete_timer(ITimer *timer)
     {
         return timer_queue_.delete_timer(timer);
+    }
+
+    int push_event(const EventType *event)
+    {
+        if (event_queue_.push_event(event)) {
+            loop_wakeup();
+            return 1;
+        }
+        return 0;
     }
 
     int loop(int64_t timeout_us = -1)
@@ -448,12 +468,13 @@ public:
         }
         if (have_event) {
             timeval tv;
-            tv.tv_sec = (long)(timeout_us / 1000000LL);
+            tv.tv_sec  = (long)(timeout_us / 1000000LL);
             tv.tv_usec = (long)(timeout_us - tv.tv_sec * 1000000LL);
             ready = select(0, &fd_set_out_.read, &fd_set_out_.write, &fd_set_out_.except, &tv);
         }
         else {
             OSApi::sleep_us(timeout_us);
+            event_queue_.loop(event_queue_.capacity());
             timer_queue_.loop(Time::instance().current_timestamp_us());
             return 0;
         }
@@ -468,6 +489,7 @@ public:
             tvp = &tv;
         }
         ready = select(max_fd_+1, &fd_set_out_.read, &fd_set_out_.write, nullptr, tvp);
+        wakeup_flag_.store(false, std::memory_order_relaxed);
 #endif
 
         int num_events = 0;
@@ -525,13 +547,23 @@ public:
             }
         }
 
+        event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
+#ifdef ZRSOCKET_OS_LINUX
+        wakeup_flag_.store(true, std::memory_order_relaxed);
+#endif
+
         return num_events;
     }
 
     int loop_wakeup()
     {
-        return wakeup_handler_.notify();
+#ifndef ZRSOCKET_OS_WINDOWS
+        if (wakeup_flag_.exchange(false, std::memory_order_relaxed)) {
+            return wakeup_handler_.notify();
+        }
+#endif
+        return 0;
     }
 
     int loop_thread_start(int64_t timeout_us = -1)
@@ -564,7 +596,7 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        SelectEventLoop<TMutex, TLoopData> *event_loop = static_cast<SelectEventLoop<TMutex, TLoopData> *>(arg);
+        SelectEventLoop<TMutex,TLoopData, TEventTypeHandler> *event_loop = static_cast<SelectEventLoop<TMutex, TLoopData, TEventTypeHandler> *>(arg);
         Thread &thread = event_loop->thread_;
         while (thread.state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -594,16 +626,15 @@ private:
 #endif
     };
 
-    uint_t  max_size_;
-    uint_t  read_size_ = 0;
+    uint_t  max_size_   = 0;
+    uint_t  read_size_  = 0;
     uint_t  write_size_ = 0;
 #ifdef ZRSOCKET_OS_WINDOWS
     uint_t  except_size_ = 0;
-#endif
-    int64_t max_timeout_us_ = -1;
-#ifndef ZRSOCKET_OS_WINDOWS
+#else 
     int     max_fd_ = 0;
 #endif
+    int64_t max_timeout_us_ = -1;
 
     ZRSOCKET_FD_SET     fd_set_in_;
     ZRSOCKET_FD_SET     fd_set_out_;
@@ -622,9 +653,14 @@ private:
     TMutex              mutex_;
     TimerQueue<TMutex>  timer_queue_;
     Thread              thread_;
-    NotifyHandler       wakeup_handler_;
 
-    TLoopData           loop_data_;
+#ifndef ZRSOCKET_OS_WINDOWS
+    NotifyHandler       wakeup_handler_;
+    AtomicBool          wakeup_flag_;
+#endif
+
+    EventLoopQueue<TMutex, EventTypeHandler> event_queue_;
+    TLoopData loop_data_;
 };
 
 ZRSOCKET_NAMESPACE_END

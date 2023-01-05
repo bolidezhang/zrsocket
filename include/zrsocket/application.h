@@ -132,7 +132,7 @@ protected:
     AtomicBool stop_flag_;
 
     //超时间隔(us)
-    int64_t timeout_us_ = -1;
+    int64_t timeout_us_ = 10000;
 
     //Main EventLoop
 #ifdef ZRSOCKET_OS_WINDOWS

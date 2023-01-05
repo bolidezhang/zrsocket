@@ -8,6 +8,7 @@
 #include "event_handler.h"
 #include "timer_interface.h"
 #include "byte_buffer.h"
+#include "event_type.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
@@ -22,13 +23,13 @@ public:
     {
     }
     
-    virtual int init(uint_t num, uint_t max_events, int event_mode)
+    virtual int init(uint_t num, uint_t max_events, int event_mode, uint_t event_queue_max_size, uint_t event_type_len)
     {
         return 0;
     }
 
     virtual int buffer_size(int recv_buffer_size, int send_buffer_size) 
-    { 
+    {
         return 0;
     }
 
@@ -75,6 +76,7 @@ public:
 
     virtual int add_timer(ITimer *timer) = 0;
     virtual int delete_timer(ITimer *timer) = 0;
+    virtual int push_event(const EventType *event) = 0;
 
     virtual int loop(int64_t timeout_us) = 0;
     virtual int loop_wakeup() = 0;
