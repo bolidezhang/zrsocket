@@ -549,7 +549,7 @@ public:
 
         event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
-#ifdef ZRSOCKET_OS_LINUX
+#ifndef ZRSOCKET_OS_WINDOWS
         wakeup_flag_.store(true, std::memory_order_relaxed);
 #endif
 
