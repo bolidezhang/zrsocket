@@ -34,11 +34,12 @@ int TestAppServer::init()
     decoder_config_.length_field_offset_ = 0;
     decoder_config_.length_field_length_ = 2;
     decoder_config_.max_message_length_ = 16384;
+    //decoder_config_.max_message_length_ = 4096;
     decoder_config_.update();
     main_event_loop_.buffer_size();
-    main_event_loop_.open(1024, 1024, -1);
+    main_event_loop_.open(1024, 1024, -1, 0);
     recv_messge_count_.store(0, std::memory_order_relaxed);
-    sub_event_loop_.init(std::thread::hardware_concurrency(), 10000, 2);
+    sub_event_loop_.init(std::thread::hardware_concurrency(), 10000, 1, 1000, 64);
     sub_event_loop_.open(1024, 1024, -1);
     sub_event_loop_.loop_thread_start(-1);
 
@@ -82,7 +83,7 @@ int TestAppServer::init()
 int main(int argc, char *argv[])
 {
 #define TEST 0
-#ifdef TEST
+#if TEST
     {
         //std::stable_sort()
         //std::vector<int> v1;
@@ -91,10 +92,6 @@ int main(int argc, char *argv[])
         //std::for_each()
         //signal()
         //select()
-
-        bool t = true;
-        bool f = false;
-        printf("true:%d, false:%d\n", t, f);
     }
 #endif
 
