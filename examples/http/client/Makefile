@@ -120,7 +120,7 @@ ${OUTPUT}: ${OBJS}
 	${CXX} -c -std=c++11 ${CXXFLAGS} ${INCS} $< -o $@
 
 %.o : %.c
-	${CC} -c -std=c++11 ${CFLAGS} ${INCS} $< -o $@
+	${CC} -c -std=c11 ${CFLAGS} ${INCS} $< -o $@
 
 dist:
 	bash makedistlinux

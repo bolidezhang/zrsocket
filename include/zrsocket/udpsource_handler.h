@@ -304,14 +304,13 @@ protected:
     }
 
     //返回已发送的消息数
-    template <class TAddrsIt, class TfnGetInetAddr>
-    int send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, TAddrsIt addrs_first, TAddrsIt addrs_last, TfnGetInetAddr get_addr, bool direct_send = true, int priority = 0, int flags = 0)
+    template <class TAddrsIter, class TfnGetInetAddr>
+    int send_i(ZRSOCKET_IOVEC *iovecs, int iovecs_count, TAddrsIter addrs_first, TAddrsIter addrs_last, TfnGetInetAddr get_addr, bool direct_send = true, int priority = 0, int flags = 0)
     {
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
         if (nullptr != event_loop_) {
             int sendmsg_count = 0;
             if (direct_send && queue_standby_->empty() && queue_active_->empty()) {
-                int  i = 0;
                 std::vector<struct mmsghdr> msgs;
                 msgs.reserve(100);
                 struct mmsghdr msg;
@@ -325,8 +324,7 @@ protected:
                     msg.msg_hdr.msg_control = nullptr;
                     msg.msg_hdr.msg_controllen = 0;
                     msg.msg_hdr.msg_flags = flags;
-                    msgs.push_back(std::move(msg));
-                    ++i;
+                    msgs.emplace_back(std::move(msg));
                 }
 
                 sendmsg_count = ::sendmmsg(fd_, msgs.data(), msgs.size(), flags);
@@ -366,7 +364,6 @@ protected:
             return sendmsg_count;
         }
         else {
-            int  i = 0;
             std::vector<struct mmsghdr> msgs;
             msgs.reserve(100);
             struct mmsghdr msg;
@@ -380,8 +377,7 @@ protected:
                 msg.msg_hdr.msg_control = nullptr;
                 msg.msg_hdr.msg_controllen = 0;
                 msg.msg_hdr.msg_flags = flags;
-                msgs.push_back(std::move(msg));
-                ++i;
+                msgs.emplace_back(std::move(msg));
             }
 
             int sendmsg_count = ::sendmmsg(fd_, msgs.data(), msgs.size(), flags);
@@ -538,10 +534,11 @@ protected:
 
     int handle_write()
     {
-        mutex_.lock();
         if (queue_active_->empty()) {
+            mutex_.lock();
             if (!queue_standby_->empty()) {
                 std::swap(queue_standby_, queue_active_);
+                mutex_.unlock();
             }
             else {
                 mutex_.unlock();
@@ -549,15 +546,13 @@ protected:
                 return EventHandler::WriteResult::WRITE_RESULT_NOT_DATA;
             }
         }
-        mutex_.unlock();
 
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG
         int iovecs_count = 0;
         ZRSOCKET_IOVEC *iovecs = event_loop_->iovecs(iovecs_count);
-        int msgs_count = -1;
+        int msgs_count = 0;
         for (auto iter = queue_active_->begin(); iter != queue_active_->end(); ++iter) {
             for (auto iter_addr = (*iter).to_addrs_.begin(); iter_addr != (*iter).to_addrs_.end(); ++iter_addr) {
-                ++msgs_count;
                 if (msgs_count < iovecs_count) {
                     iovecs[msgs_count].iov_base = (*iter).buf_.data();
                     iovecs[msgs_count].iov_len  = (*iter).buf_.data_size();
@@ -573,13 +568,13 @@ protected:
                 else {
                     goto START_SENDMMSG;
                 }
+                ++msgs_count;
             }
         }
 
     START_SENDMMSG:
-        ++msgs_count;
         if (msgs_count > 0) {
-            int retval = ::sendmmsg(fd_, send_mmsgs_.data(), send_mmsgs_.size(), 0);
+            int retval = ::sendmmsg(fd_, send_mmsgs_.data(), msgs_count, 0);
             if (retval <= 0) {
                 int error_id = OSApi::socket_get_lasterror();
                 if ((ZRSOCKET_EAGAIN == error_id) ||
@@ -591,7 +586,7 @@ protected:
                 }
                 else {
                     //非阻塞模式下异常情况
-                    last_errno_ = error_id;
+                    last_errno_ = -error_id;
                     return EventHandler::WriteResult::WRITE_RESULT_FAILURE;
                 }
             }

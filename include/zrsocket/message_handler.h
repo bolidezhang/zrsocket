@@ -232,7 +232,7 @@ protected:
                 int i = 0;
                 int iovec_remain_bytes = 0;
                 int remain_bytes = send_bytes;
-                for (; i<iovecs_count; ++i) {
+                for (; i < iovecs_count; ++i) {
                     iovec_remain_bytes = iovecs[i].iov_len - remain_bytes;
                     remain_bytes -= iovecs[i].iov_len;
                     if (remain_bytes <= 0) {
@@ -279,10 +279,11 @@ protected:
 
     int handle_write()
     {
-        mutex_.lock();
         if (queue_active_->empty()) {
+            mutex_.lock();
             if (!queue_standby_->empty()) {
                 std::swap(queue_standby_, queue_active_);
+                mutex_.unlock();
             }
             else {
                 mutex_.unlock();
@@ -290,7 +291,6 @@ protected:
                 return EventHandler::WriteResult::WRITE_RESULT_NOT_DATA;
             }
         }
-        mutex_.unlock();
 
         int iovecs_count = 0;
         ZRSOCKET_IOVEC *iovecs = event_loop_->iovecs(iovecs_count);
@@ -311,9 +311,16 @@ protected:
         int error_id = 0;
         int send_bytes = OSApi::socket_sendv(fd_, iovecs, iovecs_count, 0, nullptr, error_id);
         if (send_bytes > 0) {
+            EventHandler::WriteResult result;
+            if (send_bytes == iovecs_bytes) {
+                result = EventHandler::WriteResult::WRITE_RESULT_SUCCESS;
+            }
+            else {
+                result = EventHandler::WriteResult::WRITE_RESULT_PART;
+            }
+
             int data_size = 0;
-            int i = 1;
-            for (; i <= iovecs_count; ++i) {
+            for (int i = 0; i < iovecs_count; ++i) {
                 data_size = queue_active_->front().data_size();
                 if (send_bytes >= data_size) {
                     queue_active_->pop_front();
@@ -328,12 +335,7 @@ protected:
                 }
             }
 
-            if (send_bytes == iovecs_bytes) {
-                return EventHandler::WriteResult::WRITE_RESULT_SUCCESS;
-            }
-            else {
-                return EventHandler::WriteResult::WRITE_RESULT_PART;
-            }
+            return result;
         }
         else {
             if ((ZRSOCKET_EAGAIN == error_id) || 
