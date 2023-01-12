@@ -44,7 +44,7 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT, uint_t event_queue_max_size = 10000, uint_t event_type_len = 64)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT, uint_t event_queue_max_size = 10000, uint_t event_type_len = 8)
     {
         max_events_ = max_events;
         epoll_mode_ = event_mode;

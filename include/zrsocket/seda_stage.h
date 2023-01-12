@@ -4,11 +4,12 @@
 #include <vector>
 #include "base_type.h"
 #include "os_api.h"
+#include "mutex.h"
 #include "seda_stage_thread.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <typename TSedaStageHandler>
+template <typename TSedaStageHandler, typename TMutex = SpinlockMutex>
 class SedaStage : public ISedaStage
 {
 public:
@@ -26,7 +27,7 @@ public:
 
     int open(uint_t thread_number,
              uint_t queue_max_size,
-             uint_t event_len = 64,
+             uint_t event_len = 8,
              uint_t timedwait_interval_us = 10000,
              bool   timedwait_signal = true,
              int    type = 0,
@@ -114,7 +115,7 @@ public:
     }
 
 protected:
-    typedef SedaStageThread<TSedaStageHandler> StageThread;
+    typedef SedaStageThread<TSedaStageHandler, TMutex> StageThread;
     std::vector<StageThread * > stage_threads_;
 
     uint_t  timedwait_interval_us_;

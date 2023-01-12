@@ -16,7 +16,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <typename TSedaStageHandler>
+template <typename TSedaStageHandler, typename TMutex>
 class SedaStageThread : public ISedaStageThread
 {
 public:
@@ -200,7 +200,7 @@ private:
 
     static int thread_proc(void *arg)
     {
-        SedaStageThread<TSedaStageHandler> *stage_thread = (SedaStageThread<TSedaStageHandler> *)arg;
+        SedaStageThread<TSedaStageHandler, TMutex> *stage_thread = static_cast<SedaStageThread<TSedaStageHandler, TMutex> *>(arg);
         stage_thread->stage_handler_.handle_open();
 
         uint64_t current_clock_ms    = OSApi::timestamp_ms();
@@ -224,7 +224,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -248,7 +248,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -281,7 +281,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;
@@ -316,7 +316,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_active_->pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;
@@ -375,7 +375,7 @@ private:
     SedaEventQueue                 *event_queue_standby_;
     SedaEventQueue                  event_queue1_;
     SedaEventQueue                  event_queue2_;
-    SpinMutex                       event_queue_mutex_;
+    TMutex                          event_queue_mutex_;
 
     ThreadMutex                     timedwait_mutex_;
     Condition                       timedwait_condition_;

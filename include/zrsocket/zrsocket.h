@@ -55,10 +55,22 @@
 #include "global.h"
 #include "application.h"
 
+ZRSOCKET_NAMESPACE_BEGIN
+
 #ifdef ZRSOCKET_OS_WINDOWS
+    template<typename TMutex, typename TLoopData, typename TEventTypeHandler>
+    using DefaultEventLoop = SelectEventLoop<TMutex, TLoopData, TEventTypeHandler>;
+
     #define zrsocket_default_event_loop zrsocket::SelectEventLoop
+    #define ZRSOCKET_DEFAULT_EVENT_LOOP zrsocket::SelectEventLoop
 #else
+    template<typename TMutex, typename TLoopData, typename TEventTypeHandler>
+    using DefaultEventLoop = EpollEventLoop<TMutex, TLoopData, TEventTypeHandler>;
+
     #define zrsocket_default_event_loop zrsocket::EpollEventLoop
+    #define ZRSOCKET_DEFAULT_EVENT_LOOP zrsocket::EpollEventLoop
 #endif
+
+ZRSOCKET_NAMESPACE_END
 
 #endif

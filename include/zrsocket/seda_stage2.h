@@ -16,7 +16,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <typename TSedaStageHandler>
+template <typename TSedaStageHandler, typename TMutex = SpinlockMutex>
 class SedaStage2 : public ISedaStage
 {
 public:
@@ -36,7 +36,7 @@ public:
 
     int open(uint_t thread_number,
              uint_t queue_max_size,
-             uint_t event_len = 64,
+             uint_t event_len = 8,
              uint_t timedwait_interval_us = 10000,
              bool   timedwait_signal = true,
              int    type = 0,
@@ -155,9 +155,9 @@ protected:
     std::vector<StageThread * > stage_threads_;
 
     SedaEventQueue  high_priority_queue_;
-    SpinMutex       high_priority_mutex_;
+    TMutex          high_priority_mutex_;
     SedaEventQueue  low_priority_queue_;
-    SpinMutex       low_priority_mutex_;
+    TMutex          low_priority_mutex_;
 
     ThreadMutex     timedwait_mutex_;
     Condition       timedwait_condition_;

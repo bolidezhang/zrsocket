@@ -10,6 +10,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
+typedef std::atomic_flag        AtomicFlag;
 typedef std::atomic_bool        AtomicBool;
 typedef std::atomic_char        AtomicChar;
 typedef std::atomic_uchar       AtomicUChar;

@@ -770,16 +770,17 @@ public:
             //vc实现c++11中chrono库的内部函数_Xtime_get_ticks(100-nanosecond intervals)
             return _Xtime_get_ticks() * 100;
 
-            //std::chrono::steady_clock::now().time_since_epoch().count();
+            //方法2
+            //std::chrono::system_clock::now().time_since_epoch().count();
 
-            ////方法2 100-nanosecond intervals
+            ////方法3 100-nanosecond intervals
             //#define EPOCH 0x19DB1DED53E8000i64
             //FILETIME ft;
             ////GetSystemTimeAsFileTime(&ft);
             //GetSystemTimePreciseAsFileTime(&ft);
             //return (((static_cast<long long>(ft.dwHighDateTime)) << 32) + static_cast<long long>(ft.dwLowDateTime) - EPOCH) * 100;
 
-            //方法3
+            //方法4
             //struct _timeb tb;
             //_ftime_s(&tb);
             //return (tb.time * 1000000000LL + tb.millitm * 1000000LL);
@@ -950,11 +951,15 @@ public:
     static inline uint64_t timestamp_ns()
     {
         #ifdef ZRSOCKET_OS_WINDOWS
+            //方法1
             const long long freq    = os_counter_frequency();  // doesn't change after system boot
             const long long ctr     = os_counter();
             const long long whole   = ctr / freq * 1000000000i64;
             const long long part    = (ctr % freq) * 1000000000i64 / freq;
             return whole + part;
+
+            //方法2
+            //std::chrono::system_clock::now().time_since_epoch().count();
 
             //const long long freq    = system_counter_frequency();  // doesn't change after system boot
             //const long long ctr     = system_counter();

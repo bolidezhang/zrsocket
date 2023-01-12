@@ -25,7 +25,7 @@ public:
     {
     }
 
-    int init(uint_t queue_max_size, uint_t event_type_len = 64)
+    int init(uint_t queue_max_size, uint_t event_type_len = 8)
     {
         queue1_.init(queue_max_size, event_type_len);
         queue2_.init(queue_max_size, event_type_len);
@@ -47,7 +47,7 @@ public:
             event = queue_active_->pop();
             if (nullptr != event) {
                 handler_.handle_event(event);
-                if (EventTypeId::QUIT_EVENT == event->type_) {
+                if (EventTypeId::QUIT_EVENT == event->type()) {
                     break;
                 }
             }

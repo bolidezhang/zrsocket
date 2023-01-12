@@ -177,8 +177,8 @@ public:
     }
 
 public:
-    typedef zrsocket_default_event_loop<zrsocket::SpinMutex, LoopData, EventTypeHandler> BASE_EVENT_LOOP;
-    typedef zrsocket::ZRSocketObjectPool<TcpHandler, zrsocket::SpinMutex> TCP_OBJECT_POOL;
+    typedef zrsocket_default_event_loop<zrsocket::SpinlockMutex, LoopData, EventTypeHandler> BASE_EVENT_LOOP;
+    typedef zrsocket::ZRSocketObjectPool<TcpHandler, zrsocket::SpinlockMutex> TCP_OBJECT_POOL;
 
     TCP_OBJECT_POOL handler_object_pool_;
     zrsocket::TcpServer<TcpHandler, TCP_OBJECT_POOL, zrsocket::TcpServerHandler> tcp_server_;

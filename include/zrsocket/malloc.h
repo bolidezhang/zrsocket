@@ -66,6 +66,6 @@
 #endif
 
 //默认的内存块大小，经验值
-#define ZRSOCKET_DEFAULT_MEMORY_BLOCK_SIZE  8192
+#define ZRSOCKET_DEFAULT_MEMORY_BLOCK_SIZE 8192
 
 #endif

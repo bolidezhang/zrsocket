@@ -186,7 +186,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_.pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -202,7 +202,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_.pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
                         }
                         else {
@@ -228,7 +228,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_.pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;
@@ -255,7 +255,7 @@ private:
                 for (;;) {
                     event = stage_thread->event_queue_.pop();
                     if (nullptr != event) {
-                        if (SedaEventTypeId::QUIT_EVENT != event->type_) {
+                        if (SedaEventTypeId::QUIT_EVENT != event->type()) {
                             stage_thread->stage_handler_.handle_event(event);
 
                             ++timer_event_count;

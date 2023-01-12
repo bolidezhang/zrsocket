@@ -9,7 +9,8 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-class EventType
+template <typename TDataType>
+class IEventType
 {
 public:
     inline uint8_t * event_ptr() const
@@ -27,34 +28,28 @@ public:
         return type_;
     }
 
-    inline int64_t timestamp() const
+    inline void type(int type)
     {
-        return timestamp_;
+        type_ = type;
     }
 
-    inline void timestamp(int64_t timestamp)
-    {
-        timestamp_ = timestamp;
-    }
-
-public:
-    inline EventType(int len, int type)
+protected:
+    inline IEventType(int len, int type)
         : len_(len)
         , type_(type)
-        , timestamp_(0)
     {
     }
+    inline ~IEventType() = default;
 
-    inline ~EventType()
-    {
-    }
-
-    int         len_;       //len of data, include sizeof(EventType)
-    int         type_;      //type of SedaEvent
-
-    //事件发生时间(建议时间单位:us, 可以自行定义) 用于控制线程处理太慢,事件在队列等待时间过长时,无需再处理此事件)
-    uint64_t    timestamp_; 
+    TDataType len_;     //len of data, include sizeof(EventType)
+    TDataType type_;    //type of EventType
 };
+
+#ifdef ZRSOCKET_BIG_EVENT_TYPE
+using EventType = IEventType<uint16_t>;
+#else
+using EventType = IEventType<uint8_t>;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 //template of signal events (events without data)
@@ -93,6 +88,32 @@ protected:
     }
 };
 
+struct TimestampEventType : public EventType
+{
+public:
+    TimestampEventType(int type)
+        : EventType(sizeof(TimestampEventType), type)
+        , timestamp_(OSApi::timestamp_ms())
+    {
+    }
+
+    ~TimestampEventType() = default;
+
+    inline int64_t timestamp() const
+    {
+        return timestamp_;
+    }
+
+    inline void timestamp(int64_t timestamp)
+    {
+    }
+
+protected:
+
+    //事件发生时间(建议时间单位:us, 可以自行定义) 用于控制线程处理太慢,事件在队列等待时间过长时,无需再处理此事件)
+    uint64_t timestamp_;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // event type ids
 struct EventTypeId
@@ -115,16 +136,16 @@ struct EventTypeId
         UDP_READ_DATA = 11,
         UDP_WRITE_DATA = 12,
 
-        RPC_MESSAGE = 13,              //rpc(支持thrift和protobuf等消息格式)
+        RPC_MESSAGE  = 13,             //rpc(支持thrift和protobuf等消息格式)
         RPC_MESSAGE2 = 14,             //rpc(支持thrift和protobuf等消息格式)
 
-        USER_START = 1000,
-        USER_START_NUMBER = 1000,
+        USER_START = 32,
+        USER_START_NUMBER = 32,
     };
 };
 
-typedef SignalEvent<EventTypeId::QUIT_EVENT>  QuitEvent;
-typedef SignalEvent<EventTypeId::THREAD_IDLE> ThreadIdleEvent;
+using QuitEvent = SignalEvent<EventTypeId::QUIT_EVENT>;
+using ThreadIdleEvent = SignalEvent<EventTypeId::THREAD_IDLE>;
 
 ZRSOCKET_NAMESPACE_END
 

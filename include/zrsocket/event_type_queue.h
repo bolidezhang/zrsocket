@@ -35,7 +35,7 @@ public:
         }
     }
 
-    inline int init(uint_t capacity, int event_type_len = 64)
+    inline int init(uint_t capacity, int event_type_len = 8)
     {
         clear();
 
