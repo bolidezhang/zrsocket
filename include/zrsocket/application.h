@@ -5,7 +5,7 @@
 #ifndef ZRSOCKET_APPLICATION_H
 #define ZRSOCKET_APPLICATION_H
 
-#include <signal.h>
+#include <csignal>
 #include "atomic.h"
 #include "config.h"
 #include "global.h"
@@ -46,11 +46,10 @@ public:
 
     virtual int init()
     {
-        main_event_loop_.open();
         if (do_init() < 0) {
             return -1;
         }
-
+        main_event_loop_.open();
         init_flag_ = true;
         return 0;
     }

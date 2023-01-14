@@ -5,12 +5,10 @@ class BizStageHandler : public zrsocket::SedaStageHandler
 {
 public:
     BizStageHandler() = default;
-    ~BizStageHandler() = default;
+    virtual ~BizStageHandler() = default;
 
-    virtual int handle_event(const zrsocket::SedaEvent *event)
-    {
-        return 0;
-    }
+    virtual int handle_event(const zrsocket::SedaEvent *event);
+
+private:
 
 };
-

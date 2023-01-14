@@ -5,9 +5,9 @@
 #ifndef ZRSOCKET_SYSTEM_API_H
 #define ZRSOCKET_SYSTEM_API_H
 
-#include <time.h>
-#include <stdio.h>
-#include <stdarg.h>         // for va_list, va_start, va_end
+#include <ctime>
+#include <cstdio>
+#include <cstdarg>         // for va_list, va_start, va_end
 #include "config.h"
 #include "base_type.h"
 #include "memory.h"
@@ -876,13 +876,13 @@ public:
         return timestamp_us();
     }
 
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 毫秒:us 只能用于计时)
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 微秒:us 只能用于计时)
     static inline uint64_t timestamp()
     {
         return timestamp_us();
     }
 
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 毫秒:s 只能用于计时)
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 秒:s 只能用于计时)
     static inline uint64_t timestamp_s()
     {
         #ifdef ZRSOCKET_OS_WINDOWS

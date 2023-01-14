@@ -12,7 +12,7 @@
     #define ZRSOCKET_EXPORT __attribute__((visibility ("default")))
 #endif
 
-#include <string.h>
+#include <cstring>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>

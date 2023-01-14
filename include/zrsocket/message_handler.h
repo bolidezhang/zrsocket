@@ -380,10 +380,10 @@ protected:
     typedef std::deque<TSendBuffer> SEND_QUEUE;
     //typedef std::list<TMessageBuffer> SEND_QUEUE;
 
-    SEND_QUEUE      queue1_;
-    SEND_QUEUE      queue2_;
     SEND_QUEUE     *queue_active_;
     SEND_QUEUE     *queue_standby_;
+    SEND_QUEUE      queue1_;
+    SEND_QUEUE      queue2_;
     TMutex          mutex_;
 
     ByteBuffer      message_buffer_;        //消息缓存

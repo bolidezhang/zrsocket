@@ -11,7 +11,7 @@ public:
     {
     }
 
-    ~SedaStageHandler()
+    virtual ~SedaStageHandler()
     {
     }
 
@@ -41,7 +41,7 @@ public:
     }
 
 public:
-    ISedaStageThread *stage_thread_;
+    ISedaStageThread *stage_thread_ = nullptr;
 };
 
 ZRSOCKET_NAMESPACE_END

@@ -34,8 +34,9 @@ public:
 
     inline int push_event(const EventType *event)
     {
+        int ret;
         mutex_.lock();
-        int ret = queue_standby_->push(event);
+        ret = queue_standby_->push(event);
         mutex_.unlock();
         return ret;
     }
@@ -51,8 +52,17 @@ public:
                     break;
                 }
             }
-            else if (!swap_queue_ptr()){
-                break;
+            else {
+                //交换queue的 active/standby 指针
+                mutex_.lock();
+                if (!queue_standby_->empty()) {
+                    std::swap(queue_standby_, queue_active_);
+                    mutex_.unlock();
+                }
+                else {
+                    mutex_.unlock();
+                    break;
+                }
             }
         }
 
@@ -62,20 +72,6 @@ public:
     inline uint_t capacity() const
     {
         return queue1_.capacity();
-    }
-
-private:
-    //交换queue的 active/standby 指针
-    inline bool swap_queue_ptr()
-    {
-        bool ret = false;
-        mutex_.lock();
-        if (!queue_standby_->empty()) {
-            std::swap(queue_standby_, queue_active_);
-            ret = true;
-        }
-        mutex_.unlock();
-        return ret;
     }
 
 private:

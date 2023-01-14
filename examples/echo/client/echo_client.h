@@ -1,6 +1,5 @@
 ﻿#ifndef ECHO_CLIENT_H
 #define ECHO_CLIENT_H
-
 #include "zrsocket/zrsocket.h"
 #include "message.h"
 

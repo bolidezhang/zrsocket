@@ -82,24 +82,18 @@ public:
         if (thread_size < 2) {
             thread_index = 0;
         }
-        else {
-            if ((thread_index < 0) || (thread_index >= thread_size)) {
-                thread_index = next_thread_index_++;
-                if (thread_index >= thread_size) {
-                    thread_index -= thread_size;
-                    next_thread_index_ = thread_index + 1;
-                }
-            }
+        else if ((thread_index < 0) || (thread_index >= thread_size)) {
+            thread_index = next_thread_index_;
+            next_thread_index_ = (thread_index + 1) % thread_size;
         }
 
-        int ret = stage_threads_[thread_index]->push_event(event);
-        if (ret < 0) {
-            return -1;
+        if (stage_threads_[thread_index]->push_event(event) > 0) {
+            return thread_index;
         }
-        return thread_index;
+        return -1;
     }
 
-    inline int type() const 
+    inline int type() const
     {
         return type_;
     }

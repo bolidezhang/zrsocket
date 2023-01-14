@@ -30,20 +30,16 @@ public:
     {
         int loops_size = (int)event_loops_.size();
         if (loops_size > 1) {
-            int index = next_index_++;
-            if (index >= loops_size) {
-                index -= loops_size;
-                next_index_ = index + 1;
-            }
+            int index   = next_index_;
+            next_index_ = (index + 1) % loops_size;
             return event_loops_[index];
         }
         else {
             return event_loops_[0];
         }
-        return nullptr;
     }
 
-    int init(uint_t num = 2, uint_t max_events = 10000, int event_mode = 1, uint_t event_queue_max_size = 10000, uint_t event_type_len = 64)
+    int init(uint_t num = 2, uint_t max_events = 10000, int event_mode = 1, uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
     {
         if (num < 1) {
             num = 1;
@@ -194,8 +190,8 @@ public:
     }
 
 protected:
-    int next_index_;
     std::vector<TEventLoop *> event_loops_;
+    int next_index_;
 };
 
 ZRSOCKET_NAMESPACE_END

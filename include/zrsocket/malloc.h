@@ -5,8 +5,8 @@
 #ifndef ZRSOCKET_MALLOC_H
 #define ZRSOCKET_MALLOC_H
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "config.h"
 
 //比较优秀malloc的实现

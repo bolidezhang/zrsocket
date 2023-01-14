@@ -4,7 +4,6 @@
 
 #ifndef ZRSOCKET_UDPSOURCE_H
 #define ZRSOCKET_UDPSOURCE_H
-
 #include "config.h"
 #include "event_source.h"
 #include "inet_addr.h"

@@ -47,7 +47,7 @@ public:
         close();
     }
 
-    int init(uint_t num, uint_t max_events, int event_mode, uint_t event_queue_max_size, uint_t event_type_len)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = 0, uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
     {
         return event_queue_.init(event_queue_max_size, event_type_len);
     }
@@ -403,7 +403,7 @@ public:
 
     int push_event(const EventType *event)
     {
-        if (event_queue_.push_event(event)) {
+        if (event_queue_.push_event(event) > 0) {
             loop_wakeup();
             return 1;
         }

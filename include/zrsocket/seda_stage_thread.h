@@ -188,14 +188,16 @@ private:
     //½»»»event_queueµÄ active/standby Ö¸Õë
     inline bool swap_event_queue_ptr()
     {
-        bool ret = false;
         event_queue_mutex_.lock();
         if (!event_queue_standby_->empty()) {
             std::swap(event_queue_standby_, event_queue_active_);
-            ret = true;
+            event_queue_mutex_.unlock();
+            return true;
         }
-        event_queue_mutex_.unlock();
-        return ret;
+        else {
+            event_queue_mutex_.unlock();
+            return false;
+        }
     }
 
     static int thread_proc(void *arg)

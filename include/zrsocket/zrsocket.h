@@ -4,7 +4,6 @@
 
 #ifndef ZRSOCKET_H
 #define ZRSOCKET_H
-
 #include "version.h"
 #include "config.h"
 #include "atomic.h"

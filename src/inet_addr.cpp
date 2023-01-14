@@ -1,6 +1,5 @@
 ﻿#include "zrsocket/inet_addr.h"
 #include "zrsocket/memory.h"
-#include <stdio.h>
 #include <cstdio>
 
 ZRSOCKET_NAMESPACE_BEGIN

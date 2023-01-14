@@ -4,7 +4,6 @@
 
 #ifndef UDPSOURCE_HANDLER_H
 #define UDPSOURCE_HANDLER_H
-
 #include "os_api.h"
 #include "inet_addr.h"
 #include "byte_buffer.h"
@@ -715,10 +714,10 @@ private:
     };
 
     typedef std::deque<UdpBuffer> SEND_QUEUE;
-    SEND_QUEUE      queue1_;
-    SEND_QUEUE      queue2_;
     SEND_QUEUE     *queue_active_;
     SEND_QUEUE     *queue_standby_;
+    SEND_QUEUE      queue1_;
+    SEND_QUEUE      queue2_;
     TMutex          mutex_;
 
 #ifdef ZRSOCKET_HAVE_RECVSENDMMSG

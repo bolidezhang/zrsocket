@@ -28,7 +28,7 @@
 #ifndef ZRSOCKET_BASE_TYPE_H
 #define ZRSOCKET_BASE_TYPE_H
 
-#include <stdint.h>
+#include <cstdint>
 #include "config.h"
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
