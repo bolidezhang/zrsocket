@@ -182,6 +182,7 @@
     <ClInclude Include="include\zrsocket\inet_addr.h" />
     <ClInclude Include="include\zrsocket\length_field_message_handler.h" />
     <ClInclude Include="include\zrsocket\malloc.h" />
+    <ClInclude Include="include\zrsocket\measure_counter.h" />
     <ClInclude Include="include\zrsocket\memory.h" />
     <ClInclude Include="include\zrsocket\message_common.h" />
     <ClInclude Include="include\zrsocket\message_handler.h" />

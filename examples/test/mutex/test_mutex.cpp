@@ -276,16 +276,16 @@ int startup_test(TTest test, int thread_num, int max_times)
 
 int main(int argc, char *argv[])
 {
-    printf("please use the format: <thread number> <number_times>\n");
+    printf("please use format: <thread number> <number_times>\n");
     int thread_num = 2;
-    if (argc > 1) {
+    int times = 10000000;
+    if (argc > 2) {
+        thread_num = atoi(argv[1]);
+        times = atoi(argv[2]);
+    } else if (argc > 1) {
         thread_num = atoi(argv[1]);
     }
 
-    int times = 10000000;
-    if (argc > 2) {
-        times = atoi(argv[2]);
-    }
     printf("thread number:%d, number_times:%ld\n", thread_num, times);
 
 #if TEST_GET_TIME

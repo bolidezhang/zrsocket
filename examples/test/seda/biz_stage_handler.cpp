@@ -11,7 +11,7 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
         if (handle_num == app.push_num_.load(std::memory_order_relaxed)) {
             app.push_end_.store(false, std::memory_order_relaxed);
             auto end_timestamp = zrsocket::OSApi::timestamp();
-            printf("handle_event total_num_times:%ld, spend_time:%lld us\n", handle_num, end_timestamp - app.startup_test_timestamp_);
+            printf("BizStageHandler::handle_event total_num_times:%ld spend_time:%lld us\n", handle_num, end_timestamp - app.startup_test_timestamp_);
         }
     }
 

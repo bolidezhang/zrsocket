@@ -1017,19 +1017,19 @@ public:
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
-    static inline uint64_t system_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
+    static inline int64_t system_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
     {
         return (counter_end - counter_start) * 1000LL / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以微秒为时间单位)
-    static inline uint64_t system_counter_time_us(uint64_t counter_end, uint64_t counter_start)
+    static inline int64_t system_counter_time_us(uint64_t counter_end, uint64_t counter_start)
     {
         return (counter_end - counter_start) * 1000000LL / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以纳秒为时间单位)
-    static inline uint64_t system_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
+    static inline int64_t system_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
     {
         return (counter_end - counter_start) * 1000000000LL / os_counter_frequency();
     }

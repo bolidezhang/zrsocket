@@ -1,6 +1,6 @@
 ﻿//**********************************************************************
 //
-// Copyright (C) 2017 Bolide Zhang <bolidezhang@gmail.com>
+// Copyright (C) 2005-2023 Bolide Zhang <bolidezhang@gmail.com>
 // All rights reserved.
 //
 // This copy of zrsoket is licensed to you under the terms described 
@@ -27,13 +27,8 @@
 
 #ifndef ZRSOCKET_BASE_TYPE_H
 #define ZRSOCKET_BASE_TYPE_H
-
 #include <cstdint>
 #include "config.h"
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1200)
-    #pragma once
-#endif
 
 ZRSOCKET_NAMESPACE_BEGIN
 

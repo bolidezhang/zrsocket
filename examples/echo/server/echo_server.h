@@ -150,15 +150,15 @@ public:
 
     int do_fini()
     {
-        printf("do_fini start1\n");
+        printf("do_fini start\n");
         tcp_server_.close();
-        printf("do_fini start2\n");
+        printf("do_fini tcp_server_::close\n");
         udp_source_.close();
-        printf("do_fini start3\n");
+        printf("do_fini udp_source_::close\n");
         stage_.close();
-        printf("do_fini start4\n");
+        printf("do_fini stage_::close\n");
         stage2_.close();
-        printf("do_fini start5\n");
+        printf("do_fini stage2_::close\n");
         sub_event_loop_.close();
         printf("do_fini end\n");
         return 0;

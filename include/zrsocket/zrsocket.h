@@ -52,6 +52,7 @@
 #include "seda_stage2.h"
 #include "seda_stage2_thread.h"
 #include "global.h"
+#include "measure_counter.h"
 #include "application.h"
 
 ZRSOCKET_NAMESPACE_BEGIN

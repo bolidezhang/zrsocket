@@ -1,6 +1,6 @@
 ﻿//**********************************************************************
 //
-// Copyright (C) 2005-2007 Bolide Zhang(bolidezhang@gmail.com)
+// Copyright (C) 2005-2023 Bolide Zhang(bolidezhang@gmail.com)
 // All rights reserved.
 //
 // This copy of zrsoket is licensed to you under the terms described 
@@ -14,11 +14,6 @@
 
 #ifndef ZRSOCKET_GLOBAL_H
 #define ZRSOCKET_GLOBAL_H
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1200)
-    #pragma once
-#endif
-
 #include "event_loop.h"
 #include "event_source.h"
 
