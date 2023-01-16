@@ -46,8 +46,8 @@ public:
     }
 
 private:
-    uint64_t start_counter_ = { 0 };
-    uint64_t end_counter_ = { 0 };
+    uint64_t start_counter_ = 0;
+    uint64_t end_counter_   = 0;
 };
 
 class SystemClockCounter
@@ -86,8 +86,8 @@ public:
     }
 
 private:
-    uint64_t start_counter_ = { 0 };
-    uint64_t end_counter_ = { 0 };
+    uint64_t start_counter_ = 0;
+    uint64_t end_counter_   = 0;
 };
 
 template <typename TMeasureCounter, bool owner = true>
