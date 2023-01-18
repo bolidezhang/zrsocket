@@ -9,7 +9,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-//不受系统时间的影响的计时器
+//不受系统时钟的影响的计数器
 class SteadyClockCounter
 {
 public:
@@ -21,7 +21,7 @@ public:
 
     static uint64_t now()
     {
-        return OSApi::timestamp_ns();
+        return OSApi::steady_clock_counter();
     }
 
     inline void update_start_counter()
@@ -61,7 +61,7 @@ public:
 
     static uint64_t now()
     {
-        return OSApi::time_ns();
+        return OSApi::system_clock_counter();
     }
 
     inline void update_start_counter()

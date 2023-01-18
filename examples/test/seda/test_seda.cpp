@@ -108,6 +108,26 @@ int startup_test(TTest test, int thread_num)
 
 int main(int argc, char *argv[])
 {
+    {
+        zrsocket::OSApiFile f;
+        int ret = f.open("a.txt", O_WRONLY|O_APPEND|O_CREAT, S_IWRITE);
+        int err = zrsocket::OSApi::get_errno();
+        ret = f.write("abcd", sizeof("abcd")-1);
+
+        const char *p  = "abcd";
+        const char *p2 = "efg";
+        ZRSOCKET_IOVEC iov[2];
+        iov[0].iov_base = const_cast<char *>(p);
+        iov[0].iov_len  = 4;
+        iov[1].iov_base = const_cast<char *>(p2);
+        iov[1].iov_len  = 3;
+        ret = f.writev(iov, 2);
+        ret = f.writev(iov, 2);
+        err = zrsocket::OSApi::get_errno();
+        f.close();
+        std::cout << "open file ret:" << ret << " error:" << err << "\n";
+    }
+
     //show MeasureCounterGuard
     printf("show MeasureCounterGuard\n");
     zrsocket::SteadyClockCounter scc;

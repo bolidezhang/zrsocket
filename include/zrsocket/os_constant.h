@@ -2,8 +2,8 @@
 // We've measured 3-4% build speed improvements in apps as a result 
 #pragma once
 
-#ifndef ZRSOCKET_SYSTEM_CONSTANT_H
-#define ZRSOCKET_SYSTEM_CONSTANT_H
+#ifndef ZRSOCKET_OS_CONSTANT_H
+#define ZRSOCKET_OS_CONSTANT_H
 #include "config.h"
 #include "base_type.h"
 #include "os_api.h"

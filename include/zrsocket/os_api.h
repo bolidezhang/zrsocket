@@ -2,8 +2,8 @@
 // We've measured 3-4% build speed improvements in apps as a result 
 #pragma once
 
-#ifndef ZRSOCKET_SYSTEM_API_H
-#define ZRSOCKET_SYSTEM_API_H
+#ifndef ZRSOCKET_OS_API_H
+#define ZRSOCKET_OS_API_H
 
 #include <ctime>
 #include <cstdio>
@@ -722,10 +722,73 @@ public:
         //#endif
     }
 
-    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数)
-    static inline uint64_t time()
+    //取得系统时钟计数值(单位:ns)(一般是系统时钟的最高精度)
+    static inline uint64_t system_clock_counter()
     {
-        return ::time(nullptr);
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1 100-nanosecond intervals
+        //vc实现c++11中chrono库的内部函数_Xtime_get_ticks(100-nanosecond intervals)
+        return _Xtime_get_ticks() * 100;
+
+        //方法2
+        //std::chrono::system_clock::now().time_since_epoch().count();
+
+        ////方法3 100-nanosecond intervals
+        //#define EPOCH 0x19DB1DED53E8000i64
+        //FILETIME ft;
+        ////GetSystemTimeAsFileTime(&ft);
+        //GetSystemTimePreciseAsFileTime(&ft);
+        //return (((static_cast<long long>(ft.dwHighDateTime)) << 32) + static_cast<long long>(ft.dwLowDateTime) - EPOCH) * 100;
+
+        //方法4
+        //struct _timeb tb;
+        //_ftime_s(&tb);
+        //return (tb.time * 1000000000LL + tb.millitm * 1000000LL);
+#else
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+
+        ////方法2
+        //struct timeval tv;
+        //gettimeofday(&tv, nullptr);
+        //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000LL);
+#endif
+    }
+
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过纳秒)
+    static inline uint64_t time_ns()
+    {
+        return system_clock_counter();
+    }
+
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过微秒)
+    static inline uint64_t time_us()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        return time_ns() / 1000L;
+#else
+        struct timeval tv;
+        gettimeofday(&tv, nullptr);
+        return (tv.tv_sec * 1000000LL + tv.tv_usec);
+#endif
+    }
+
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过毫秒)
+    static inline uint64_t time_ms()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        return time_ns() / 1000000L;
+
+        //struct _timeb tb;
+        //_ftime_s(&tb);
+        //return (tb.time * 1000LL + tb.millitm);
+#else
+        struct timeval tv;
+        gettimeofday(&tv, nullptr);
+        return (tv.tv_sec * 1000LL + tv.tv_usec / 1000LL);
+#endif
     }
 
     //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数)
@@ -734,85 +797,28 @@ public:
         return ::time(nullptr);
     }
 
-    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过毫秒)
-    static inline uint64_t time_ms()
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数)
+    static inline uint64_t time()
     {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            return time_ns() / 1000000L;
-
-            //struct _timeb tb;
-            //_ftime_s(&tb);
-            //return (tb.time * 1000LL + tb.millitm);
-        #else
-            struct timeval tv;
-            gettimeofday(&tv, nullptr);
-            return (tv.tv_sec * 1000LL + tv.tv_usec / 1000LL);
-        #endif
-    }
-
-    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过微秒)
-    static inline uint64_t time_us()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            return time_ns() / 1000L;
-        #else
-            struct timeval tv;
-            gettimeofday(&tv, nullptr);
-            return (tv.tv_sec * 1000000LL + tv.tv_usec);
-        #endif
-    }
-
-    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过纳秒)
-    static inline uint64_t time_ns()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS          
-            //方法1 100-nanosecond intervals
-            //vc实现c++11中chrono库的内部函数_Xtime_get_ticks(100-nanosecond intervals)
-            return _Xtime_get_ticks() * 100;
-
-            //方法2
-            //std::chrono::system_clock::now().time_since_epoch().count();
-
-            ////方法3 100-nanosecond intervals
-            //#define EPOCH 0x19DB1DED53E8000i64
-            //FILETIME ft;
-            ////GetSystemTimeAsFileTime(&ft);
-            //GetSystemTimePreciseAsFileTime(&ft);
-            //return (((static_cast<long long>(ft.dwHighDateTime)) << 32) + static_cast<long long>(ft.dwLowDateTime) - EPOCH) * 100;
-
-            //方法4
-            //struct _timeb tb;
-            //_ftime_s(&tb);
-            //return (tb.time * 1000000000LL + tb.millitm * 1000000LL);
-        #else
-            //方法1
-            struct timespec ts;
-            clock_gettime(CLOCK_REALTIME, &ts);
-            return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
-
-            ////方法2
-            //struct timeval tv;
-            //gettimeofday(&tv, nullptr);
-            //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000LL);
-        #endif
+        return ::time(nullptr);
     }
 
     //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数,可以精确到微秒)
     static inline int gettimeofday(struct timeval *tv, struct timezone *tz)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
-            uint64_t now = time_ns();
-            tv->tv_sec   = static_cast<long>(now / 1000000000L);
-            tv->tv_usec  = static_cast<long>(now % 1000000000L) / 1000L;
+            uint64_t now = system_clock_counter();
+            tv->tv_sec   = static_cast<long>(now / 1000000000LL);
+            tv->tv_usec  = static_cast<long>(now % 1000000000LL) / 1000LL;
+            return 0;
 
             //struct _timeb tb;
             //_ftime_s(&tb);
             //tv->tv_sec  = tb.time;
             //tv->tv_usec = tb.millitm * 1000L;
         #else
-            gettimeofday(tv, tz);
+            return gettimeofday(tv, tz);
         #endif
-        return 0;
     }
 
     //时间操作函数
@@ -870,10 +876,163 @@ public:
         return 0;
     }
 
-    //取得进程时钟滴答(不受修改系统时钟影响/调整系统时间无关 毫秒:us 只能用于计时)
-    static inline uint64_t gettickcount()
+    //取得系统高精度计数器频率(用于windows系统高精度计时)
+    static inline uint64_t os_counter_frequency()
     {
-        return timestamp_us();
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1
+        //LARGE_INTEGER li;
+        //QueryPerformanceFrequency(&li);
+        //return li.QuadPart;
+
+        //方法2
+        static uint64_t counter_frequency = 1;
+        if (1 == counter_frequency) {
+            LARGE_INTEGER li;
+            QueryPerformanceFrequency(&li);
+            counter_frequency = li.QuadPart;
+        }
+        return counter_frequency;
+#else
+        return 1;
+#endif
+    }
+
+    //取得系统高精度计数器的计数值
+    static inline uint64_t os_counter()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        LARGE_INTEGER li;
+        QueryPerformanceCounter(&li);
+        return li.QuadPart;
+#else
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+#endif
+    }
+
+    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
+    static inline int64_t os_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
+    {
+        return (counter_end - counter_start) * 1000LL / os_counter_frequency();
+    }
+
+    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以微秒为时间单位)
+    static inline int64_t os_counter_time_us(uint64_t counter_end, uint64_t counter_start)
+    {
+        return (counter_end - counter_start) * 1000000LL / os_counter_frequency();
+    }
+
+    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以纳秒为时间单位)
+    static inline int64_t os_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
+    {
+        return (counter_end - counter_start) * 1000000000LL / os_counter_frequency();
+    }
+
+    //取得稳定时钟计数值(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
+    static inline uint64_t steady_clock_counter()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1
+        const long long freq  = os_counter_frequency();  // doesn't change after system boot
+        const long long ctr   = os_counter();
+        const long long whole = ctr / freq * 1000000000i64;
+        const long long part  = (ctr % freq) * 1000000000i64 / freq;
+        return whole + part;
+
+        //方法2
+        //std::chrono::system_clock::now().time_since_epoch().count();
+
+        //const long long freq    = system_counter_frequency();  // doesn't change after system boot
+        //const long long ctr     = system_counter();
+        //const long long tmp     = ctr / freq;
+        //const long long whole   = tmp * 1000000000i64;
+        //const long long part    = (ctr - tmp * freq) * 1000000000i64 / freq;
+        //return whole + part;
+#else
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+
+        //方法2
+        //struct timeval tv;
+        //gettimeofday(&tv, nullptr);
+        //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000L);
+#endif
+    }
+
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
+    static inline uint64_t timestamp_ns()
+    {
+        return steady_clock_counter();
+    }
+
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 微秒:us 只能用于计时)
+    static inline uint64_t timestamp_us()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        return timestamp_ns() / 1000LL;
+#else
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * 1000000LL + ts.tv_nsec / 1000LL);
+
+        //方法2
+        //struct timeval tv;
+        //gettimeofday(&tv, nullptr);
+        //return (tv.tv_sec * 1000000LL + tv.tv_usec);
+#endif
+    }
+
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 毫秒:ms 只能用于计时)
+    static inline uint64_t timestamp_ms()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1 精度低些, 精确到 10-16ms
+        //return GetTickCount();
+
+        //方法2 精度高些, 最高精确到 1ms
+        //return timeGetTime();
+
+        //方法3
+        return timestamp_ns() / 1000000LL;
+#else
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * 1000LL + ts.tv_nsec / 1000000LL);
+
+        //方法2
+        //struct timeval tv;
+        //gettimeofday(&tv, nullptr);
+        //return (tv.tv_sec * 1000L + tv.tv_usec / 1000);
+#endif
+    }
+
+    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 秒:s 只能用于计时)
+    static inline uint64_t timestamp_s()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1 精度低些, 精确到 10-16ms
+        return GetTickCount() / 1000LL;
+
+        //方法2 精度高些, 最高精确到 1ms
+        //return (timeGetTime() / 1000LL);
+#else
+        
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return ts.tv_sec;
+
+        //方法2
+        //struct timeval tv;
+        //gettimeofday(&tv, nullptr);
+        //return tv.tv_sec;
+#endif
     }
 
     //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 微秒:us 只能用于计时)
@@ -882,156 +1041,10 @@ public:
         return timestamp_us();
     }
 
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 秒:s 只能用于计时)
-    static inline uint64_t timestamp_s()
+    //取得进程时钟滴答(不受修改系统时钟影响/调整系统时间无关 毫秒:us 只能用于计时)
+    static inline uint64_t gettickcount()
     {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            //方法1 精度低些, 精确到 10-16ms
-            return GetTickCount()/1000LL;
-
-            //方法2 精度高些, 最高精确到 1ms
-            //return (timeGetTime() / 1000LL);
-        #else
-            //方法1
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            return ts.tv_sec;
-
-            //方法2
-            //struct timeval tv;
-            //gettimeofday(&tv, nullptr);
-            //return tv.tv_sec;
-        #endif
-    }
-
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 毫秒:ms 只能用于计时)
-    static inline uint64_t timestamp_ms()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            //方法1 精度低些, 精确到 10-16ms
-            //return GetTickCount();
-
-            //方法2 精度高些, 最高精确到 1ms
-            //return timeGetTime();
-
-            //方法3
-            return timestamp_ns() / 1000000LL;
-        #else
-            //方法1
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            return (ts.tv_sec * 1000LL + ts.tv_nsec / 1000000LL);
-
-            //方法2
-            //struct timeval tv;
-            //gettimeofday(&tv, nullptr);
-            //return (tv.tv_sec * 1000L + tv.tv_usec / 1000);
-        #endif
-    }
-
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 微秒:us 只能用于计时)
-    static inline uint64_t timestamp_us()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            return timestamp_ns() / 1000LL;
-        #else
-            //方法1
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            return (ts.tv_sec * 1000000LL + ts.tv_nsec / 1000LL);
-
-            //方法2
-            //struct timeval tv;
-            //gettimeofday(&tv, nullptr);
-            //return (tv.tv_sec * 1000000LL + tv.tv_usec);
-        #endif
-    }
-
-    //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
-    static inline uint64_t timestamp_ns()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            //方法1
-            const long long freq    = os_counter_frequency();  // doesn't change after system boot
-            const long long ctr     = os_counter();
-            const long long whole   = ctr / freq * 1000000000i64;
-            const long long part    = (ctr % freq) * 1000000000i64 / freq;
-            return whole + part;
-
-            //方法2
-            //std::chrono::system_clock::now().time_since_epoch().count();
-
-            //const long long freq    = system_counter_frequency();  // doesn't change after system boot
-            //const long long ctr     = system_counter();
-            //const long long tmp     = ctr / freq;
-            //const long long whole   = tmp * 1000000000i64;
-            //const long long part    = (ctr - tmp * freq) * 1000000000i64 / freq;
-            //return whole + part;
-        #else
-            //方法1
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
-
-            //方法2
-            //struct timeval tv;
-            //gettimeofday(&tv, nullptr);
-            //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000L);
-        #endif
-    }
-
-    //取得系统高精度计数器频率(用于windows系统高精度计时)
-    static inline uint64_t os_counter_frequency()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            //方法1
-            //LARGE_INTEGER li;
-            //QueryPerformanceFrequency(&li);
-            //return li.QuadPart;
-
-            //方法2
-            static uint64_t counter_frequency = 1;
-            if (1 == counter_frequency) {
-                LARGE_INTEGER li;
-                QueryPerformanceFrequency(&li);
-                counter_frequency = li.QuadPart;
-            }
-            return counter_frequency;
-        #else
-            return 1;
-        #endif
-    }
-
-    //取得系统高精度计数器的计数值
-    static inline uint64_t os_counter()
-    {
-        #ifdef ZRSOCKET_OS_WINDOWS
-            LARGE_INTEGER li;
-            QueryPerformanceCounter(&li);
-            return li.QuadPart;
-        #else
-            struct timespec ts;
-            clock_gettime(CLOCK_MONOTONIC, &ts);
-            return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
-        #endif
-    }
-
-    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
-    static inline int64_t system_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
-    {
-        return (counter_end - counter_start) * 1000LL / os_counter_frequency();
-    }
-
-    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以微秒为时间单位)
-    static inline int64_t system_counter_time_us(uint64_t counter_end, uint64_t counter_start)
-    {
-        return (counter_end - counter_start) * 1000000LL / os_counter_frequency();
-    }
-
-    //计算系统高精度计数器的计时(两次计数值之差即时间差: 以纳秒为时间单位)
-    static inline int64_t system_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
-    {
-        return (counter_end - counter_start) * 1000000000LL / os_counter_frequency();
+        return timestamp_us();
     }
 
     //内存拷贝

@@ -15,6 +15,7 @@
 #include "mutex.h"
 #include "thread.h"
 #include "os_api.h"
+#include "os_api_file.h"
 #include "os_constant.h"
 #include "event_type.h"
 #include "event_type_queue.h"

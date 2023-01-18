@@ -8,7 +8,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-#ifdef ZRSOCKET_OS_LINUX
+#ifndef ZRSOCKET_OS_WINDOWS
 // os eventfd api
 #include <sys/eventfd.h>
 

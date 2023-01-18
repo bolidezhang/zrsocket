@@ -1,6 +1,6 @@
 ﻿//**********************************************************************
 //
-// Copyright (C) 2005-2023 Bolide Zhang(bolidezhang@gmail.com)
+// Copyright (C) 2015-2023 Bolide Zhang(bolidezhang@gmail.com)
 // All rights reserved.
 //
 // This copy of zrsoket is licensed to you under the terms described 
