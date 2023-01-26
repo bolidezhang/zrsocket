@@ -84,7 +84,7 @@ public:
     virtual int loop_thread_join() = 0;
     virtual int loop_thread_stop() = 0;
 
-    virtual size_t handler_size() = 0;
+    virtual uint_t handler_size() = 0;
 
 };
 

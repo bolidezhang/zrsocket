@@ -338,7 +338,7 @@ public:
             zrsocket_memcpy(buffer_ + data_end_index_, data, size);
             data_end_index_ += size;
         }
-        else {   
+        else {
             uint_t new_size  = buffer_size_ * multiple / 100 + buffer_size_ + size;
             char *new_buffer = (char *)zrsocket_realloc(buffer_, new_size);
             if (nullptr != new_buffer) {
@@ -356,7 +356,7 @@ public:
 
     inline bool write(const char *data)
     {
-        return write(data, strlen(data));
+        return write(data, static_cast<uint_t>(strlen(data)));
     }
 
     inline bool write(char c)
@@ -656,7 +656,7 @@ public:
 
     inline bool write(const char *data)
     {
-        return write(data, strlen(data));
+        return write(data, static_cast<uint_t>(strlen(data)));
     }
 
     inline bool write(char c)

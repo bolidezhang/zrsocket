@@ -405,7 +405,7 @@ public:
         return 0;
     }
 
-    inline size_t handler_size()
+    inline uint_t handler_size()
     {
         return current_handle_size_;
     }
@@ -777,7 +777,7 @@ public:
         return 0;
     }
 
-    inline size_t handler_size()
+    inline uint_t handler_size()
     {
         return current_handle_size_;
     }

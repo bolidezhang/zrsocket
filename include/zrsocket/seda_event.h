@@ -17,8 +17,8 @@ typedef ThreadIdleEvent SedaThreadIdleEvent;
 
 struct SedaTimerExpireEvent : public SedaEvent
 {
-    SedaTimer *timer;
-    int slot;
+    SedaTimer *timer = nullptr;
+    int slot = 0;
 
     inline SedaTimerExpireEvent()
         : SedaEvent(sizeof(SedaTimerExpireEvent), SedaEventTypeId::TIMER_EXPIRE)
@@ -32,7 +32,7 @@ struct SedaTimerExpireEvent : public SedaEvent
 
 struct SedaTcpSocketOpenEvent : public SedaEvent
 {
-    EventHandler *handler;
+    EventHandler *handler = nullptr;
 
     inline SedaTcpSocketOpenEvent()
         : SedaEvent(sizeof(SedaTcpSocketOpenEvent), SedaEventTypeId::TCP_SOCKET_OPEN)
@@ -46,11 +46,11 @@ struct SedaTcpSocketOpenEvent : public SedaEvent
 
 struct SedaTcpSocketCloseEvent : public SedaEvent
 {
-    EventHandler *handler;
-    int64_t attach_id1;
-    int64_t attach_id2;
-    void *attach_object1;
-    void *attach_object2;
+    EventHandler *handler = nullptr;
+    int64_t attach_id1 = 0;
+    int64_t attach_id2 = 0;
+    void *attach_object1 = nullptr;
+    void *attach_object2 = nullptr;
 
     inline SedaTcpSocketCloseEvent()
         : SedaEvent(sizeof(SedaTcpSocketCloseEvent), SedaEventTypeId::TCP_SOCKET_CLOSE)
@@ -64,12 +64,12 @@ struct SedaTcpSocketCloseEvent : public SedaEvent
 
 struct SedaTcpReadDataEvent : public SedaEvent
 {
-    EventHandler *handler;
-    ByteBuffer   *data;
-    int64_t attach_id1;
-    int64_t attach_id2;
-    void *attach_object1;
-    void *attach_object2;
+    EventHandler *handler = nullptr;
+    ByteBuffer   *data = nullptr;
+    int64_t attach_id1 = 0;
+    int64_t attach_id2 = 0;
+    void *attach_object1 = nullptr;
+    void *attach_object2 = nullptr;
 
     inline SedaTcpReadDataEvent()
         : SedaEvent(sizeof(SedaTcpReadDataEvent), SedaEventTypeId::TCP_READ_DATA)
@@ -83,12 +83,12 @@ struct SedaTcpReadDataEvent : public SedaEvent
 
 struct SedaTcpReadMessageEvent : public SedaEvent
 {
-    EventHandler *handler;
-    ByteBuffer   *message;
-    int64_t attach_id1;
-    int64_t attach_id2;
-    void *attach_object1;
-    void *attach_object2;
+    EventHandler *handler = nullptr;
+    ByteBuffer   *message = nullptr;
+    int64_t attach_id1 = 0;
+    int64_t attach_id2 = 0;
+    void *attach_object1 = nullptr;
+    void *attach_object2 = nullptr;
 
     inline SedaTcpReadMessageEvent()
         : SedaEvent(sizeof(SedaTcpReadDataEvent), SedaEventTypeId::TCP_READ_MESSAGE)
@@ -102,11 +102,11 @@ struct SedaTcpReadMessageEvent : public SedaEvent
 
 struct SedaTcpWriteDataEvent : public SedaEvent
 {
-    EventHandler *handler;
-    int64_t attach_id1;
-    int64_t attach_id2;
-    void *attach_object1;
-    void *attach_object2;
+    EventHandler *handler = nullptr;;
+    int64_t attach_id1 = 0;
+    int64_t attach_id2 = 0;
+    void *attach_object1 = nullptr;
+    void *attach_object2 = nullptr;
 
     inline SedaTcpWriteDataEvent()
         : SedaEvent(sizeof(SedaTcpWriteDataEvent), SedaEventTypeId::TCP_WRITE_DATA)
@@ -121,11 +121,11 @@ struct SedaTcpWriteDataEvent : public SedaEvent
 typedef int (*SedaRpcMessageProc)(int handler_id, EventHandler *handler, void *seda_stagehandler, void *rpc_message, InetAddr *remote_addr);
 struct SedaRpcMessageEvent : public SedaEvent
 {
-    EventHandler *handler;
+    EventHandler *handler = nullptr;;
     SedaRpcMessageProc rpc_proc;
-    void *rpc_message;
-    InetAddr *remote_addr;
-    int handler_id;
+    void *rpc_message = nullptr;
+    InetAddr *remote_addr = nullptr;
+    int handler_id = 0;
 
     inline SedaRpcMessageEvent()
         : SedaEvent(sizeof(SedaRpcMessageEvent), SedaEventTypeId::RPC_MESSAGE)
@@ -141,11 +141,11 @@ struct SedaRpcMessageEvent2;
 typedef int (*SedaRpcMessageProc2)(SedaRpcMessageEvent2 *rpc_event, void *seda_stagehandler);
 struct SedaRpcMessageEvent2 : public SedaEvent
 {
-    EventHandler *handler;
+    EventHandler *handler = nullptr;
     SedaRpcMessageProc2 rpc_proc;
-    void *rpc_message;
-    InetAddr *remote_addr;
-    int64_t handler_id;
+    void *rpc_message = nullptr;
+    InetAddr *remote_addr = nullptr;
+    int64_t handler_id = 0;
 
     inline SedaRpcMessageEvent2()
         : SedaEvent(sizeof(SedaRpcMessageEvent2), SedaEventTypeId::RPC_MESSAGE2)

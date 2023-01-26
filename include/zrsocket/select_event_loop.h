@@ -219,7 +219,7 @@ public:
         handler->in_event_loop_ = false;
         handler->event_loop_    = nullptr;
         handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
-        temp_handlers_standby_->emplace(handler, DEL_HANDLER);
+        temp_handlers_standby_->emplace(handler, OperateCode::DEL_HANDLER);
         mutex_.unlock();
 
         loop_wakeup();
@@ -256,7 +256,7 @@ public:
         handler->in_event_loop_ = false;
         handler->event_loop_    = nullptr;
         handler->event_mask_    = EventHandler::NULL_EVENT_MASK;
-        temp_handlers_standby_->emplace(handler, REMOVE_HANDLER);
+        temp_handlers_standby_->emplace(handler, OperateCode::REMOVE_HANDLER);
         mutex_.unlock();
 
         return 0;
@@ -436,15 +436,15 @@ public:
             for (auto &iter : *temp_handlers_active_) {
                 handler = iter.first;
                 switch (iter.second) {
-                case ADD_HANDLER:
+                case OperateCode::ADD_HANDLER:
                     handlers_.emplace(std::move(handler));
                     break;
-                case DEL_HANDLER:
+                case OperateCode::DEL_HANDLER:
                     handlers_.erase(handler);
                     handler->handle_close();
                     handler->source_->free_handler(handler);
                     break;
-                case REMOVE_HANDLER:
+                case OperateCode::REMOVE_HANDLER:
                     handlers_.erase(handler);
                     break;
                 default:
@@ -582,10 +582,10 @@ public:
         return thread_.stop();
     }
 
-    size_t handler_size()
+    uint_t handler_size()
     {
         mutex_.lock();
-        size_t handlers_size = std::max<uint_t>(read_size_, write_size_);
+        uint_t handlers_size = std::max<uint_t>(read_size_, write_size_);
 #ifdef ZRSOCKET_OS_WINDOWS
         handlers_size = std::max<uint_t>(handlers_size, except_size_);
 #endif

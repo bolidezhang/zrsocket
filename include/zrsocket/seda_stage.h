@@ -78,7 +78,7 @@ public:
 
     inline int push_event(const SedaEvent *event, int thread_index = -1, int priority = SedaPriority::UNKNOWN_PRIOITY)
     {
-        int thread_size = stage_threads_.size();
+        int thread_size = static_cast<int>(stage_threads_.size());
         if (thread_size < 2) {
             thread_index = 0;
         }

@@ -30,7 +30,7 @@ public:
     virtual int     add_timer(ITimer *timer, uint64_t current_timestamp) = 0;
     virtual int     delete_timer(ITimer *timer) = 0;
     virtual int     loop(uint64_t current_timestamp) = 0;
-    virtual size_t  size() = 0;
+    virtual uint_t  size() = 0;
     virtual bool    empty() = 0;
     virtual int64_t min_interval() = 0;
 

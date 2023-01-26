@@ -180,9 +180,9 @@ public:
         return 0;
     }
 
-    size_t handler_size()
+    uint_t handler_size()
     {
-        size_t handler_size = 0;
+        uint_t handler_size = 0;
         for (auto &loop : event_loops_) {
             handler_size += loop->handler_size();
         }

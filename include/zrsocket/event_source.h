@@ -35,6 +35,7 @@ public:
         : handler_(nullptr)
         , event_loop_(nullptr)
         , message_decoder_config_(nullptr)
+        , recvbuffer_size_(4096)
     {
     }
 
@@ -80,12 +81,12 @@ public:
 
     virtual SOURCE_TYPE source_type()
     {
-        return TYPE_UNKNOW;
+        return EventSource::SOURCE_TYPE::TYPE_UNKNOW;
     }
 
     virtual SOURCE_STATE source_state()
     {
-        return STATE_CLOSED;
+        return EventSource::SOURCE_STATE::STATE_CLOSED;
     }
 
     virtual void source_state(SOURCE_STATE state)

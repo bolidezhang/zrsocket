@@ -152,7 +152,7 @@ public:
         return 0;
     }
 
-    inline int init(size_t max_size = 1000, uint_t init_size = 1, uint_t grow_size = 10)
+    inline int init(uint_t max_size = 1000, uint_t init_size = 1, uint_t grow_size = 10)
     {
         clear();
 
@@ -225,7 +225,7 @@ private:
     }
 
 private:
-    size_t  max_size_;   //对象池最大容量
+    uint_t  max_size_;   //对象池最大容量
     uint_t  grow_size_;  //增长幅度
 
     TMutex  mutex_;

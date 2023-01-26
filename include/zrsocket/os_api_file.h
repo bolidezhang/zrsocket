@@ -12,6 +12,7 @@
 //      STDERR_FILENO: 2  标准错误输出  screen(defaut)
 //      open / close / read / readv / write / writev / lseek / fsync /fdatasync ...
 //  1）c-style cstdio
+//      带缓冲区file io
 //      stdin, stdout, stderr
 //      std::FILE *
 //      fopen / fclose / fflush / fread / fwrite / fprintf / fgets / fputs
@@ -62,7 +63,7 @@ public:
 #endif
     }
 
-    static int os_creat(const char* file_name, int mode)
+    static int os_creat(const char *file_name, int mode)
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         return ::_creat(file_name, mode);
@@ -194,7 +195,7 @@ public:
 
     //因windows下没有writev, 
     //  当mode==0时,将iov指向内容拷贝到一个buffer中
-    //    mode!=0时,循环write
+    //    mode!=0时,循环调write
     static int writev(int fd, const ZRSOCKET_IOVEC *iov, int iovcnt, int mode = 0)
     {
 #ifdef ZRSOCKET_OS_WINDOWS

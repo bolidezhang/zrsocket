@@ -271,7 +271,7 @@ public:
         return head_.prev_;
     }
 
-    inline size_t size() const
+    inline uint_t size() const
     {
         return size_;
     }
@@ -293,7 +293,7 @@ public:
 
 protected:
     Timer   head_;          //此节点的next_指向第一个节点，prev_指向最后一个节点
-    size_t  size_ = 0;
+    uint_t  size_ = 0;
     int64_t interval_ = 0;  //定时间隔
 };
 

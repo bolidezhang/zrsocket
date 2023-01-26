@@ -32,42 +32,42 @@ public:
         current_time_s_         = current_time_ns_ / 1000000000LL;
     }
 
-    inline uint64_t current_timestamp_ns()
+    inline uint64_t current_timestamp_ns() const
     {
         return current_timestamp_ns_;
     }
 
-    inline uint64_t current_timestamp_us()
+    inline uint64_t current_timestamp_us() const
     {
         return current_timestamp_us_;
     }
 
-    inline uint64_t current_timestamp_ms()
+    inline uint64_t current_timestamp_ms() const
     {
         return current_timestamp_ms_;
     }
 
-    inline uint64_t current_timestamp_s()
+    inline uint64_t current_timestamp_s() const
     {
         return current_timestamp_s_;
     }
 
-    inline uint64_t current_time_ns()
+    inline uint64_t current_time_ns() const
     {
         return current_time_ns_;
     }
 
-    inline uint64_t current_time_us()
+    inline uint64_t current_time_us() const
     {
         return current_time_us_;
     }
 
-    inline uint64_t current_time_ms()
+    inline uint64_t current_time_ms() const
     {
         return current_time_ms_;
     }
 
-    inline uint64_t current_time_s()
+    inline uint64_t current_time_s() const
     {
         return current_time_s_;
     }

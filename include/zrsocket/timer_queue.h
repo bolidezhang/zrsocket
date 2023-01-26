@@ -85,7 +85,7 @@ public:
         }
         mutex_.unlock();
 
-        auto ret_size = timeout_timers_.size();
+        int ret_size = static_cast<int>(timeout_timers_.size());
         if (!timeout_timers_.empty()) {
             for (auto &timer : timeout_timers_) {
                 timer->handle_timeout();
@@ -113,10 +113,10 @@ public:
         return min_value;
     }
 
-    size_t size()
+    uint_t size()
     {
         mutex_.lock();
-        size_t ret = size_i();
+        uint_t ret = size_i();
         mutex_.unlock();
         return ret;
     }
@@ -137,9 +137,9 @@ public:
     }
 
 private:
-    inline size_t size_i() const
+    inline uint_t size_i() const
     {
-        size_t ret = 0;
+        uint_t ret = 0;
         for (auto &iter : interval_timers_) {
             ret += iter.second.size();
         }

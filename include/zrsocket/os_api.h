@@ -767,7 +767,7 @@ public:
     static inline uint64_t time_us()
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return time_ns() / 1000L;
+        return system_clock_counter() / 1000LL;
 #else
         struct timeval tv;
         gettimeofday(&tv, nullptr);
@@ -779,7 +779,7 @@ public:
     static inline uint64_t time_ms()
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return time_ns() / 1000000L;
+        return system_clock_counter() / 1000000LL;
 
         //struct _timeb tb;
         //_ftime_s(&tb);
@@ -973,7 +973,7 @@ public:
     static inline uint64_t timestamp_us()
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return timestamp_ns() / 1000LL;
+        return steady_clock_counter() / 1000LL;
 #else
         //方法1
         struct timespec ts;
@@ -998,7 +998,7 @@ public:
         //return timeGetTime();
 
         //方法3
-        return timestamp_ns() / 1000000LL;
+        return steady_clock_counter() / 1000000LL;
 #else
         //方法1
         struct timespec ts;
@@ -1041,7 +1041,7 @@ public:
         return timestamp_us();
     }
 
-    //取得进程时钟滴答(不受修改系统时钟影响/调整系统时间无关 毫秒:us 只能用于计时)
+    //取得进程时钟滴答(不受修改系统时钟影响/调整系统时间无关 微秒:us 只能用于计时)
     static inline uint64_t gettickcount()
     {
         return timestamp_us();
@@ -1123,14 +1123,14 @@ public:
         return rc;
     }
 
-private:
-    OSApi()
-    {
-    }
+public:
+    OSApi() = delete;
+    ~OSApi() = delete;
 
-    ~OSApi()
-    {
-    }
+    OSApi(const OSApi&) = delete;
+    OSApi(OSApi&&) = delete;
+    OSApi& operator=(const OSApi&) = delete;
+    OSApi& operator=(OSApi&&) = delete;
 };
 
 ZRSOCKET_NAMESPACE_END

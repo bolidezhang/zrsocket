@@ -6,16 +6,34 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zrsocket", "zrsocket.vcxproj", "{93930916-DB1A-4B37-BF1D-B64D67D5F52A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echo_client", "examples\echo\client\echo_client.vcxproj", "{DB3CAD6D-C31F-42CE-8214-62683940E9F1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "echo_server", "examples\echo\server\echo_server.vcxproj", "{A9CD4783-9AA3-47E4-B96B-BBCA047FF62F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "http_server", "examples\http\server\http_server.vcxproj", "{4FC29FF9-0074-4CE9-B4FE-EBFFD3CB87DB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "http_client", "examples\http\client\http_client.vcxproj", "{37AD115A-1240-48CA-9EFC-F481EE8B14A6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_mutex", "examples\test\mutex\test_mutex.vcxproj", "{1ED92F5D-688D-48C6-B2A1-01F0861AAC0E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_seda", "examples\test\seda\test_seda.vcxproj", "{DA284901-8147-44CC-A0BC-8B40DF793C3E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,10 +51,12 @@ Global
 		{93930916-DB1A-4B37-BF1D-B64D67D5F52A}.Release|x64.Build.0 = Release|x64
 		{93930916-DB1A-4B37-BF1D-B64D67D5F52A}.Release|x86.ActiveCfg = Release|Win32
 		{93930916-DB1A-4B37-BF1D-B64D67D5F52A}.Release|x86.Build.0 = Release|Win32
-		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Debug|x64.ActiveCfg = Debug|Win32
+		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Debug|x64.ActiveCfg = Debug|x64
+		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Debug|x64.Build.0 = Debug|x64
 		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Debug|x86.ActiveCfg = Debug|Win32
 		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Debug|x86.Build.0 = Debug|Win32
-		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Release|x64.ActiveCfg = Release|Win32
+		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Release|x64.ActiveCfg = Release|x64
+		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Release|x64.Build.0 = Release|x64
 		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Release|x86.ActiveCfg = Release|Win32
 		{DB3CAD6D-C31F-42CE-8214-62683940E9F1}.Release|x86.Build.0 = Release|Win32
 		{A9CD4783-9AA3-47E4-B96B-BBCA047FF62F}.Debug|x64.ActiveCfg = Debug|x64
