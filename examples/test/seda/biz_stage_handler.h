@@ -11,5 +11,6 @@ public:
     virtual int handle_event(const zrsocket::SedaEvent *event);
 
 private:
-    zrsocket::SedaTimer *timer_ = nullptr;
+    zrsocket::SedaTimer *counter_timer_ = nullptr;
+    zrsocket::SedaTimer *counter_timer_s_ = nullptr;
 };

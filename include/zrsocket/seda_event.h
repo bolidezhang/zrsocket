@@ -118,11 +118,11 @@ struct SedaTcpWriteDataEvent : public SedaEvent
     }
 };
 
-typedef int (*SedaRpcMessageProc)(int handler_id, EventHandler *handler, void *seda_stagehandler, void *rpc_message, InetAddr *remote_addr);
+typedef int (* SedaRpcMessageProc)(int handler_id, EventHandler *handler, void *seda_stagehandler, void *rpc_message, InetAddr *remote_addr);
 struct SedaRpcMessageEvent : public SedaEvent
 {
     EventHandler *handler = nullptr;;
-    SedaRpcMessageProc rpc_proc;
+    SedaRpcMessageProc rpc_proc = nullptr;
     void *rpc_message = nullptr;
     InetAddr *remote_addr = nullptr;
     int handler_id = 0;
@@ -138,11 +138,11 @@ struct SedaRpcMessageEvent : public SedaEvent
 };
 
 struct SedaRpcMessageEvent2;
-typedef int (*SedaRpcMessageProc2)(SedaRpcMessageEvent2 *rpc_event, void *seda_stagehandler);
+typedef int (* SedaRpcMessageProc2)(SedaRpcMessageEvent2 *rpc_event, void *seda_stagehandler);
 struct SedaRpcMessageEvent2 : public SedaEvent
 {
     EventHandler *handler = nullptr;
-    SedaRpcMessageProc2 rpc_proc;
+    SedaRpcMessageProc2 rpc_proc = nullptr;
     void *rpc_message = nullptr;
     InetAddr *remote_addr = nullptr;
     int64_t handler_id = 0;

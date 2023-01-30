@@ -11,21 +11,26 @@
 
 //比较优秀malloc的实现
 //memory allocation: malloc implement
-//1.jemalloc freebsd/facebook/firefox
+
+//1.facebook jemalloc freebsd/firefox
 //#define ZRSOCKET_USE_JEMALLOC
 //2.google tcmalloc
 //#define ZRSOCKET_USE_TCMALLOC
-//3.hoard - The Hoard Memory Allocator
+//3.microsoft mimalloc
+//#define ZRSOCKET_USE_MIMALLOC
+//4.hoard - The Hoard Memory Allocator
 //#define ZRSOCKET_MALLOC_HOARD
-//4.nedmalloc - ned Productions dlmalloc
-//#define ZRSOCKET_USE_NEDMALLOC
-//5.Lockless malloc - Lockless Inc. Low level software to optimize performance
-//#define ZRSOCKET_USE_LOCKLESS
-//6.intel tbbmalloc
+
+//10.intel tbbmalloc
 //#define ZRSOCKET_USE_TBBMALLOC
-//7.ptmalloc - a) linux glibc default malloc b) 起源于 Doug Lea 的 dlmalloc
+//11.Lockless malloc - Lockless Inc. Low level software to optimize performance
+//#define ZRSOCKET_USE_LOCKLESS
+//12.nedmalloc - ned Productions dlmalloc
+//#define ZRSOCKET_USE_NEDMALLOC
+
+//100.ptmalloc - a) linux glibc default malloc b) 起源于 Doug Lea 的 dlmalloc
 //#define ZRSOCKET_USE_PTMALLOC
-//8.dlmalloc - Doug Lea dlmalloc
+//101.dlmalloc - Doug Lea dlmalloc
 //#define ZRSOCKET_USE_DLMALLOC
 
 #if defined(ZRSOCKET_USE_JEMALLOC)
@@ -59,10 +64,10 @@
     #define free(ptr) tc_free(ptr)
 #else
     //重新定义内存分配器
-    #define zrsocket_malloc(size) ::malloc(size)
-    #define zrsocket_calloc(count, size) ::calloc(count, size)
-    #define zrsocket_realloc(ptr, size) ::realloc(ptr, size)
-    #define zrsocket_free(ptr) ::free(ptr)
+    #define zrsocket_malloc(size) std::malloc(size)
+    #define zrsocket_calloc(count, size) std::calloc(count, size)
+    #define zrsocket_realloc(ptr, size) std::realloc(ptr, size)
+    #define zrsocket_free(ptr) std::free(ptr)
 #endif
 
 //默认的内存块大小，经验值

@@ -67,8 +67,12 @@ public:
     }
 
 public:
-    zrsocket::SedaStage<BizStageHandler, zrsocket::SpinlockMutex> spinlock_stage_;
-    zrsocket::SedaStage<BizStageHandler, zrsocket::ThreadMutex>   mutex_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::MPSCEventTypeQueue>                                      mpsc_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::DoubleBufferEventTypeQueue<zrsocket::SpinlockMutex> >    doublebuffer_spinlock_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::DoubleBufferEventTypeQueue<zrsocket::ThreadMutex> >      doublebuffer_mutex_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::SPSCVolatileEventTypeQueue>                              spsc_volatile_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::SPSCAtomicEventTypeQueue>                                spsc_atomic_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::MPMCEventTypeQueue>                                      mpmc_stage_;
 
     zrsocket::AtomicBool ready_     = ATOMIC_VAR_INIT(false);
     zrsocket::AtomicBool push_end_  = ATOMIC_VAR_INIT(false);
@@ -82,7 +86,7 @@ public:
     int thread_num_         = 1;
     int num_times_          = 10000000;
 
-    int64_t startup_test_timestamp_ = 0;
+    zrsocket::SteadyClockCounter test_counter_;
 };
 
 #endif

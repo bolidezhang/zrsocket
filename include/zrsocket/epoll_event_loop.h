@@ -27,7 +27,7 @@ enum class EPOLL_MODE
     ET = 2,
 };
 
-template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler>
+template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler, class TQueue = DoubleBufferEventTypeQueue<TMutex> >
 class EpollEventLoop : public EventLoop
 {
 public:
@@ -413,7 +413,7 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollEventLoop<TMutex, TLoopData, TEventTypeHandler> *event_loop = static_cast<EpollEventLoop<TMutex, TLoopData, TEventTypeHandler> *>(arg);
+        EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = static_cast<EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
         Thread &thread = event_loop->thread_;
         while (thread.state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -442,12 +442,12 @@ private:
     NotifyHandler       wakeup_handler_;
     AtomicBool          wakeup_flag_;
 
-    EventLoopQueue<TMutex, EventTypeHandler> event_queue_;
+    EventLoopQueue<TQueue, EventTypeHandler> event_queue_;
     TLoopData loop_data_;
 };
 
 //only support epoll mode: ET
-template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler>
+template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler, class TQueue = DoubleBufferEventTypeQueue<TMutex> >
 class EpollETEventLoop : public EventLoop
 {
 public:
@@ -785,7 +785,7 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler> *event_loop = static_cast<EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler> *>(arg);
+        EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = static_cast<EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
         Thread *thread = &(event_loop->thread_);
         while (thread->state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -814,7 +814,7 @@ private:
     NotifyHandler       wakeup_handler_;
     AtomicBool          wakeup_flag_;
 
-    EventLoopQueue<TMutex, EventTypeHandler> event_queue_;
+    EventLoopQueue<TQueue, EventTypeHandler> event_queue_;
     TLoopData loop_data_;
 };
 

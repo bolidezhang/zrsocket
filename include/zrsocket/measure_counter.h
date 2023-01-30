@@ -13,11 +13,11 @@ ZRSOCKET_NAMESPACE_BEGIN
 class SteadyClockCounter
 {
 public:
-    SteadyClockCounter() = default;
-    ~SteadyClockCounter() = default;
-    SteadyClockCounter(const SteadyClockCounter&) = default;
-    SteadyClockCounter(SteadyClockCounter&&) = default;
-    SteadyClockCounter& operator=(const SteadyClockCounter&) = default;
+    inline SteadyClockCounter() = default;
+    inline ~SteadyClockCounter() = default;
+    inline SteadyClockCounter(const SteadyClockCounter&) = default;
+    inline SteadyClockCounter(SteadyClockCounter&&) = default;
+    inline SteadyClockCounter& operator=(const SteadyClockCounter&) = default;
 
     static uint64_t now()
     {
@@ -53,11 +53,11 @@ private:
 class SystemClockCounter
 {
 public:
-    SystemClockCounter()  = default;
-    ~SystemClockCounter() = default;
-    SystemClockCounter(const SystemClockCounter&) = default;
-    SystemClockCounter(SystemClockCounter&&) = default;
-    SystemClockCounter&operator=(const SystemClockCounter&) = default;
+    inline SystemClockCounter()  = default;
+    inline ~SystemClockCounter() = default;
+    inline SystemClockCounter(const SystemClockCounter&) = default;
+    inline SystemClockCounter(SystemClockCounter&&) = default;
+    inline SystemClockCounter&operator=(const SystemClockCounter&) = default;
 
     static uint64_t now()
     {
@@ -94,7 +94,7 @@ template <typename TMeasureCounter, bool owner = true>
 class MeasureCounterGuard
 {
 public:
-    MeasureCounterGuard(const char *out_prefix = "", const char *out_postfix = "\n", std::ostream &out = std::cout)
+    inline MeasureCounterGuard(const char *out_prefix = "", const char *out_postfix = "\n", std::ostream &out = std::cout)
         : out_prefix_(out_prefix)
         , out_postfix_(out_postfix)
         , out_(out)
@@ -102,7 +102,7 @@ public:
         mc_.update_start_counter();
     }
 
-    ~MeasureCounterGuard()
+    inline ~MeasureCounterGuard()
     {
         mc_.update_end_counter();
         out_ << out_prefix_ << mc_.diff() << out_postfix_;
@@ -125,13 +125,13 @@ template <typename TMeasureCounter>
 class MeasureCounterGuard<TMeasureCounter, false>
 {
 public:
-    MeasureCounterGuard(TMeasureCounter &mc)
+    inline MeasureCounterGuard(TMeasureCounter &mc)
         : mc_(mc)
     {
         mc_.update_start_counter();
     }
 
-    ~MeasureCounterGuard()
+    inline ~MeasureCounterGuard()
     {
         mc_.update_end_counter();
     }

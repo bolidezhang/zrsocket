@@ -33,7 +33,7 @@ public:
         type_ = type;
     }
 
-protected:
+public:
     inline IEventType(int len, int type)
         : len_(len)
         , type_(type)

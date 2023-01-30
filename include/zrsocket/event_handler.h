@@ -23,9 +23,9 @@ enum class SendResult
 
 class EventSource;
 class EventLoop;
-template <class TMutex, class TLoopData, class TEventTypeHandler> class SelectEventLoop;
-template <class TMutex, class TLoopData, class TEventTypeHandler> class EpollEventLoop;
-template <class TMutex, class TLoopData, class TEventTypeHandler> class EpollETEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> class SelectEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> class EpollEventLoop;
+template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> class EpollETEventLoop;
 template <class TEventLoop> class EventLoopGroup;
 template <class TClientHandler, class TObjectPool, class TServerHandler> class TcpServer;
 template <class TUdpSourceHandler> class UdpSource;
@@ -187,9 +187,9 @@ protected:
 private:
     bool            in_object_pool_;    //是否在object_pool中(上层不能修改)
 
-    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class SelectEventLoop;
-    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class EpollEventLoop;
-    template <class TMutex, class TLoopData, class TEventTypeHandler> friend class EpollETEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> friend class SelectEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> friend class EpollEventLoop;
+    template <class TMutex, class TLoopData, class TEventTypeHandler, class TQueue> friend class EpollETEventLoop;
     template <class TEventLoop> friend class EventLoopGroup;
     template <class TClientHandler, class TObjectPool, class TServerHandler> friend class TcpServer;
     template <class TUdpSourceHandler> friend class UdpSource;

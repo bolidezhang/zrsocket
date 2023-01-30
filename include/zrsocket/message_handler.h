@@ -294,7 +294,7 @@ protected:
 
         int iovecs_count = 0;
         ZRSOCKET_IOVEC *iovecs = event_loop_->iovecs(iovecs_count);
-        int queue_size = queue_active_->size();
+        int queue_size = static_cast<int>(queue_active_->size());
         if (iovecs_count > queue_size) {
             iovecs_count = queue_size;
         }

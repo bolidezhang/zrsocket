@@ -3,9 +3,9 @@
 #include <chrono>
 #include "test_seda.h"
 
-int test_spinlock_stage(int id)
+int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
 {
-    TestApp &app = TestApp::instance();
+    TestApp& app = TestApp::instance();
     while (!app.ready_.load()) {
         std::this_thread::yield();
     }
@@ -13,50 +13,14 @@ int test_spinlock_stage(int id)
     Test8SedaEvent test8_event;
     Test8SedaEvent test16_event;
     int push_num = 0;
-    printf("test_spinlock_stage thread_id:%d push start\n", id);
-    zrsocket::SteadyClockCounter scc;
-    scc.update_start_counter();
-    if (app.seda_event_len_ <= 8) {
-        for (int i = 0; i < app.num_times_; ++i) {
-            test8_event.sequence = i;
-            if (app.spinlock_stage_.push_event(&test8_event) >= 0) {
-                ++push_num;
-            }
-        }
-    }
-    else {
-        for (int i = 0; i < app.num_times_; ++i) {
-            test16_event.sequence = i;
-            if (app.spinlock_stage_.push_event(&test16_event) >= 0) {
-                ++push_num;
-            }
-        }
-    }
-    scc.update_end_counter();
-    printf("test_spinlock_stage thread_id:%d push end num:%d spend_time:%lld us\n", id, push_num, scc.diff()/1000LL);
-    app.push_num_.fetch_add(push_num, std::memory_order_relaxed);
-
-    return 0;
-}
-
-int test_mutex_stage(int id)
-{
-    TestApp &app = TestApp::instance();
-    while (!app.ready_.load()) {
-        std::this_thread::yield();
-    }
-
-    Test8SedaEvent test8_event;
-    Test8SedaEvent test16_event;
-    int push_num = 0;
-    printf("test_mutex_stage thread_id:%d push start\n", id);
+    printf("%s thread_id:%d push start\n", out_title, id);
     zrsocket::SteadyClockCounter scc;
     {
         zrsocket::MeasureCounterGuard<zrsocket::SteadyClockCounter, false> mcg(scc);
         if (app.seda_event_len_ <= 8) {
             for (int i = 0; i < app.num_times_; ++i) {
                 test8_event.sequence = i;
-                if (app.mutex_stage_.push_event(&test8_event) >= 0) {
+                if (stage->push_event(&test8_event, -1, 0) >= 0) {
                     ++push_num;
                 }
             }
@@ -64,23 +28,26 @@ int test_mutex_stage(int id)
         else {
             for (int i = 0; i < app.num_times_; ++i) {
                 test16_event.sequence = i;
-                if (app.mutex_stage_.push_event(&test16_event) >= 0) {
+                if (stage->push_event(&test16_event, -1, 0) >= 0) {
                     ++push_num;
                 }
             }
         }
     }
-    printf("test_mutex_stage thread_id:%d push end num:%d spend_time:%lld us\n", id, push_num, scc.diff()/1000LL);
+    printf("%s thread_id:%d push end num:%d spend_time:%lld us\n", out_title, id, push_num, scc.diff() / 1000LL);
     app.push_num_.fetch_add(push_num, std::memory_order_relaxed);
 
     return 0;
 }
 
 template <typename TTest>
-int startup_test(TTest test, int thread_num)
+int startup_test(TTest test, bool thread_num_flag, int thread_num, zrsocket::ISedaStage *stage, const char *out_title)
 {
-    TestApp &app = TestApp::instance();
+    if (!thread_num_flag) {
+        thread_num = 1;
+    }
 
+    TestApp &app = TestApp::instance();
     while (app.push_end_.load(std::memory_order_relaxed)) {
         std::this_thread::yield();
     }
@@ -91,10 +58,10 @@ int startup_test(TTest test, int thread_num)
     std::vector<std::thread *> threads;
     threads.reserve(thread_num);
     for (auto i = 0; i < thread_num; ++i) {
-        threads.emplace_back(new std::thread(test, i));
+        threads.emplace_back(new std::thread(test, i, stage, out_title));
     }
 
-    app.startup_test_timestamp_ = zrsocket::OSApi::timestamp();
+    app.test_counter_.update_start_counter();
     app.ready_.store(true);
     for (auto &t : threads) {
         t->join();
@@ -108,6 +75,7 @@ int startup_test(TTest test, int thread_num)
 
 int main(int argc, char *argv[])
 {
+    /*
     {
         zrsocket::OSApiFile f;
         int ret = f.open("a.txt", O_WRONLY|O_APPEND|O_CREAT, S_IWRITE);
@@ -127,6 +95,7 @@ int main(int argc, char *argv[])
         f.close();
         std::cout << "open file ret:" << ret << " error:" << err << "\n";
     }
+    */
 
     //show MeasureCounterGuard
     printf("show MeasureCounterGuard\n");
@@ -174,9 +143,19 @@ int main(int argc, char *argv[])
 int TestApp::do_init()
 {
     printf("do_init start\n");
-    spinlock_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
-    mutex_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
-    startup_test(test_spinlock_stage, thread_num_);
-    startup_test(test_mutex_stage, thread_num_);
+    //mpsc_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    doublebuffer_spinlock_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    doublebuffer_mutex_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    spsc_volatile_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    spsc_atomic_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    //mpmc_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+
+    //startup_test(test_stage, true,  thread_num_, &mpsc_stage_, "mpsc_stage");
+    startup_test(test_stage, true,  thread_num_, &doublebuffer_spinlock_stage_, "doublebuffer_spinlock_stage");
+    startup_test(test_stage, true,  thread_num_, &doublebuffer_mutex_stage_, "doublebuffer_mutex_stage");
+    startup_test(test_stage, false, thread_num_, &spsc_volatile_stage_, "spsc_volatile_stage");
+    startup_test(test_stage, false, thread_num_, &spsc_atomic_stage_, "spsc_atomic_stage");
+    //startup_test(test_stage, true, thread_num_, &mpmc_stage_, "mpmc_stage");
+
     return 0;
 }

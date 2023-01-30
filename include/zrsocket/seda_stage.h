@@ -9,7 +9,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <typename TSedaStageHandler, typename TMutex = SpinlockMutex>
+template <typename TSedaStageHandler, typename TQueue = DoubleBufferEventTypeQueue<SpinlockMutex> >
 class SedaStage : public ISedaStage
 {
 public:
@@ -109,7 +109,7 @@ public:
     }
 
 protected:
-    typedef SedaStageThread<TSedaStageHandler, TMutex> StageThread;
+    using StageThread = SedaStageThread<TSedaStageHandler, TQueue>;
     std::vector<StageThread * > stage_threads_;
 
     uint_t  timedwait_interval_us_;

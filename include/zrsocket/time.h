@@ -21,12 +21,12 @@ public:
 
     inline void update_time()
     {
-        current_timestamp_ns_   = OSApi::timestamp_ns();
+        current_timestamp_ns_   = OSApi::steady_clock_counter();
         current_timestamp_us_   = current_timestamp_ns_ / 1000LL;
         current_timestamp_ms_   = current_timestamp_ns_ / 1000000LL;
         current_timestamp_s_    = current_timestamp_ns_ / 1000000000LL;
 
-        current_time_ns_        = OSApi::time_ns();
+        current_time_ns_        = OSApi::system_clock_counter();
         current_time_us_        = current_time_ns_ / 1000LL;
         current_time_ms_        = current_time_ns_ / 1000000LL;
         current_time_s_         = current_time_ns_ / 1000000000LL;
