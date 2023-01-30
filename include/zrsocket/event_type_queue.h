@@ -77,17 +77,17 @@ public:
         return active_buf_->pop();
     }
 
+    //只能在消费者线程且active_buf_.empty()==true时调用
     inline bool swap_buffer()
     {
-        if (active_buf_->empty()) {
-            mutex_.lock();
-            if (!standby_buf_->empty()) {
-                std::swap(standby_buf_, active_buf_);
-                mutex_.unlock();
-                return true;
-            }
+        mutex_.lock();
+        if (!standby_buf_->empty()) {
+            std::swap(standby_buf_, active_buf_);
             mutex_.unlock();
+            return true;
         }
+        mutex_.unlock();
+
         return false;
     }
 
