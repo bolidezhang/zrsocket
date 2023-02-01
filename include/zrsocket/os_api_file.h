@@ -226,10 +226,7 @@ public:
 #endif
     }
 
-    OSApiFile()
-    {
-    }
-
+    OSApiFile() = default;
     virtual ~OSApiFile()
     {
         close();
@@ -319,11 +316,15 @@ public:
         return writev(fd_, iov, iovcnt);
     }
 
-    inline int fd()
+    inline int fd() const
     {
         return fd_;
     }
 
+    inline const char * file_name() const
+    {
+        return file_name_.c_str();
+    }
 protected:
     int fd_ = -1;
     std::string file_name_;

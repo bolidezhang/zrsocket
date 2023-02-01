@@ -39,9 +39,7 @@ public:
     {
     }
 
-    virtual ~EventSource()
-    {
-    }
+    virtual ~EventSource() = default;
 
     virtual InetAddr * local_addr()
     {

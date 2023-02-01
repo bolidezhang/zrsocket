@@ -134,9 +134,9 @@ public:
     int handle_open()
     {
         HttpDecoderConfig *config = static_cast<HttpDecoderConfig *>(super::source_->message_decoder_config());
-        header_length_ = 0;
-        decode_state_ = HttpDecodeState::kMethod;
-        line_state_   = HttpLineState::kNormal;
+        header_length_  = 0;
+        decode_state_   = HttpDecodeState::kMethod;
+        line_state_     = HttpLineState::kNormal;
         field1_.clear();
         field2_.clear();
         field1_.reserve(config->max_uri_length_);

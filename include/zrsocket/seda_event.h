@@ -15,10 +15,13 @@ typedef EventTypeId     SedaEventTypeId;
 typedef QuitEvent       SedaQuitEvent;
 typedef ThreadIdleEvent SedaThreadIdleEvent;
 
+//#pragma pack(push)  //±£´æ¶ÔÆë×´Ì¬
+//#pragma pack(1)
+
 struct SedaTimerExpireEvent : public SedaEvent
 {
-    SedaTimer *timer = nullptr;
     int slot = 0;
+    SedaTimer *timer = nullptr;
 
     inline SedaTimerExpireEvent()
         : SedaEvent(sizeof(SedaTimerExpireEvent), SedaEventTypeId::TIMER_EXPIRE)
@@ -156,6 +159,8 @@ struct SedaRpcMessageEvent2 : public SedaEvent
     {
     }
 };
+
+//#pragma pack(pop)   //»Ö¸´¶ÔÆë×´Ì¬
 
 ZRSOCKET_NAMESPACE_END
 

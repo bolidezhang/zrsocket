@@ -15,13 +15,8 @@ template <class TQueue, class TEventTypeHandler>
 class EventLoopQueue
 {
 public:
-    EventLoopQueue()
-    {
-    }
-
-    virtual ~EventLoopQueue()
-    {
-    }
+    EventLoopQueue() = default;
+    virtual ~EventLoopQueue() = default;
 
     int init(uint_t queue_max_size, uint16_t event_type_len = 8)
     {

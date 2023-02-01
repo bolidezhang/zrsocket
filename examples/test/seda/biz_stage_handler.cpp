@@ -18,7 +18,7 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
 {
     TestApp &app = TestApp::instance();
 
-    switch (event->type()) {
+    switch (event->type_) {
         case zrsocket::SedaEventTypeId::TIMER_EXPIRE:
             {
                 zrsocket::SedaTimerExpireEvent *timer_event = (zrsocket::SedaTimerExpireEvent *)event;
@@ -27,10 +27,11 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                     //auto current_timestamp = zrsocket::OSApi::timestamp();
                     //printf("BizStageHandler::handle_event:TIMER_EXPIRE timestamp:%lld\n", current_timestamp);
                     if (app.push_end_.load(std::memory_order_relaxed)) {
-                        int handle_num = app.handle_num_.load(std::memory_order_relaxed);
+                        zrsocket::uint_t handle_num = app.handle_num_.load(std::memory_order_relaxed);
                         if (handle_num >= app.push_num_.load(std::memory_order_relaxed)) {
                             app.push_end_.store(false, std::memory_order_relaxed);
                             app.test_counter_.update_end_counter();
+                            //stage_thread_->cancel_lru_timer(1, counter_timer_s_);
                             printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:0) total_num_times:%ld spend_time:%lld us\n", handle_num, app.test_counter_.diff()/1000LL);
                             return 0;
                         }
@@ -38,8 +39,9 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                     counter_timer_ = stage_thread_->set_lru_timer(0, 0);
                 }
                 else {
-                    int handle_num = app.handle_num_.load(std::memory_order_relaxed);
-                    printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:1) total_num_times:%ld timestamp:%lld\n", handle_num, zrsocket::SystemClockCounter::now());
+                    zrsocket::uint_t handle_num = app.handle_num_.load(std::memory_order_relaxed);
+                    printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:1) local_handle_num:%ld total_num_times:%ld timestamp:%lld\n", 
+                        handle_num_, handle_num, zrsocket::SystemClockCounter::now());
                     counter_timer_s_ = stage_thread_->set_lru_timer(1, 0);
                 }
 
@@ -48,11 +50,12 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
         case TestEventType::EVENT_TEST8:
             {
                 //const Test8SedaEvent *test8_event = static_cast<const Test8SedaEvent *>(event);
+                ++handle_num_;
                 app.handle_num_.fetch_add(1, std::memory_order_relaxed);
                 if (app.push_end_.load(std::memory_order_relaxed)) {
-                    int handle_num = app.handle_num_.load(std::memory_order_relaxed);
+                    zrsocket::uint_t handle_num = app.handle_num_.load(std::memory_order_relaxed);
                     if (handle_num >= app.push_num_.load(std::memory_order_relaxed)) {
-                        app.push_end_.store(false, std::memory_order_relaxed);
+                        app.push_end_.store(false);
                         app.test_counter_.update_end_counter();
                         printf("BizStageHandler::handle_event:EVENT_TEST8 total_num_times:%ld spend_time:%lld us\n", handle_num, app.test_counter_.diff()/1000LL);
 
@@ -67,7 +70,7 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                 //const Test16SedaEvent * test16_event = static_cast<const Test16SedaEvent *>(event);
                 app.handle_num_.fetch_add(1, std::memory_order_relaxed);
                 if (app.push_end_.load(std::memory_order_relaxed)) {
-                    int handle_num = app.handle_num_.load(std::memory_order_relaxed);
+                    zrsocket::uint_t handle_num = app.handle_num_.load(std::memory_order_relaxed);
                     if (handle_num >= app.push_num_.load(std::memory_order_relaxed)) {
                         app.push_end_.store(false, std::memory_order_relaxed);
                         app.test_counter_.update_end_counter();
@@ -80,6 +83,11 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
             }
             break;
         default:
+            {
+                thread_local int default_num = 0;
+                ++default_num;
+                printf("default_num:%ld, event->type:%d event->len:%d\n", default_num, event->type_, event->len_);
+            }
             break;
     }
 

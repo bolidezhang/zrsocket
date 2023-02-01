@@ -13,4 +13,6 @@ public:
 private:
     zrsocket::SedaTimer *counter_timer_ = nullptr;
     zrsocket::SedaTimer *counter_timer_s_ = nullptr;
+
+    zrsocket::uint_t handle_num_ = 0;
 };

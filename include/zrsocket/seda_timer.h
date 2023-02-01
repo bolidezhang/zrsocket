@@ -24,9 +24,7 @@ public:
         next_ = this;
     }
 
-    ~SedaTimer()
-    {
-    }
+    ~SedaTimer() = default;
 
     inline int init()
     {

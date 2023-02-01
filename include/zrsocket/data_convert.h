@@ -124,13 +124,8 @@ public:
     }
 
 private:
-    DataConvert()
-    {
-    }
-
-    ~DataConvert()
-    {
-    }
+    DataConvert() = default;
+    ~DataConvert() = default;
 
     static char digits_[201];
 };

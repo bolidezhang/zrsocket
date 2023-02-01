@@ -89,9 +89,7 @@ public:
     {
     }
 
-    virtual ~EventHandler()
-    {
-    }
+    virtual ~EventHandler() = default;
 
     inline ZRSOCKET_SOCKET socket() const
     {

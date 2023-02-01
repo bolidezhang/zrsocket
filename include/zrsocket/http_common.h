@@ -521,9 +521,7 @@ public:
         init();
     }
 
-    virtual ~HttpContext()
-    {
-    }
+    virtual ~HttpContext() = default;
 
     void init()
     {

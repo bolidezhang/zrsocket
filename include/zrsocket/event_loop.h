@@ -15,13 +15,8 @@ ZRSOCKET_NAMESPACE_BEGIN
 class ZRSOCKET_EXPORT EventLoop
 {
 public:
-    EventLoop()
-    {
-    }
-
-    virtual ~EventLoop()
-    {
-    }
+    EventLoop() = default;
+    virtual ~EventLoop() = default;
     
     virtual int init(uint_t num, uint_t max_events, int event_mode, uint_t event_queue_max_size, uint_t event_type_len)
     {

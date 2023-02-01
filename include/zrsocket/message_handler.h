@@ -24,10 +24,8 @@ public:
         queue_standby_  = &queue2_;
     }
 
-    virtual ~MessageHandler()
-    {
-    }
-
+    virtual ~MessageHandler() = default;
+\
     virtual int do_open()
     {
         return 0;

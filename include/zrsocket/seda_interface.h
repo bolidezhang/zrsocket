@@ -31,13 +31,8 @@ struct SedaPriority
 class ISedaEventQueue
 {
 public:
-    ISedaEventQueue()
-    {
-    }
-
-    virtual ~ISedaEventQueue()
-    {
-    }
+    ISedaEventQueue() = default;
+    virtual ~ISedaEventQueue() = default;
 
     virtual int         init(uint_t capacity, uint_t event_len) = 0;
     virtual void        clear() = 0;
@@ -52,13 +47,8 @@ public:
 class ISedaStageHandler
 {
 public:
-    ISedaStageHandler()
-    {
-    }
-
-    virtual ~ISedaStageHandler()
-    {
-    }
+    ISedaStageHandler() = default;
+    virtual ~ISedaStageHandler() = default;
 
     virtual int handle_open()  = 0;
     virtual int handle_close() = 0;
@@ -68,14 +58,8 @@ public:
 class ISedaStage
 {
 public:
-    ISedaStage()
-    {
-    }
-
-    virtual ~ISedaStage()
-    {
-    }
-
+    ISedaStage() = default;
+    virtual ~ISedaStage() = default;
     virtual int     open(uint_t thread_number, uint_t queue_max_size, uint_t event_len,
                         uint_t timedwait_interval_us, bool timedwait_signal, int type,
                         uint_t batch_size, bool is_priority, bool is_shared_queue) = 0;
@@ -94,13 +78,8 @@ public:
 class ISedaStageThread
 {
 public:
-    ISedaStageThread()
-    {
-    }
-
-    virtual ~ISedaStageThread()
-    {
-    }
+    ISedaStageThread() = default;
+    virtual ~ISedaStageThread() = default;
 
     virtual int start() = 0;
     virtual int stop() = 0;

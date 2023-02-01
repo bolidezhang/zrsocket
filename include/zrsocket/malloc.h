@@ -18,14 +18,14 @@
 //#define ZRSOCKET_USE_TCMALLOC
 //3.microsoft mimalloc
 //#define ZRSOCKET_USE_MIMALLOC
-//4.hoard - The Hoard Memory Allocator
-//#define ZRSOCKET_MALLOC_HOARD
 
-//10.intel tbbmalloc
+//10.hoard - The Hoard Memory Allocator
+//#define ZRSOCKET_MALLOC_HOARD
+//11.intel tbbmalloc
 //#define ZRSOCKET_USE_TBBMALLOC
-//11.Lockless malloc - Lockless Inc. Low level software to optimize performance
+//12.Lockless malloc - Lockless Inc. Low level software to optimize performance
 //#define ZRSOCKET_USE_LOCKLESS
-//12.nedmalloc - ned Productions dlmalloc
+//13.nedmalloc - ned Productions dlmalloc
 //#define ZRSOCKET_USE_NEDMALLOC
 
 //100.ptmalloc - a) linux glibc default malloc b) 起源于 Doug Lea 的 dlmalloc

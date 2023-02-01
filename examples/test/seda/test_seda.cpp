@@ -10,8 +10,8 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
         std::this_thread::yield();
     }
 
-    Test8SedaEvent test8_event;
-    Test8SedaEvent test16_event;
+    Test8SedaEvent  test8_event;
+    Test16SedaEvent test16_event;
     int push_num = 0;
     printf("%s thread_id:%d push start\n", out_title, id);
     zrsocket::SteadyClockCounter scc;
@@ -48,7 +48,7 @@ int startup_test(TTest test, bool thread_num_flag, int thread_num, zrsocket::ISe
     }
 
     TestApp &app = TestApp::instance();
-    while (app.push_end_.load(std::memory_order_relaxed)) {
+    while (app.push_end_.load()) {
         std::this_thread::yield();
     }
 

@@ -7,13 +7,8 @@ ZRSOCKET_NAMESPACE_BEGIN
 class SedaStageHandler : public ISedaStageHandler
 {
 public:
-    SedaStageHandler()
-    {
-    }
-
-    virtual ~SedaStageHandler()
-    {
-    }
+    SedaStageHandler() = default;
+    virtual ~SedaStageHandler() = default;
 
     virtual int handle_open()
     {

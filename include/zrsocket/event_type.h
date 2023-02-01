@@ -9,6 +9,9 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
+//#pragma pack(push)  //保存对齐状态
+//#pragma pack(1)
+
 template <typename TDataType>
 class IEventType
 {
@@ -34,12 +37,14 @@ public:
     }
 
 public:
-    inline IEventType(int len, int type)
+    inline IEventType(TDataType len, TDataType type)
         : len_(len)
         , type_(type)
     {
     }
-    inline ~IEventType() = default;
+    inline ~IEventType()
+    {
+    }
 
     TDataType len_;     //len of data, include sizeof(EventType)
     TDataType type_;    //type of EventType
@@ -64,9 +69,7 @@ public:
     {
     }
 
-    inline ~SignalEvent()
-    {
-    }
+    inline ~SignalEvent() = default;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,9 +86,7 @@ protected:
     {
     }
 
-    inline ~FixedSizeEventBase()
-    {
-    }
+    inline ~FixedSizeEventBase() = default;
 };
 
 struct TimestampEventType : public EventType
@@ -113,6 +114,8 @@ protected:
     //事件发生时间(建议时间单位:us, 可以自行定义) 用于控制线程处理太慢,事件在队列等待时间过长时,无需再处理此事件)
     uint64_t timestamp_;
 };
+
+//#pragma pack(pop)   //恢复对齐状态
 
 ////////////////////////////////////////////////////////////////////////////////
 // event type ids
