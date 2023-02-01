@@ -7,7 +7,7 @@
 #include "event_type_queue.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
-using SedaEventQueue = NormalEventTypeQueue;
+using SedaEventQueue = SPSCNormalEventTypeQueue;
 ZRSOCKET_NAMESPACE_END
 
 #endif

@@ -144,18 +144,20 @@ int TestApp::do_init()
 {
     printf("do_init start\n");
     //mpsc_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    //mpmc_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
     doublebuffer_spinlock_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
     doublebuffer_mutex_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
-    spsc_volatile_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    spsc_steady_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
     spsc_atomic_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
-    //mpmc_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
+    spsc_normal_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
 
     //startup_test(test_stage, true,  thread_num_, &mpsc_stage_, "mpsc_stage");
+    //startup_test(test_stage, true, thread_num_, &mpmc_stage_, "mpmc_stage");
     startup_test(test_stage, true,  thread_num_, &doublebuffer_spinlock_stage_, "doublebuffer_spinlock_stage");
     startup_test(test_stage, true,  thread_num_, &doublebuffer_mutex_stage_, "doublebuffer_mutex_stage");
-    startup_test(test_stage, false, thread_num_, &spsc_volatile_stage_, "spsc_volatile_stage");
+    startup_test(test_stage, false, thread_num_, &spsc_steady_stage_, "spsc_steady_stage");
     startup_test(test_stage, false, thread_num_, &spsc_atomic_stage_, "spsc_atomic_stage");
-    //startup_test(test_stage, true, thread_num_, &mpmc_stage_, "mpmc_stage");
+    startup_test(test_stage, false, thread_num_, &spsc_normal_stage_, "spsc_normal_stage");
 
     return 0;
 }

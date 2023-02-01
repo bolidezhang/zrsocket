@@ -156,6 +156,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <SupportJustMyCode>false</SupportJustMyCode>
       <WholeProgramOptimization>true</WholeProgramOptimization>
+      <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

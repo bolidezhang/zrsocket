@@ -31,7 +31,7 @@ public:
         clear();
     }
 
-    inline int init(uint_t capacity, uint16_t event_type_len = 8)
+    inline int init(uint_t capacity, uint_t event_type_len = 8)
     {
         if (capacity < 1) {
             return 0;
@@ -44,7 +44,7 @@ public:
         capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
         //将event_type_len转换为 移位掩码<<
-        uint16_t type_len_mask = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
+        uint8_t type_len_mask = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         buf1_.init(capacity, type_len_mask);
         buf2_.init(capacity, type_len_mask);
@@ -101,7 +101,7 @@ private:
             clear();
         }
 
-        inline int init(uint_t capacity, uint16_t type_len_mask)
+        inline int init(uint_t capacity, uint8_t type_len_mask)
         {
             uint_t buffer_size = capacity << type_len_mask;
             buffer_ = (char *)zrsocket_malloc(buffer_size);
@@ -173,10 +173,10 @@ private:
 
     public:
         char       *buffer_         = nullptr;  //事件类型缓冲
-        uint64_t    capacity_       = 0;        //队列容量
+        uint64_t    capacity_       = 0;        //队列容量(只能是2的N次方)
+        uint8_t     type_len_mask_  = 0;        //类型长度掩码N(类型长度只能是 2的N次方)
         uint64_t    head_index_     = 0;        //头下标(单调递增:只增不减)
         uint64_t    tail_index_     = 0;        //尾下标(单调递增:只增不减)
-        uint16_t    type_len_mask_  = 0;        //类型长度掩码
     };
 
     Buffer *active_buf_;
@@ -189,16 +189,17 @@ private:
 // 单生产者单消费者 队列
 //  signle producer single consumer event_type_queue
 
-class SPSCVolatileEventTypeQueue
+//normal implement queue
+class SPSCNormalEventTypeQueue
 {
 public:
-    inline SPSCVolatileEventTypeQueue() = default;
-    inline ~SPSCVolatileEventTypeQueue()
+    inline SPSCNormalEventTypeQueue() = default;
+    ~SPSCNormalEventTypeQueue()
     {
         clear();
     }
 
-    inline int init(uint_t capacity, uint16_t event_type_len = 8)
+    inline int init(uint_t capacity, uint_t event_type_len = 8)
     {
         if (capacity < 1) {
             return 0;
@@ -211,7 +212,139 @@ public:
         capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
         //将event_type_len换算为移位掩码
-        type_len_mask_ = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
+        type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
+
+        uint_t buffer_size = capacity << type_len_mask_;
+        buffer_ = (char *)zrsocket_malloc(buffer_size);
+        if (nullptr != buffer_) {
+            capacity_ = capacity;
+            return 1;
+        }
+
+        return 0;
+    }
+
+    inline void clear()
+    {
+        if (nullptr != buffer_) {
+            zrsocket_free(buffer_);
+            buffer_ = nullptr;
+        }
+        capacity_ = 0;
+        type_len_mask_ = 0;
+        write_index_ = 0;
+        read_index_ = 0;
+    }
+
+    inline uint_t capacity() const
+    {
+        return capacity_;
+    }
+
+    inline uint_t size() const
+    {
+        uint_t write_index = write_index_;
+        uint_t read_index = read_index_;
+        if (write_index >= read_index) {
+            return write_index - read_index;
+        }
+        else {
+            return capacity_ - read_index + write_index;
+        }
+    }
+
+    inline uint_t free_size() const
+    {
+        return capacity_ - size();
+    }
+
+    inline bool empty() const
+    {
+        return write_index_ == read_index_;
+    }
+
+    inline bool full() const
+    {
+        return ((write_index_ + 1) & (capacity_ - 1)) == read_index_;
+    }
+
+    inline int push(const EventType* event)
+    {
+        uint_t write_index = write_index_;
+        if (((write_index + 1) & (capacity_ - 1)) != read_index_) {
+            uint_t offset = write_index << type_len_mask_;
+            zrsocket_memcpy((buffer_ + offset), event->event_ptr(), event->event_len());
+            write_index_ = (write_index + 1) & (capacity_ - 1);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    inline EventType * pop()
+    {
+        uint_t read_index = read_index_;
+        if (write_index_ != read_index) {
+            uint_t offset = read_index << type_len_mask_;
+            EventType *event = (EventType *)(buffer_ + offset);
+            read_index_ = (read_index + 1) & (capacity_ - 1);
+            return event;
+        }
+        return nullptr;
+    }
+
+    inline int pop(SPSCNormalEventTypeQueue *push_queue, uint_t batch_size)
+    {
+        auto queue_size = size();
+        uint_t push_free_size = push_queue->free_size();
+        if ((queue_size < 1) || (push_free_size < 1)) {
+            return 0;
+        }
+
+        uint_t pop_size = ZRSOCKET_MIN(queue_size, push_free_size);
+        pop_size = ZRSOCKET_MIN(batch_size, pop_size);
+        for (uint_t i = 0; i < pop_size; ++i) {
+            push_queue->push(pop());
+        }
+        return pop_size;
+    }
+
+    inline bool swap_buffer() const
+    {
+        return false;
+    }
+
+private:
+    char    *buffer_        = nullptr;  //事件类型缓冲
+    uint_t   capacity_      = 0;        //队列容量(只能是2的N次方)
+    uint8_t  type_len_mask_ = 0;        //类型长度掩码N(类型长度只能是 2的N次方)
+    uint_t   write_index_   = 0;        //写下标
+    uint_t   read_index_    = 0;        //读下标
+};
+
+class SPSCSteadyEventTypeQueue
+{
+public:
+    inline SPSCSteadyEventTypeQueue() = default;
+    inline ~SPSCSteadyEventTypeQueue()
+    {
+        clear();
+    }
+
+    inline int init(uint_t capacity, uint_t event_type_len = 8)
+    {
+        if (capacity < 1) {
+            return 0;
+        }
+        clear();
+
+        //将取模(求余数%)转换为 算术位运算与(&)
+        //计算大于等于capacity的最小 2的N次方整数
+        auto log2x = std::log2(capacity);
+        capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
+
+        //将event_type_len换算为移位掩码
+        type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
         buffer_ = (char *)zrsocket_malloc(buffer_size);
@@ -287,11 +420,11 @@ public:
     }
 
 private:
-    char             *buffer_           = nullptr;  //事件类型缓冲
-    uint64_t          capacity_         = 0;        //队列容量
-    volatile uint64_t head_index_       = 0;        //头下标(单调递增:只增不减)
-    volatile uint64_t tail_index_       = 0;        //尾下标(单调递增:只增不减)
-    uint16_t          type_len_mask_    = 0;        //类型长度掩码
+    char             *buffer_        = nullptr;  //事件类型缓冲
+    uint64_t          capacity_      = 0;        //队列容量(只能是2的N次方)
+    uint8_t           type_len_mask_ = 0;        //类型长度掩码N(类型长度只能是 2的N次方)
+    volatile uint64_t head_index_    = 0;        //头下标(单调递增:只增不减)
+    volatile uint64_t tail_index_    = 0;        //尾下标(单调递增:只增不减)
 };
 
 class SPSCAtomicEventTypeQueue
@@ -303,7 +436,7 @@ public:
         clear();
     }
 
-    inline int init(uint_t capacity, uint16_t event_type_len = 8)
+    inline int init(uint_t capacity, uint_t event_type_len = 8)
     {
         if (capacity < 1) {
             return 0;
@@ -316,7 +449,7 @@ public:
         capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
         //将event_type_len换算为移位掩码
-        type_len_mask_ = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
+        type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
         buffer_ = (char *)zrsocket_malloc(buffer_size);
@@ -393,135 +526,13 @@ public:
 
 private:
     char           *buffer_         = nullptr;  //事件类型缓冲
-    uint64_t        capacity_       = 0;        //队列容量
+    uint64_t        capacity_       = 0;        //队列容量(只能是2的N次方)
+    uint8_t         type_len_mask_  = 0;        //类型长度掩码N(类型长度只能是 2的N次方)
     AtomicUInt64    head_index_     = { 0 };    //头下标(单调递增:只增不减)
     AtomicUInt64    tail_index_     = { 0 };    //尾下标(单调递增:只增不减)
-    uint16_t        type_len_mask_  = 0;        //类型长度掩码
 };
 
-//normal implement queue
-class NormalEventTypeQueue
-{
-public:
-    inline NormalEventTypeQueue()
-    {
-    }
-
-    ~NormalEventTypeQueue()
-    {
-        clear();
-    }
-
-    inline int init(uint_t capacity, uint16_t event_type_len = 8)
-    {
-        if (capacity < 1) {
-            return 0;
-        }
-        clear();
-
-        //将取模(求余数%)转换为 算术位运算与(&)
-        //计算大于等于capacity的最小 2的N次方整数
-        auto log2x = std::log2(capacity);
-        capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
-
-        uint_t buffer_size = capacity * event_type_len;
-        buffer_ = (char *)zrsocket_malloc(buffer_size);
-        if (nullptr != buffer_) {
-            capacity_ = capacity;
-            event_type_len_ = event_type_len;
-            return 1;
-        }
-
-        return 0;
-    }
-
-    inline void clear()
-    {
-        if (nullptr != buffer_) {
-            zrsocket_free(buffer_);
-            buffer_ = nullptr;
-        }
-        write_index_ = 0;
-        read_index_  = 0;
-        capacity_    = 0;
-        queue_size_  = 0;
-        event_type_len_ = 0;
-    }
-
-    inline int push(const EventType *event)
-    {
-        if (queue_size_ < capacity_) {
-            ++queue_size_;
-            uint_t write_index = write_index_;
-            zrsocket_memcpy((buffer_ + write_index * event_type_len_), event->event_ptr(), event->event_len());
-            write_index_ = (write_index + 1) & (capacity_ - 1);
-            return 1;
-        }
-        return 0;
-    }
-
-    inline EventType * pop()
-    {
-        if (queue_size_ > 0) {
-            --queue_size_;
-            uint_t read_index = read_index_;
-            EventType *event = (EventType *)(buffer_ + read_index * event_type_len_);
-            read_index_ = (read_index + 1) & (capacity_ - 1);
-            return event;
-        }
-        return nullptr;
-    }
-
-    inline int pop(NormalEventTypeQueue *push_queue, uint_t batch_size)
-    {
-        uint_t push_free_size = push_queue->free_size();
-        if ((queue_size_ < 1) || (push_free_size < 1)) {
-            return 0;
-        }
-
-        uint_t pop_size = ZRSOCKET_MIN(queue_size_, push_free_size);
-        pop_size = ZRSOCKET_MIN(batch_size, pop_size);
-        for (uint_t i = 0; i < pop_size; ++i) {
-            push_queue->push(pop());
-        }
-        return pop_size;
-    }
-
-    inline uint_t capacity() const
-    {
-        return capacity_;
-    }
-
-    inline uint_t size() const
-    {
-        return queue_size_;
-    }
-
-    inline uint_t free_size() const
-    {
-        return capacity_ - queue_size_;
-    }
-
-    inline bool empty() const
-    {
-        return 0 == queue_size_;
-    }
-
-    inline bool swap_buffer() const
-    {
-        return false;
-    }
-
-private:
-    char    *buffer_         = nullptr; //事件类型缓冲
-    uint_t   capacity_       = 0;       //队列容量
-    uint_t   write_index_    = 0;       //写下标
-    uint_t   read_index_     = 0;       //读下标
-    uint_t   queue_size_     = 0;       //队列大小
-    uint16_t event_type_len_ = 0;       //事件类型大小
-};
-
-using EventTypeQueue = NormalEventTypeQueue;
+using EventTypeQueue = SPSCNormalEventTypeQueue;
 
 ZRSOCKET_NAMESPACE_END
 
