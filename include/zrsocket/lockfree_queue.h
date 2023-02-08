@@ -61,7 +61,7 @@ public:
     }
 
     //交换active_queue_/standby_queue_指针
-    //只能在消费者线程且active_queue_.empty()==true时调用
+    //只能在消费者线程且active_queue_->empty()==true时调用
     inline bool swap_pointer()
     {
         mutex_.lock();

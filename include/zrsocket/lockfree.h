@@ -102,7 +102,7 @@ public:
     }
 
     //交换active/standby指针
-    //只能在active线程调用
+    //只能在active线程且active_ptr_->empty()==true调用
     inline bool swap_buffer()
     {
         mutex_.lock();

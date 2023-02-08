@@ -26,6 +26,9 @@
     <ClInclude Include="biz_stage_handler.h" />
     <ClInclude Include="test_seda.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{DA284901-8147-44CC-A0BC-8B40DF793C3E}</ProjectGuid>

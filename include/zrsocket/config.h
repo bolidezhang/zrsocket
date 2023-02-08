@@ -15,10 +15,6 @@
 #ifndef ZRSOCKET_CONFIG_H
 #define ZRSOCKET_CONFIG_H
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1200)
-    #pragma once
-#endif
-
 #ifdef DEBUG
     #define ZRSOCKET_DEBUG
 #else
