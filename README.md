@@ -1,20 +1,20 @@
-#zrsocket
-һ���ǳ������Reactorģʽ�ĸ�����������
+zrsocket
+一个非常优秀的Reactor模式的高性能网络框架
 
-���ԣ�
+特性：
     1.event loop 
-        ֧�� epoll,select��
-    2.tcp �� udp
+        支持 epoll,select等
+    2.tcp 和 udp
     3.http
         http client/http server
-        �����Կɴ�40��qps
+        经测试可达40万qps
     4.seda
-        seda�¼�����ģʽ
-        ������ÿ��ߴ�20000�������¼�����
+        seda事件处理模式
+        经测试每秒高达20000万以上事件处理
     5.log
-        ֧��ͬ�����첽�ĸ�������־
-        ������ÿ��ߴ�500��������(ÿ��300���ֽ�)
+        支持同步和异步的高性能日志
+        经测试每秒高达500万以上条(每条300个字节)
 
-֧��ƽ̨:
-    1.windows
-    2.linux
+支持平台:
+    1.windows    
+    2.linux   
