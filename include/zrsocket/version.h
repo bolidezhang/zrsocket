@@ -5,9 +5,9 @@
 #ifndef ZRSOCKET_VERSION_H
 #define ZRSOCKET_VERSION_H
 
-#define ZRSOCKET_VERSION_MAJOR  1
-#define ZRSOCKET_VERSION_MINOR  8
-#define ZRSOCKET_VERSION_PATCH  2
+#define ZRSOCKET_VERSION_MAJOR 1
+#define ZRSOCKET_VERSION_MINOR 8
+#define ZRSOCKET_VERSION_PATCH 3
 
 #define ZRSOCKET_MAKE_VERSION(major, minor, patch) \
     (major * 1000 * 1000u + minor * 1000u + patch)
