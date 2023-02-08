@@ -1,8 +1,17 @@
-# zrsocket
-an asynchronous event-driven network framework (c++11)
+#zrsocket
+一个非常优秀的Reactor模式的高性能网络框架
 
-It simplifies the development of OO socket network applications and services that utilize socket communication, 
-socket event demultiplexing, concurrency. 
-zrsockert is targeted for developers of high-performance socket network communication services 
-and applications on Window, Linux platforms.
+特性：
+    1.event loop 
+        支持 epoll,select等
+    2.tcp 和 udp
+    3.http
+    4.seda处理模式
+        经测试每秒高达20000万以上事件处理
+    5.log
+        支持同步和异步的高性能日志
+        经测试每秒高达500万以上条(每条500个字节)
 
+支持平台:
+    1.windows
+    2.linux
