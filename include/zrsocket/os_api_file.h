@@ -6,12 +6,12 @@
 //   os system file api
 
 // file i/o api type:
-//  0) system call:
+//  0) low-level i/o system call:
 //      STDIN_FILENO:  0  标准输入      keyboard(defaut)
 //      STDOUT_FILENO: 1  标准输出      screen(defaut)
 //      STDERR_FILENO: 2  标准错误输出  screen(defaut)
 //      open / close / read / readv / write / writev / lseek / fsync /fdatasync ...
-//  1）c-style cstdio
+//  1）c-style stdio
 //      带缓冲区file io
 //      stdin, stdout, stderr
 //      std::FILE *
@@ -28,6 +28,7 @@
 #define ZRSOCKET_OS_API_FILE_H
 #include <string>
 #include <cassert>
+#include <cstdio>
 #include "config.h"
 #include "base_type.h"
 
@@ -54,21 +55,21 @@ ZRSOCKET_NAMESPACE_BEGIN
 class OSApiFile
 {
 public:
-    static int os_open(const char *file_name, int flags, int mode)
+    static int os_open(const char *filename, int flags, int mode)
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return ::_open(file_name, flags, mode);
+        return ::_open(filename, flags, mode);
 #else
-        return ::open(file_name, flags, mode);
+        return ::open(filename, flags, mode);
 #endif
     }
 
-    static int os_creat(const char *file_name, int mode)
+    static int os_creat(const char *filename, int mode)
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return ::_creat(file_name, mode);
+        return ::_creat(filename, mode);
 #else
-        return ::creat(file_name, mode);
+        return ::creat(filename, mode);
 #endif
     }
 
@@ -140,13 +141,21 @@ public:
         assert(buf != nullptr);
         assert(nbytes > 0);
 
-        char *ptr = buf;
+        char *ptr    = buf;
         uint_t nleft = nbytes;
-        int nread = 0;
+        int nread    = 0;
 
         do {
             nread = os_read(fd, ptr, nleft);
-            if (nread < 0) {
+            if (nread > 0) {
+                nleft -= nread;
+                ptr += nread;
+            }
+            else if (nread == 0) {
+                break;
+            }
+            else 
+            {
                 if (nleft == nbytes) {
                     return -1;
                 }
@@ -154,11 +163,6 @@ public:
                     break;
                 }
             }
-            else if (nread == 0) {
-                break;
-            }
-            nleft -= nread;
-            ptr += nread;
         } while (nleft > 0);
 
         return (nbytes - nleft);
@@ -169,13 +173,17 @@ public:
         assert(buf != nullptr);
         assert(nbytes > 0);
 
-        char *ptr = const_cast<char *>(buf);
+        char *ptr    = const_cast<char *>(buf);
         uint_t nleft = nbytes;
-        int nwrite = 0;
+        int nwrite   = 0;
 
         do {
             nwrite = os_write(fd, ptr, nleft);
-            if (nwrite < 0) {
+            if (nwrite > 0) {
+                nleft -= nwrite;
+                ptr += nwrite;
+            }
+            else if (nwrite < 0) {
                 if (nleft == nbytes) {
                     return -1;
                 }
@@ -183,11 +191,9 @@ public:
                     break;
                 }
             }
-            else if (nwrite == 0) {
+            else {
                 break;
             }
-            nleft -= nwrite;
-            ptr += nwrite;
         } while (nleft > 0);
 
         return (nbytes - nleft);
@@ -200,7 +206,8 @@ public:
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         if (0 == mode) {
-            thread_local ByteBuffer buf(1024);
+            static thread_local ByteBuffer buf_(1024);
+            ByteBuffer &buf = buf_;
             buf.reset();
             for (int i = 0; i < iovcnt; ++i) {
                 buf.write(iov[i].iov_base, iov[i].iov_len);
@@ -232,27 +239,27 @@ public:
         close();
     }
 
-    inline int open(const char *file_name, int flags, int mode)
+    inline int open(const char *filename, int flags, int mode)
     {
         close();
 
-        fd_ = os_open(file_name, flags, mode);
+        fd_ = os_open(filename, flags, mode);
         if (fd_ < 0) {
             return -1;
         }
-        file_name_ = file_name;
+        filename_ = filename;
         return 0;
     }
 
-    inline int creat(const char *file_name, int mode)
+    inline int creat(const char *filename, int mode)
     {
         close();
 
-        fd_ = os_creat(file_name, mode);
+        fd_ = os_creat(filename, mode);
         if (fd_ < 0) {
             return -1;
         }
-        file_name_ = file_name;
+        filename_ = filename;
         return 0;
     }
 
@@ -267,7 +274,7 @@ public:
         }
 
         fd_ = -1;
-        file_name_.clear();
+        filename_.clear();
         return 0;
     }
 
@@ -321,13 +328,154 @@ public:
         return fd_;
     }
 
-    inline const char * file_name() const
+    inline const char * filename() const
     {
-        return file_name_.c_str();
+        return filename_.c_str();
     }
+
 protected:
     int fd_ = -1;
-    std::string file_name_;
+    std::string filename_;
+};
+
+class StdioFile
+{
+public:
+    StdioFile() = default;
+    virtual ~StdioFile()
+    {
+        close();
+    }
+
+    inline int open(const char *filename, const char *mode)
+    {
+        close();
+
+        fp_ = fopen(filename, mode);
+        if (nullptr != fp_) {
+            filename_ = filename;
+            return 1;
+        }
+        return -1;
+    }
+
+    inline int close()
+    {
+        if (nullptr != fp_) {
+            fclose(fp_);
+            fp_ = nullptr;
+            filename_.clear();
+        }
+        return 0;
+    }
+
+    inline uint_t read(char *buf, uint_t nbytes)
+    {
+        return static_cast<uint_t>(fread(buf, 1, nbytes, fp_));
+    }
+
+    inline uint_t write(const char *buf, uint_t nbytes)
+    {
+        return static_cast<uint_t>(fwrite(buf, 1, nbytes, fp_));
+    }
+
+    inline int flush()
+    {
+        return fflush(fp_);
+    }
+
+    inline int readn(char *buf, uint_t nbytes)
+    {
+        assert(buf != nullptr);
+        assert(nbytes > 0);
+
+        char *ptr    = buf;
+        uint_t nleft = nbytes;
+        uint_t nread = 0;
+
+        do {
+            nread = read(ptr, nleft);
+            if (nread > 0) {
+                nleft -= nread;
+                ptr   += nread;
+            }
+            else if (nread == 0) {
+                break;
+            }
+            else
+            {
+                if (nleft == nbytes) {
+                    return -1;
+                }
+                else {
+                    break;
+                }
+            }
+        } while (nleft > 0);
+
+        return (nbytes - nleft);
+    }
+
+    inline int writen(const char *buf, uint_t nbytes)
+    {
+        assert(buf != nullptr);
+        assert(nbytes > 0);
+
+        char *ptr = const_cast<char *>(buf);
+        uint_t nleft  = nbytes;
+        uint_t nwrite = 0;
+
+        do {
+            nwrite = write(ptr, nleft);
+            if (nwrite > 0) {
+                nleft -= nwrite;
+                ptr   += nwrite;
+            }
+            else if (nwrite < 0) {
+                if (nleft == nbytes) {
+                    return -1;
+                }
+                else {
+                    break;
+                }
+            }
+            else {
+                break;
+            }
+        } while (nleft > 0);
+
+        return (nbytes - nleft);
+    }
+
+    inline int writev(const ZRSOCKET_IOVEC *iov, int iovcnt)
+    {
+        int ret;
+        int write_nbytes = 0;
+        for (int i = 0; i < iovcnt; ++i) {
+            ret = writen(static_cast<const char *>(iov[i].iov_base), iov[i].iov_len);
+            if (ret < static_cast<int>(iov[i].iov_len)) {
+                return write_nbytes;
+            }
+            else {
+                write_nbytes += ret;
+            }
+        }
+        return write_nbytes;
+    }
+
+    inline FILE* fd() const
+    {
+        return fp_;
+    }
+
+    inline const char* filename() const
+    {
+        return filename_.c_str();
+    }
+
+protected:
+    FILE *fp_ = nullptr;
+    std::string filename_;
 };
 
 ZRSOCKET_NAMESPACE_END

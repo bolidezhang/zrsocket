@@ -68,6 +68,8 @@ public:
     virtual int     type() const = 0;
     virtual int     event_count() const = 0;
     virtual uint_t  batch_size() const = 0;
+    virtual void    set_context(void *context) = 0;
+    virtual void*   get_context() const = 0;
 
     virtual int     pop_event(void *push_queue, uint_t batch_size)
     {

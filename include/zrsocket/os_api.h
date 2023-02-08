@@ -8,6 +8,9 @@
 #include <ctime>
 #include <cstdio>
 #include <cstdarg>         // for va_list, va_start, va_end
+#include <thread>
+#include <functional>
+
 #include "config.h"
 #include "base_type.h"
 #include "memory.h"
@@ -821,6 +824,19 @@ public:
         #endif
     }
 
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数,可以精确到纳秒)
+    static inline int gettimeofday(struct timespec *ts)
+    {
+    #ifdef ZRSOCKET_OS_WINDOWS
+        uint64_t now = system_clock_counter();
+        ts->tv_sec   = now / 1000000000LL;
+        ts->tv_nsec  = now % 1000000000LL;
+        return 0;
+    #else 
+        return clock_gettime(CLOCK_REALTIME, ts);
+    #endif
+    }
+
     //时间操作函数
     static inline void time_add(struct timeval *tvp, struct timeval *uvp, struct timeval *vvp)
     {
@@ -1123,6 +1139,44 @@ public:
         return rc;
     }
 
+
+    static inline uint64_t this_thread_id()
+    {
+        static thread_local uint64_t id = 0;
+        if (id !=  0) {
+            return id;
+        }
+        else {
+            std::hash<std::thread::id> hasher;
+            id = hasher(std::this_thread::get_id());
+            return id;
+        }
+    }
+
+    static struct tm* gmtime_s(const time_t *time, struct tm *buf_tm)
+    {
+    #ifdef ZRSOCKET_OS_WINDOWS
+        if (::gmtime_s(buf_tm, time) != 0) {
+            return buf_tm;
+        }
+        return nullptr;
+    #else
+        return ::gmtime_r(time, buf_tm);
+    #endif
+    }
+
+    static struct tm* localtime_s(const time_t *time, struct tm *buf_tm)
+    {
+    #ifdef ZRSOCKET_OS_WINDOWS
+        if (::localtime_s(buf_tm, time) != 0) {
+            return buf_tm;
+        }
+        return nullptr;
+    #else
+        return ::localtime_r(time, buf_tm);
+    #endif
+    }
+    
 public:
     OSApi() = delete;
     ~OSApi() = delete;

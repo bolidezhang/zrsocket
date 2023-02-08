@@ -17,6 +17,7 @@ public:
         : timedwait_interval_us_(10000)
         , next_thread_index_(0)
         , type_(0)
+        , context_(nullptr)
     {
     }
 
@@ -108,15 +109,27 @@ public:
         return 0;
     }
 
+    void set_context(void *context) 
+    {
+        context_ = context;
+    }
+
+    void * get_context() const
+    {
+        return context_;
+    }
+
 protected:
     using StageThread = SedaStageThread<TSedaStageHandler, TQueue>;
     std::vector<StageThread * > stage_threads_;
 
-    uint_t  timedwait_interval_us_;
-    int     next_thread_index_;
+    uint_t  timedwait_interval_us_ = 10000;
+    int     next_thread_index_ = 0;
 
     //区分多个实例标识
-    int     type_;
+    int     type_  = 0;
+
+    void   *context_ = nullptr;
 };
 
 ZRSOCKET_NAMESPACE_END

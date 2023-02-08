@@ -190,6 +190,9 @@
     <ClInclude Include="include\zrsocket\http_response_handler.h" />
     <ClInclude Include="include\zrsocket\inet_addr.h" />
     <ClInclude Include="include\zrsocket\length_field_message_handler.h" />
+    <ClInclude Include="include\zrsocket\lockfree.h" />
+    <ClInclude Include="include\zrsocket\lockfree_queue.h" />
+    <ClInclude Include="include\zrsocket\logging.h" />
     <ClInclude Include="include\zrsocket\malloc.h" />
     <ClInclude Include="include\zrsocket\measure_counter.h" />
     <ClInclude Include="include\zrsocket\memory.h" />

@@ -57,6 +57,7 @@ public:
     int do_init();
     int do_fini()
     {
+        zrsocket::Logger::instance().fini();
         printf("do_fini\n");
         return 0;
     }

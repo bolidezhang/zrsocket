@@ -15,7 +15,7 @@
 ZRSOCKET_NAMESPACE_BEGIN
 
 // 双缓冲队列: double buffer event_type_queue
-//  一般用于只有一个消费者
+//  一般用于单消费者场景
 template <class TMutex>
 class DoubleBufferEventTypeQueue
 {

@@ -184,6 +184,8 @@ private:
         SedaStageThread<TSedaStageHandler, TQueue> *stage_thread = static_cast<SedaStageThread<TSedaStageHandler, TQueue> *>(arg);
         TSedaStageHandler &stage_handler = stage_thread->stage_handler_;
         AtomicInt &timedwait_flag = stage_thread->timedwait_flag_;
+        Mutex &timedwait_mutex = stage_thread->timedwait_mutex_;
+        Condition &timedwait_condition = stage_thread->timedwait_condition_;
         TQueue &event_queue = stage_thread->event_queue_;
         stage_handler.handle_open();
 
@@ -226,7 +228,7 @@ private:
                         timedwait_flag.store(1, std::memory_order_relaxed);
                         {
                             std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
-                            stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
+                            timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                         }
                         timedwait_flag.store(0, std::memory_order_relaxed);
                         event_queue.swap_buffer();
@@ -245,16 +247,14 @@ private:
                         goto QUIT_THREAD_PROC;
                     }
                 }
-                else {
-                    if (!event_queue.swap_buffer()) {
-                        timedwait_flag.store(1, std::memory_order_relaxed);
-                        {
-                            std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
-                            stage_thread->timedwait_condition_.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
-                        }
-                        timedwait_flag.store(0, std::memory_order_relaxed);
-                        event_queue.swap_buffer();
+                else if (!event_queue.swap_buffer()) {
+                    timedwait_flag.store(1, std::memory_order_relaxed);
+                    {
+                        std::unique_lock<std::mutex> lock(timedwait_mutex);
+                        timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                     }
+                    timedwait_flag.store(0, std::memory_order_relaxed);
+                    event_queue.swap_buffer();
                 }
             }
         }
@@ -277,7 +277,7 @@ private:
     SedaTimerQueue                  timer_queue_;
     std::vector<SedaLRUTimerQueue>  lru_timer_managers_;
 
-    std::mutex                      timedwait_mutex_;
+    Mutex                           timedwait_mutex_;
     Condition                       timedwait_condition_;
     uint_t                          timedwait_interval_us_;
     AtomicInt                       timedwait_flag_;        //条件触发标识

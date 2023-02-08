@@ -26,6 +26,7 @@ public:
         , type_(0)
         , batch_size_(2)
         , is_priority_(false)
+        , context_(nullptr)
     {
     }
 
@@ -150,6 +151,17 @@ public:
         return batch_size_;
     }
 
+
+    void set_context(void *context)
+    {
+        context_ = context;
+    }
+
+    void *get_context() const
+    {
+        return context_;
+    }
+
 protected:
     typedef SedaStage2Thread<TSedaStageHandler> StageThread;
     std::vector<StageThread * > stage_threads_;
@@ -172,6 +184,9 @@ protected:
 
     //是否启用优先级
     bool    is_priority_;
+
+    void   *context_ = nullptr;
+
 };
 
 ZRSOCKET_NAMESPACE_END

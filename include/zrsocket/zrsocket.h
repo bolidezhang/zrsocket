@@ -55,6 +55,8 @@
 #include "global.h"
 #include "measure_counter.h"
 #include "application.h"
+#include "logging.h"
+#include "lockfree_queue.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 

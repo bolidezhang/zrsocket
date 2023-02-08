@@ -21,21 +21,20 @@ ZRSOCKET_NAMESPACE_BEGIN
 
 class Global
 {
-private:
-    Global()  = default;
-    ~Global() = default;
-    Global(const Global &) = delete;
-    Global & operator=(const Global &) = delete;
-
 public:
     static Global & instance()
     {
         static Global global;
         return global;
     }
-    
-public:
+
     EventSource null_event_source_;
+
+private:
+    Global() = default;
+    ~Global() = default;
+    Global(const Global&) = delete;
+    Global& operator=(const Global&) = delete;
 };
 
 ZRSOCKET_NAMESPACE_END

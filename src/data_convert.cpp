@@ -332,7 +332,7 @@ int DataConvert::uitoa(uint32_t value, char str[12])
     if (value < 10000) {
         MOD100(3);
         LESS100;
-        str[3] = '\0';
+        str[4] = '\0';
         return 4;
     }
     if (value < 100000) {

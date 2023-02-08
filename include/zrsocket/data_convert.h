@@ -124,8 +124,8 @@ public:
     }
 
 private:
-    DataConvert() = default;
-    ~DataConvert() = default;
+    inline DataConvert() = default;
+    inline ~DataConvert() = default;
 
     static char digits_[201];
 };
