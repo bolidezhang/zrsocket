@@ -16,7 +16,10 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-static const std::string LEVEL_NAMES[] = { "TRACE", "DEBUG", "INFO ", "WARN", "ERROR", "FATAL" };
+//为了输出美观对齐
+//所有level_name长度相同,不足的用空格补齐
+static const int   LEVEL_NAME_LEN = sizeof("TRACE") - 1;
+static const char *LEVEL_NAMES[]  = { "TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL" };
 enum class LogLevel : uint8_t
 {
     kTRACE,
@@ -165,7 +168,7 @@ public:
         LogAppenderType appender_type_  = LogAppenderType::CONSOLE;
         LogWorkMode     work_mode_      = LogWorkMode::ASYNC;
         LogLockType     lock_type_      = LogLockType::MUTEX;
-        uint_t          buffer_size_    = 1024 * 1024 * 4;
+        uint_t          buffer_size_    = 1024 * 1024 * 16;
         const char     *filename_       = nullptr;
     };
 
@@ -204,9 +207,8 @@ public:
             buf_tm.tm_year + 1900, buf_tm.tm_mon + 1, buf_tm.tm_mday, buf_tm.tm_hour, buf_tm.tm_min, buf_tm.tm_sec, ts.tv_nsec);
         buf_.data_end(buf_.data_end() + len);
 
-        //output level
-        const std::string &level_name = LEVEL_NAMES[static_cast<int>(level)];
-        buf_.write(level_name.data(), static_cast<uint_t>(level_name.size()));
+        //output level        
+        buf_.write(LEVEL_NAMES[static_cast<int>(level)], LEVEL_NAME_LEN);
 
         //加分隔符
         buf_.write(" [");
@@ -345,7 +347,7 @@ public:
 
 private:
     LogLevel level_ = LogLevel::kTRACE;
-    uint_t line_ = 0;
+    uint_t   line_  = 0;
     const char *source_file_ = nullptr;
     const char *func_name_ = nullptr;
 
@@ -639,7 +641,6 @@ public:
                 switch (config_.get_lock_type()) {
                 case LogLockType::NONE:
                     worker_ = new AsyncWorker<NullMutex>(appender_, config_.get_buffer_size());
-                    config_.get_buffer_size();
                     break;
                 case LogLockType::SPINLOCK:
                     worker_ = new AsyncWorker<SpinlockMutex>(appender_, config_.get_buffer_size());

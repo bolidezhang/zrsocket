@@ -23,6 +23,10 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
                 test8_event.sequence = i;
                 if (stage->push_event(&test8_event, -1, 0) >= 0) {
                     ++push_num;
+                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << i <<" success");
+                }
+                else {
+                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << i <<" failure");
                 }
             }
         }
@@ -78,7 +82,7 @@ int startup_test(TTest test, bool thread_num_flag, int thread_num, zrsocket::ISe
 int main(int argc, char *argv[])
 {
     printf("please use the format: <thread_num> <num_times> <seda_thread_num> <seda_queue_size> <seda_event_len>\n\
-<logLevel 0:Trace 1:Debug 2:Info 3Warn 4:Error 5Fatal> <logAppenderType 0:Console 1:File> <logWorkMode 0:Sync 1:Async> <logLockType 0:None 1:Spinlock 2:Mutex>\n");
+<logLevel 0:Trace 1:Debug 2:Info 3Warn 4:Error 5Fatal> <logAppenderType 0:Console 1:File> <logWorkMode 0:Sync 1:Async> <logLockType 0:None 1:Spinlock 2:Mutex> <bufferSize:1024*1024*4>\n");
 
     if (argc < 2) {
         return 0;
