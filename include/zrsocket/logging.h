@@ -211,8 +211,8 @@ public:
 
         int len = 0;
 
-        //每线程本地缓存精确到秒的时间
-        //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间
+        //每线程本地缓存精确到秒的时间字符串
+        //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间字符串
         const uint_t DATETIME_S_LEN = 21;
         static thread_local struct timespec last_ts_ = { 0 };
 
@@ -673,10 +673,7 @@ public:
         : ILogWorker(appender)
     {
     }
-
-    virtual ~SyncWorker()
-    {
-    }
+    virtual ~SyncWorker() = default;
 
     int open() override
     {
