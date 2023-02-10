@@ -123,16 +123,17 @@ int main(int argc, char* argv[])
     ZRSOCKET_LOG_INIT;
 
     {
+        const int LOG_TIMES = 1000000;
         zrsocket::SteadyClockCounter scc;
         scc.update_start_counter();
-        for (int i = 0; i < 1000000; ++i) {
+        for (int i = 0; i < LOG_TIMES; ++i) {
             ZRSOCKET_LOG_TRACE(i<<" "<<i+1);
             //ZRSOCKET_LOG_INFO(i);
             //ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
             //ZRSOCKET_LOG_INFO("start...01234567890123456789");
         }
         scc.update_end_counter();
-        printf("diff %lld ns\n", scc.diff());
+        printf("log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
     }
   
     //TestApp &app = TestApp::instance();
