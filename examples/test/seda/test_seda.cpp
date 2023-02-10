@@ -13,8 +13,8 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
     Test8SedaEvent  test8_event;
     Test16SedaEvent test16_event;
     int push_num = 0;
-    //printf("%s thread_id:%d push start\n", out_title, id);
-    ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push start");
+    printf("%s thread_id:%d push start\n", out_title, id);
+    //ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push start");
     zrsocket::SteadyClockCounter scc;
     {
         zrsocket::MeasureCounterGuard<zrsocket::SteadyClockCounter, false> mcg(scc);
@@ -23,10 +23,10 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
                 test8_event.sequence = i;
                 if (stage->push_event(&test8_event, -1, 0) >= 0) {
                     ++push_num;
-                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << i <<" success");
+                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << push_num <<" success");
                 }
                 else {
-                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << i <<" failure");
+                    ZRSOCKET_LOG_DEBUG(out_title << " thread_id:" << id << " push num:" << push_num <<" failure");
                 }
             }
         }
@@ -39,8 +39,8 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
             }
         }
     }
-    //printf("%s thread_id:%d push end num:%d spend_time:%lld us\n", out_title, id, push_num, scc.diff() / 1000LL);
-    ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push end num:" << push_num << " spend_time:" << static_cast<uint64_t>(scc.diff() / 1000LL) << " us");
+    printf("%s thread_id:%d push end num:%d spend_time:%lld ns\n", out_title, id, push_num, scc.diff());
+    //ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push end num:" << push_num << " spend_time:" << scc.diff() << " ns");
     app.push_num_.fetch_add(push_num, std::memory_order_relaxed);
 
     return 0;
@@ -79,10 +79,15 @@ int startup_test(TTest test, bool thread_num_flag, int thread_num, zrsocket::ISe
     return 0;
 }
 
-int main(int argc, char *argv[])
+int send_to_remote(void *context, const char *log, zrsocket::uint_t len)
+{
+    return 0;
+}
+
+int main(int argc, char* argv[])
 {
     printf("please use the format: <thread_num> <num_times> <seda_thread_num> <seda_queue_size> <seda_event_len>\n\
-<logLevel 0:Trace 1:Debug 2:Info 3Warn 4:Error 5Fatal> <logAppenderType 0:Console 1:File> <logWorkMode 0:Sync 1:Async> <logLockType 0:None 1:Spinlock 2:Mutex> <bufferSize:1024*1024*4>\n");
+<logLevel 0:Trace 1:Debug 2:Info 3Warn 4:Error 5Fatal> <logAppenderType 0:Console 1:File 2:null 3:callback> <logWorkMode 0:Sync 1:Async> <logLockType 0:None 1:Spinlock 2:Mutex> <bufferSize:1024*1024*16>\n");
 
     if (argc < 2) {
         return 0;
@@ -91,28 +96,44 @@ int main(int argc, char *argv[])
     TestApp &app = TestApp::instance();
     if (argc > 6) {
         auto level = static_cast<zrsocket::LogLevel>(std::atoi(argv[6]));
-        ZRSOCKET_LOG_SET_LOGLEVEL(level);
+        ZRSOCKET_LOG_SET_LOG_LEVEL(level);
     }
     if (argc > 7) {
         auto type = static_cast<zrsocket::LogAppenderType>(std::atoi(argv[7]));
-        if (type == zrsocket::LogAppenderType::FILE) {
-            ZRSOCKET_LOG_SET_FILENAME("./test_seda.log");
+        ZRSOCKET_LOG_SET_APPENDER_TYPE(type);
+        if (type == zrsocket::LogAppenderType::kFILE) {
+            ZRSOCKET_LOG_SET_FILE_NAME("./test_seda.log");
+        }
+        if (type == zrsocket::LogAppenderType::kCALLBACK) {
+            ZRSOCKET_LOG_SET_CALLBACK_FUNC(send_to_remote, nullptr);
         }
     }
     if (argc > 8) {
         auto mode = static_cast<zrsocket::LogWorkMode>(std::atoi(argv[8]));
-        ZRSOCKET_LOG_SET_WORKMODE(mode);
+        ZRSOCKET_LOG_SET_WORK_MODE(mode);
     }
     if (argc > 9) {
         auto type = static_cast<zrsocket::LogLockType>(std::atoi(argv[9]));
-        ZRSOCKET_LOG_SET_LOCKTYPE(type);
+        ZRSOCKET_LOG_SET_LOCK_TYPE(type);
     }
     if (argc > 10) {
-        auto buffersize = std::atoi(argv[10]);
-        ZRSOCKET_LOG_SET_BUFFERSIZE(buffersize);
+        auto size = std::atoi(argv[10]);
+        ZRSOCKET_LOG_SET_BUFFER_SIZE(size);
     }
     ZRSOCKET_LOG_INIT;
-    ZRSOCKET_LOG_INFO("start...");
+
+    {
+        zrsocket::SteadyClockCounter scc;
+        scc.update_start_counter();
+        for (int i = 0; i < 1000000; ++i) {
+            ZRSOCKET_LOG_TRACE(i<<" "<<i+1);
+            //ZRSOCKET_LOG_INFO(i);
+            //ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+            //ZRSOCKET_LOG_INFO("start...01234567890123456789");
+        }
+        scc.update_end_counter();
+        printf("diff %lld ns\n", scc.diff());
+    }
   
     //TestApp &app = TestApp::instance();
     //ZRSOCKET_LOG_INFO("please use the format: <thread_num> <num_times> <seda_thread_num> <seda_queue_size> <seda_event_len>");

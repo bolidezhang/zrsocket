@@ -1142,15 +1142,14 @@ public:
 
     static inline uint64_t this_thread_id()
     {
-        static thread_local uint64_t id = 0;
-        if (id !=  0) {
-            return id;
-        }
-        else {
+        static thread_local uint64_t id_ = 0;
+        uint64_t id = id_;
+        if (0 == id) {
             std::hash<std::thread::id> hasher;
             id = hasher(std::this_thread::get_id());
-            return id;
+            id_ = id;
         }
+        return id;
     }
 
     static struct tm* gmtime_s(const time_t *time, struct tm *buf_tm)
@@ -1168,6 +1167,8 @@ public:
     static struct tm* localtime_s(const time_t *time, struct tm *buf_tm)
     {
     #ifdef ZRSOCKET_OS_WINDOWS
+        //windows下::localtime_s这个函数, 特费时: 700-900us. 不知什么原因
+        //比gmtime_s差很多
         if (::localtime_s(buf_tm, time) != 0) {
             return buf_tm;
         }

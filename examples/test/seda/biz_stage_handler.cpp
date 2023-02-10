@@ -32,9 +32,9 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                             app.push_end_.store(false, std::memory_order_relaxed);
                             app.test_counter_.update_end_counter();
                             //stage_thread_->cancel_lru_timer(1, counter_timer_s_);
-                            //printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:0) total_num_times:%ld spend_time:%lld us\n", handle_num, app.test_counter_.diff()/1000LL);
-                            ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:TIMER_EXPIRE(slot:0) total_num_times:" << app_handle_num
-                                << " spend_time:" << static_cast<uint64_t>(app.test_counter_.diff() / 1000LL) << " us");
+                            printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:0) total_num_times:%ld spend_time:%lld ns\n", app_handle_num, app.test_counter_.diff());
+                            //ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:TIMER_EXPIRE(slot:0) total_num_times:" << app_handle_num
+                            //    << " spend_time:" << static_cast<uint64_t>(app.test_counter_.diff() / 1000LL) << " us");
                             return 0;
                         }
                     //}
@@ -42,8 +42,13 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                 }
                 else {
                     zrsocket::uint_t app_handle_num = app.handle_num_.load(std::memory_order_relaxed);
-                    ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:TIMER_EXPIRE(slot:1) local_handle_num:" << handle_num_ <<" total_num_times:"
-                        << app_handle_num <<" timestamp:"<<zrsocket::SystemClockCounter::now());
+
+                    printf("BizStageHandler::handle_event:TIMER_EXPIRE(slot:1) local_handle_num:%ld total_num_times:%ld timestamp:%lld\n", handle_num_, app_handle_num, 
+                        zrsocket::SystemClockCounter::now());
+
+                    //ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:TIMER_EXPIRE(slot:1) local_handle_num:" << handle_num_ <<" total_num_times:"
+                    //    << app_handle_num <<" timestamp:"<<zrsocket::SystemClockCounter::now());
+
                     counter_timer_s_ = stage_thread_->set_lru_timer(1, 0);
                 }
             }
@@ -59,7 +64,8 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                     if (app_handle_num >= app.push_num_.load(std::memory_order_relaxed)) {
                         app.push_end_.store(false);
                         app.test_counter_.update_end_counter();
-                        ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:EVENT_TEST8 total_num_times:" << app_handle_num << " spend_time:" << static_cast<uint64_t>(app.test_counter_.diff()/1000LL) << " us");
+                        printf("BizStageHandler::handle_event EVENT_TEST8 total_num_times:%ld spend_time:%lld ns\n", app_handle_num, app.test_counter_.diff());
+                        //ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:EVENT_TEST8 total_num_times:" << app_handle_num << " spend_time:" << app.test_counter_.diff() << " ns");
 
                         stage_thread_->cancel_lru_timer(0, counter_timer_);
                         //stage_thread_->cancel_lru_timer(1, counter_timer_s_);
@@ -76,8 +82,8 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
                     if (app_handle_num >= app.push_num_.load(std::memory_order_relaxed)) {
                         app.push_end_.store(false, std::memory_order_relaxed);
                         app.test_counter_.update_end_counter();
-                        ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:EVENT_TEST16 total_num_times:" << app_handle_num << " spend_time:" << static_cast<uint64_t>(app.test_counter_.diff() / 1000LL) << " us");
-                        //printf("BizStageHandler::handle_event EVENT_TEST16 total_num_times:%ld spend_time:%lld us\n", static_cast<uint64_t>(app_handle_num, app.test_counter_.diff()/1000LL));
+                        ZRSOCKET_LOG_INFO("BizStageHandler::handle_event:EVENT_TEST16 total_num_times:" << app_handle_num << " spend_time:" << app.test_counter_.diff() << " ns");
+                        //printf("BizStageHandler::handle_event EVENT_TEST16 total_num_times:%ld spend_time:%lld us\n", app_handle_num, app_handle_num, app.test_counter_.diff());
 
                         stage_thread_->cancel_lru_timer(0, counter_timer_);
                         //stage_thread_->cancel_lru_timer(1, counter_timer_s_);

@@ -54,10 +54,10 @@
 #include "seda_stage2_thread.h"
 #include "global.h"
 #include "measure_counter.h"
-#include "application.h"
 #include "logging.h"
 #include "lockfree.h"
 #include "lockfree_queue.h"
+#include "application.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
