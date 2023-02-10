@@ -109,9 +109,6 @@ public:
     inline void set_filename(const char *name)
     {
         obj_.standby_ptr()->filename_ = name;
-        //auto config = obj_.standby_ptr();
-        //config->filename_ = name;
-        //config->appender_type_ = LogAppenderType::kFILE;
     }
 
     inline void set_work_mode(LogWorkMode mode)
