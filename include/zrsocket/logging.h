@@ -202,35 +202,31 @@ public:
 
     inline int init(LogLevel level, const char *file, uint_t line, const char *function)
     {
-        buf_.reset();
-
         level_  = level;
         file_   = file;
         line_   = line;
         function_ = function;
 
-        int len = 0;
+        int len;
 
         //每线程本地缓存精确到秒的时间字符串
         //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间字符串
-        const uint_t DATETIME_S_LEN = 21;
+        static const uint_t DATETIME_S_LEN = sizeof("2020-01-01 00:00:00.") - 1;
         static thread_local struct timespec last_ts_ = { 0 };
 
         //取当前精确到纳秒的时间
         struct timespec ts;
         OSApi::gettimeofday(&ts);
 
-        //output current datetime(format: [yyyy-mm-dd hh:mm:ss.nnnnnnnnn] UTC时区)
+        //output current datetime(format: [YYYY-MM-DD HH:MM:SS.SSSSSSSSSZ] UTC时区)
         if (ts.tv_sec != last_ts_.tv_sec) {
             last_ts_.tv_sec = ts.tv_sec;
 
             struct tm buf_tm;
             OSApi::gmtime_s(&ts.tv_sec, &buf_tm);
 
-            int datetime_s_len = 0;
-            char *datetime_s   = buf_.data();
-            datetime_s[0] = '[';
-            ++datetime_s_len;
+            int  datetime_s_len = 0;
+            char *datetime_s    = buf_.data();
 
             //output year
             len = DataConvert::uitoa(buf_tm.tm_year + 1900, datetime_s + datetime_s_len);
@@ -396,30 +392,26 @@ public:
                 }
             }
         }
-
         uint_t end = buf_.data_end();
         len = DataConvert::uitoa(ts.tv_nsec, buf_.buffer() + end);
         buf_.data_end(end + len);
-
-        buf_.write("] ", 2);
+        buf_.write("Z ", 2);
 
         //output level        
         buf_.write(LEVEL_NAMES[static_cast<int>(level)], LEVEL_NAME_LEN);
-
-        //加分隔符
-        buf_.write(" [", 2);
+        buf_.write(' ');
 
         return 1;
     }
 
     inline int fini()
     {
-        //加分隔符
-        buf_.write("] ", 2);
+        //加空格分隔符
+        buf_.write(' ');
 
         //output file
         buf_.write(file_);
-        buf_.write(' ');
+        buf_.write(':');
 
         //output line
         uint_t end = buf_.data_end();
@@ -433,7 +425,7 @@ public:
         len = DataConvert::ulltoa(OSApi::this_thread_id(), buf_.buffer() + end);
         buf_.data_end(end + len);
 
-        //换行
+        //加换行符
         buf_.write('\n');
 
         return 1;
@@ -607,7 +599,7 @@ public:
 private:
     static int worker_thread_proc(void *arg)
     {
-        const uint_t WRITE_BLOCK_SIZE = 8192;
+        static const uint_t WRITE_BLOCK_SIZE = 8192;
 
         AsyncWorker<TMutex> *worker = static_cast<AsyncWorker<TMutex> *>(arg);
         Thread &thread = worker->worker_thread_;

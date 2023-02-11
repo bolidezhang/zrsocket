@@ -127,9 +127,9 @@ int main(int argc, char* argv[])
         zrsocket::SteadyClockCounter scc;
         scc.update_start_counter();
         for (int i = 0; i < LOG_TIMES; ++i) {
-            ZRSOCKET_LOG_TRACE(i<<" "<<i+1);
+            //ZRSOCKET_LOG_TRACE(i<<"-"<<i+1);
             //ZRSOCKET_LOG_INFO(i);
-            //ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+            ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
             //ZRSOCKET_LOG_INFO("start...01234567890123456789");
         }
         scc.update_end_counter();
