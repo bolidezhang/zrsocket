@@ -76,4 +76,7 @@ typedef iovec ZRSOCKET_IOVEC;
     #define ZRSOCKET_HAVE_RECVSENDMMSG
 #endif
 
+#define zrsocket_fast_thread_local  __thread
+#define ZRSOCKET_FAST_THREAD_LOCAL  zrsocket_fast_thread_local
+
 #endif

@@ -1,14 +1,90 @@
-﻿//#include <cstdio>
-#include <vector>
+﻿#include <vector>
 #include <chrono>
 #include <sstream>
 #include "test_seda.h"
+
 int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
 {
-    TestApp& app = TestApp::instance();
+    TestApp &app = TestApp::instance();
     while (!app.ready_.load()) {
         std::this_thread::yield();
     }
+
+#if 0
+    //测试thread_local/__thread
+    {
+        const int TIMES = 100000000;
+        zrsocket::SteadyClockCounter scc;
+
+        volatile uint64_t v_sum = 0;
+        scc.update_start_counter();
+        for (int i = 0; i < TIMES; ++i) {
+            v_sum += i;
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d volatile sum:%lld times:%ld diff %lld ns\n", out_title, id, v_sum, TIMES, scc.diff());
+
+        static zrsocket_fast_thread_local uint64_t sum_ = 0;
+        scc.update_start_counter();
+        for (int i = 0; i < TIMES; ++i) {
+            sum_ += i;
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d zrsocket_fast_thread_local sum:%lld times:%ld diff %lld ns\n", out_title, id, sum_, TIMES, scc.diff());
+
+        static thread_local uint64_t tl_sum_ = 0;
+        scc.update_start_counter();
+        for (int i = 0; i < TIMES; ++i) {
+            tl_sum_ += i;
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d thread_local sum:%lld times:%ld diff %lld ns\n", out_title, id, tl_sum_, TIMES, scc.diff());
+
+        static thread_local zrsocket::ByteBuffer tl_buf_;
+        scc.update_start_counter();
+        tl_buf_.reserve(50);
+        for (int i = 0; i < TIMES; ++i) {
+            tl_buf_.reset();
+            tl_buf_.write(i);
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d thread_local tl_buf_size:%d times:%ld diff %lld ns\n", out_title, id, tl_buf_.data_size(), TIMES, scc.diff());
+
+
+        static thread_local zrsocket::ByteBuffer tl_buf2_;
+        zrsocket::ByteBuffer &buf2 = tl_buf2_;
+        scc.update_start_counter();
+        buf2.reserve(50);
+        for (int i = 0; i < TIMES; ++i) {
+            buf2.reset();
+            buf2.write(i);
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d thread_local tl_buf2_size:%d times:%ld diff %lld ns\n", out_title, id, buf2.data_size(), TIMES, scc.diff());
+
+        static zrsocket_fast_thread_local zrsocket::ByteBuffer ftl_buf_;
+        scc.update_start_counter();
+        ftl_buf_.reserve(50);
+        for (int i = 0; i < TIMES; ++i) {
+            ftl_buf_.reset();
+            ftl_buf_.write(i);
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d fast_thread_local ftl_buf_size:%d times:%ld diff %lld ns\n", out_title, id, ftl_buf_.data_size(), TIMES, scc.diff());
+
+        zrsocket::ByteBuffer buf;
+        scc.update_start_counter();
+        buf.reserve(50);
+        for (int i = 0; i < TIMES; ++i) {
+            buf.reset();
+            buf.write(i);
+        }
+        scc.update_end_counter();
+        printf("%s thread_id:%d buf_size:%d times:%ld diff %lld ns\n", out_title, id, buf.data_size(), TIMES, scc.diff());
+
+        return 1;
+    }
+#endif
 
     Test8SedaEvent  test8_event;
     Test16SedaEvent test16_event;
@@ -122,6 +198,9 @@ int main(int argc, char* argv[])
     }
     ZRSOCKET_LOG_INIT;
 
+    
+#if 0
+    //测试log性能
     {
         const int LOG_TIMES = 1000000;
         zrsocket::SteadyClockCounter scc;
@@ -135,6 +214,8 @@ int main(int argc, char* argv[])
         scc.update_end_counter();
         printf("log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
     }
+
+#endif
   
     //TestApp &app = TestApp::instance();
     //ZRSOCKET_LOG_INFO("please use the format: <thread_num> <num_times> <seda_thread_num> <seda_queue_size> <seda_event_len>");
@@ -189,3 +270,4 @@ int TestApp::do_init()
 
     return 0;
 }
+

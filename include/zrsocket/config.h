@@ -50,9 +50,7 @@
 //#define ZRSOCKET_C_STD_2011
 //5.C17
 //#define ZRSOCKET_C_STD_2017
-//6.C20
-//#define ZRSOCKET_C_STD_2020
-//7.C23
+//6.C23
 //#define ZRSOCKET_C_STD_2023
 
 //C++ 标准

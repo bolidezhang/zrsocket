@@ -207,8 +207,6 @@ public:
         line_   = line;
         function_ = function;
 
-        int len;
-
         //每线程本地缓存精确到秒的时间字符串
         //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间字符串
         static const uint_t DATETIME_S_LEN = sizeof("2020-01-01 00:00:00.") - 1;
@@ -229,7 +227,7 @@ public:
             char *datetime_s    = buf_.data();
 
             //output year
-            len = DataConvert::uitoa(buf_tm.tm_year + 1900, datetime_s + datetime_s_len);
+            int len = DataConvert::uitoa(buf_tm.tm_year + 1900, datetime_s + datetime_s_len);
             datetime_s_len += len;
             datetime_s[datetime_s_len] = '-';
             ++datetime_s_len;
@@ -393,7 +391,7 @@ public:
             }
         }
         uint_t end = buf_.data_end();
-        len = DataConvert::uitoa(ts.tv_nsec, buf_.buffer() + end);
+        int len = DataConvert::uitoa(ts.tv_nsec, buf_.buffer() + end);
         buf_.data_end(end + len);
         buf_.write("Z ", 2);
 

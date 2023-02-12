@@ -89,4 +89,7 @@ struct ZRSOCKET_IOVEC
 #define ZRSOCKET_ECONNECTING        WSAEWOULDBLOCK
 #define ZRSOCKET_IO_PENDING         WSA_IO_PENDING
 
+#define zrsocket_fast_thread_local  thread_local
+#define ZRSOCKET_FAST_THREAD_LOCAL  zrsocket_fast_thread_local
+
 #endif

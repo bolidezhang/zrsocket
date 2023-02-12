@@ -206,7 +206,7 @@ public:
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         if (0 == mode) {
-            static thread_local ByteBuffer buf_(1024);
+            static thread_local ByteBuffer buf_(4096);
             ByteBuffer &buf = buf_;
             buf.reset();
             for (int i = 0; i < iovcnt; ++i) {
