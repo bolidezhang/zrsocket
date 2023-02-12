@@ -852,6 +852,10 @@ public:
 
     int init()
     {
+        if (init_flag_) {
+            return 1;
+        }
+
         config_.update_config();
         switch (config_.get_appender_type()) {
         case LogAppenderType::kCONSOLE:
@@ -948,7 +952,7 @@ public:
         }
 
         init_flag_ = true;
-        return 0;
+        return 1;
     }
 
     int fini()
@@ -963,6 +967,7 @@ public:
             delete appender_;
             appender_ = nullptr;
         }
+        init_flag_ = false;
         return 1;
     }
 
