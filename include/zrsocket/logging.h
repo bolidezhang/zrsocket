@@ -839,10 +839,18 @@ private:
 class Logger
 {
 public:
+
+    //访问全局logger
     static Logger & instance()
     {
         static Logger logger;
         return logger;
+    }
+
+    Logger() = default;
+    ~Logger()
+    {
+        fini();
     }
 
     inline LogConfig & config()
@@ -985,14 +993,8 @@ public:
 
         return 0;
     }
-    
-private:
-    Logger() = default;
-    ~Logger()
-    {
-        fini();
-    }
 
+private:
     ILogAppender *appender_ = nullptr;
     ILogWorker   *worker_   = nullptr;
     LogConfig     config_;
@@ -1002,31 +1004,52 @@ private:
 
 ZRSOCKET_NAMESPACE_END
 
-#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)               zrsocket::Logger::instance().config().set_log_level(level)
-#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)            zrsocket::Logger::instance().config().set_appender_type(type)
-#define ZRSOCKET_LOG_SET_FILE_NAME(name)                zrsocket::Logger::instance().config().set_filename(name)
-#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context)    zrsocket::Logger::instance().config().set_callback_func(func, context)
-#define ZRSOCKET_LOG_SET_WORK_MODE(mode)                zrsocket::Logger::instance().config().set_work_mode(mode)
-#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)                zrsocket::Logger::instance().config().set_lock_type(type)
-#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)              zrsocket::Logger::instance().config().set_buffer_size(size)
-#define ZRSOCKET_LOG_INIT                               zrsocket::Logger::instance().init()
 
-#define ZRSOCKET_LOG_BODY(logEvent,logLevel)                                \
-            do {                                                            \
-                zrsocket::Logger &logger = zrsocket::Logger::instance();    \
-                if (logger.is_logged(logLevel)) {                           \
-                    zrsocket::LogStream &stream = zrsocket::stream_;        \
-                    stream.init(logLevel,__FILE__, __LINE__,__func__);      \
-                    stream << logEvent;                                     \
-                    logger.log(stream);                                     \
-                }                                                           \
-            } while (0)
+//一个系统可以有多个logger
 
-#define ZRSOCKET_LOG_TRACE(e)   ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kTRACE)
-#define ZRSOCKET_LOG_DEBUG(e)   ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kDEBUG)
-#define ZRSOCKET_LOG_INFO(e)    ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kINFO)
-#define ZRSOCKET_LOG_WARN(e)    ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kWARN)
-#define ZRSOCKET_LOG_ERROR(e)   ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kERROR)
-#define ZRSOCKET_LOG_FATAL(e)   ZRSOCKET_LOG_BODY(e,zrsocket::LogLevel::kFATAL)
+#define ZRSOCKET_LOG_SET_LOG_LEVEL2(logger,level)               logger.config().set_log_level(level)
+#define ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger,type)            logger.config().set_appender_type(type)
+#define ZRSOCKET_LOG_SET_FILE_NAME2(logger,name)                logger.config().set_filename(name)
+#define ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger,func,context)    logger.config().set_callback_func(func, context)
+#define ZRSOCKET_LOG_SET_WORK_MODE2(logger,mode)                logger.config().set_work_mode(mode)
+#define ZRSOCKET_LOG_SET_LOCK_TYPE2(logger,type)                logger.config().set_lock_type(type)
+#define ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger,size)              logger.config().set_buffer_size(size)
+#define ZRSOCKET_LOG_INIT2(logger)                              logger.init()
+
+#define ZRSOCKET_LOG_BODY(logger,logEvent,logLevel)             \
+    do {                                                        \
+        if (logger.is_logged(logLevel)) {                       \
+            zrsocket::LogStream &stream = zrsocket::stream_;    \
+            stream.init(logLevel,__FILE__,__LINE__,__func__);   \
+            stream << logEvent;                                 \
+            logger.log(stream);                                 \
+        }                                                       \
+    } while (0)
+
+#define ZRSOCKET_LOG_TRACE2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kTRACE)
+#define ZRSOCKET_LOG_DEBUG2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kDEBUG)
+#define ZRSOCKET_LOG_INFO2(logger,e)    ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kINFO)
+#define ZRSOCKET_LOG_WARN2(logger,e)    ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kWARN)
+#define ZRSOCKET_LOG_ERROR2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kERROR)
+#define ZRSOCKET_LOG_FATAL2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kFATAL)
+
+
+//全局logger
+
+#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)               ZRSOCKET_LOG_SET_LOG_LEVEL2(zrsocket::Logger::instance(),level)
+#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)            ZRSOCKET_LOG_SET_APPENDER_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_FILE_NAME(name)                ZRSOCKET_LOG_SET_FILE_NAME2(zrsocket::Logger::instance(),name)
+#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context)    ZRSOCKET_LOG_SET_CALLBACK_FUNC2(zrsocket::Logger::instance(),func,context)
+#define ZRSOCKET_LOG_SET_WORK_MODE(mode)                ZRSOCKET_LOG_SET_WORK_MODE2(zrsocket::Logger::instance(),mode)
+#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)                ZRSOCKET_LOG_SET_LOCK_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)              ZRSOCKET_LOG_SET_BUFFER_SIZE2(zrsocket::Logger::instance(),size)
+#define ZRSOCKET_LOG_INIT                               ZRSOCKET_LOG_INIT2(zrsocket::Logger::instance())
+
+#define ZRSOCKET_LOG_TRACE(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kTRACE)
+#define ZRSOCKET_LOG_DEBUG(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kDEBUG)
+#define ZRSOCKET_LOG_INFO(e)    ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kINFO)
+#define ZRSOCKET_LOG_WARN(e)    ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kWARN)
+#define ZRSOCKET_LOG_ERROR(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kERROR)
+#define ZRSOCKET_LOG_FATAL(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kFATAL)
 
 #endif

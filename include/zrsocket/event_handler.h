@@ -170,10 +170,10 @@ public:
 protected:
     EventSource    *source_;
     EventLoop      *event_loop_;
-    ZRSOCKET_FD     fd_;
 
-    uint64_t        last_update_time_;
-    int             last_errno_;        //最后错误号
+    uint64_t        last_update_time_;  //最近更新时间
+    ZRSOCKET_FD     fd_;                //socket fd
+    int             last_errno_;        //最近错误号
 
 private:
     int             event_mask_;        //事件码(上层不能修改)

@@ -213,6 +213,8 @@ int main(int argc, char* argv[])
         }
         scc.update_end_counter();
         printf("log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+
+        return 0;
     }
 
 #endif

@@ -156,7 +156,9 @@ private:
     }
     
 private:
-    TMutex mutex_;
+
+    //所属EventLoop
+    EventLoop *event_loop_ = nullptr;
 
     //定时器集合
     //interval越小,可能最先到期,需要按interval排序,所以选择sorted associative container的map
@@ -166,8 +168,7 @@ private:
     //到期定时器列表
     std::list<Timer *> timeout_timers_;
 
-    //所属EventLoop
-    EventLoop *event_loop_ = nullptr;
+    TMutex mutex_;
 };
 
 //class TimeWheelTimerQueue : public ITimerQueue

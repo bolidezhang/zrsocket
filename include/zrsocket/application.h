@@ -126,14 +126,6 @@ private:
     }
 
 protected:
-    //初始化
-    bool init_flag_ = false;
-
-    //退出/停止标记
-    AtomicBool stop_flag_;
-
-    //超时间隔(us)
-    int64_t timeout_us_ = 10000;
 
     //Main EventLoop
 #ifdef ZRSOCKET_OS_WINDOWS
@@ -141,6 +133,15 @@ protected:
 #else
     EpollEventLoop<TMutex>  main_event_loop_;
 #endif
+
+    //超时间隔(us)
+    int64_t timeout_us_ = 10000;
+
+    //退出/停止标记
+    AtomicBool stop_flag_;
+
+    //初始化
+    bool init_flag_ = false;
 };
 
 ZRSOCKET_NAMESPACE_END

@@ -334,8 +334,8 @@ public:
     }
 
 protected:
-    int fd_ = -1;
     std::string filename_;
+    int fd_ = -1;
 };
 
 class StdioFile
