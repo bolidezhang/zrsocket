@@ -840,7 +840,7 @@ class Logger
 {
 public:
 
-    //访问全局logger
+    //全局logger
     static Logger & instance()
     {
         static Logger logger;
@@ -1004,7 +1004,6 @@ private:
 
 ZRSOCKET_NAMESPACE_END
 
-
 //一个系统可以有多个logger
 
 #define ZRSOCKET_LOG_SET_LOG_LEVEL2(logger,level)               logger.config().set_log_level(level)
@@ -1032,7 +1031,6 @@ ZRSOCKET_NAMESPACE_END
 #define ZRSOCKET_LOG_WARN2(logger,e)    ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kWARN)
 #define ZRSOCKET_LOG_ERROR2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kERROR)
 #define ZRSOCKET_LOG_FATAL2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kFATAL)
-
 
 //全局logger
 
