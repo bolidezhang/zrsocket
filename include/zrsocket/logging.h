@@ -54,6 +54,12 @@ enum class LogLockType : uint8_t
     kMUTEX,
 };
 
+enum class LogFormatType : uint8_t
+{
+    kTEXT,
+    kBINARY,
+};
+
 //日志回调函数
 typedef int (* LogCallbackFunc)(void *context, const char *log, uint_t len);
 
@@ -129,6 +135,11 @@ public:
         obj_.standby_ptr()->buffer_size_ = size;
     }
 
+    inline void set_format_type(LogFormatType type)
+    {
+        obj_.standby_ptr()->format_type_ = type;
+    }
+
     inline void set_callback_func(LogCallbackFunc func, void *context)
     {
         auto conf = obj_.standby_ptr();
@@ -156,6 +167,11 @@ public:
         return obj_.active_ptr()->lock_type_;
     }
 
+    inline LogFormatType get_format_type() const
+    {
+        return obj_.active_ptr()->format_type_;
+    }
+
     inline uint_t get_buffer_size() const
     {
         return obj_.active_ptr()->buffer_size_;
@@ -179,6 +195,7 @@ public:
         LogWorkMode     work_mode_      = LogWorkMode::kASYNC;
         LogLockType     lock_type_      = LogLockType::kMUTEX;
         uint_t          buffer_size_    = 1024 * 1024 * 16;
+        LogFormatType   format_type_    = LogFormatType::kTEXT;
         const char     *filename_       = nullptr;
 
         LogCallbackFunc callback_func_  = nullptr;      //回调函数
@@ -209,7 +226,7 @@ public:
 
         //每线程本地缓存精确到秒的时间字符串
         //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间字符串
-        static const uint_t DATETIME_S_LEN = sizeof("2020-01-01 00:00:00.") - 1;
+        static const uint_t DATETIME_S_LEN = sizeof("1900-01-01 00:00:00.") - 1;
         static thread_local struct timespec last_ts_ = { 0 };
 
         //取当前精确到纳秒的时间
@@ -284,72 +301,6 @@ public:
         buf_.data_end(DATETIME_S_LEN);
 
         //output nanoseconds
-        ////补零写法一
-        //if (ts.tv_nsec < 10) {
-        //    buf_.write("00000000", 8);
-        //}
-        //else if (ts.tv_nsec < 100) {
-        //    buf_.write("0000000", 7);
-        //}
-        //else if (ts.tv_nsec < 1000) {
-        //    buf_.write("000000", 6);
-        //}
-        //else if (ts.tv_nsec < 10000) {
-        //    buf_.write("00000", 5);
-        //}
-        //else if (ts.tv_nsec < 100000) {
-        //    buf_.write("0000", 4);
-        //}
-        //else if (ts.tv_nsec < 1000000) {
-        //    buf_.write("000", 3);
-        //}
-        //else if (ts.tv_nsec < 10000000) {
-        //    buf_.write("00", 2);
-        //}
-        //else if (ts.tv_nsec < 100000000) {
-        //    buf_.write("0", 1);
-        //}
-
-        ////补零写法二
-        //if (ts.tv_nsec < 100000000) {
-        //    if (ts.tv_nsec < 10000000) {
-        //        if (ts.tv_nsec < 1000000) {
-        //            if (ts.tv_nsec < 100000) {
-        //                if (ts.tv_nsec < 10000) {
-        //                    if (ts.tv_nsec < 1000) {
-        //                        if (ts.tv_nsec < 100) {
-        //                            if (ts.tv_nsec < 10) {
-        //                                buf_.write("00000000", 8);
-        //                            }
-        //                            else {
-        //                                buf_.write("0000000", 7);
-        //                            }
-        //                        }
-        //                        else {
-        //                            buf_.write("000000", 6);
-        //                        }
-        //                    }
-        //                    else {
-        //                        buf_.write("00000", 5);
-        //                    }
-        //                }
-        //                else {
-        //                    buf_.write("0000", 4);
-        //                }
-        //            }
-        //            else {
-        //                buf_.write("000", 3);
-        //            }
-        //        }
-        //        else {
-        //            buf_.write("00", 2);
-        //        }
-        //    }
-        //    else {
-        //        buf_.write("0", 1);
-        //    }
-        //}
-
         //补零写法三
         //性能提高不明显(与编译器优化有关)
         if (ts.tv_nsec >= 100000) {
@@ -429,13 +380,19 @@ public:
         return 1;
     }
 
-    inline self& operator<< (const char *s)
+    inline self& operator<<(char *s)
     {
         buf_.write(s);
         return *this;
     }
 
-    inline self& operator<< (std::string &s)
+    inline self& operator<<(const char *s)
+    {
+        buf_.write(s);
+        return *this;
+    }
+
+    inline self& operator<<(std::string &s)
     {
         buf_.write(s.data(), static_cast<uint_t>(s.length()));
         return *this;
@@ -464,7 +421,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (int16_t i)
+    inline self& operator<<(int16_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int16_t>::digits10 + 30);
@@ -473,7 +430,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (uint16_t i)
+    inline self& operator<<(uint16_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint16_t>::digits10 + 30);
@@ -482,7 +439,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (int32_t i)
+    inline self& operator<<(int32_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int32_t>::digits10 + 30);
@@ -491,7 +448,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (uint32_t i)
+    inline self& operator<<(uint32_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 30);
@@ -500,7 +457,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (int64_t i)
+    inline self& operator<<(int64_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int64_t>::digits10 + 30);
@@ -510,7 +467,7 @@ public:
         return *this;
     }
 
-    inline self& operator<< (uint64_t i)
+    inline self& operator<<(uint64_t i)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint64_t>::digits10 + 30);
@@ -519,25 +476,25 @@ public:
         return *this;
     }
 
-    inline self& operator<<(float f)
+    inline self& operator<<(float32_t f)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<float>::max_digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 30);
         int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float>::max_digits10 + 30, "%.12g", f);
         buf_.data_end(end + len);
         return *this;
     }
 
-    inline self& operator<<(double d)
+    inline self& operator<<(float64_t d)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<double>::max_digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 30);
         int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<double>::max_digits10 + 30, "%.12g", d);
         buf_.data_end(end + len);
         return *this;
     }
 
-    inline ByteBuffer& get_buffer()
+    inline ByteBuffer& buffer()
     {
         return buf_;
     }
@@ -988,7 +945,7 @@ public:
     {
         if (init_flag_) {
             stream.fini();
-            return worker_->push(stream.get_buffer());
+            return worker_->push(stream.buffer());
         }
 
         return 0;
@@ -1013,6 +970,7 @@ ZRSOCKET_NAMESPACE_END
 #define ZRSOCKET_LOG_SET_WORK_MODE2(logger,mode)                logger.config().set_work_mode(mode)
 #define ZRSOCKET_LOG_SET_LOCK_TYPE2(logger,type)                logger.config().set_lock_type(type)
 #define ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger,size)              logger.config().set_buffer_size(size)
+#define ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger,type)              logger.config().set_format_type(type)
 #define ZRSOCKET_LOG_INIT2(logger)                              logger.init()
 
 #define ZRSOCKET_LOG_BODY(logger,logEvent,logLevel)             \

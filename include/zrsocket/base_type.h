@@ -39,10 +39,10 @@ typedef unsigned short      ushort_t;
 typedef unsigned int        uint_t;
 typedef unsigned long       ulong_t;
 typedef unsigned long long  ulonglong_t;
-typedef float               real32_t;
-typedef double              real64_t;
-typedef real32_t            float32_t;
-typedef real64_t            float64_t;
+typedef float               float32_t;
+typedef double              float64_t;
+typedef float32_t           real32_t;
+typedef float64_t           real64_t;
 
 ZRSOCKET_NAMESPACE_END
 

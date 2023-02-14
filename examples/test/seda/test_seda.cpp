@@ -89,8 +89,8 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
     Test8SedaEvent  test8_event;
     Test16SedaEvent test16_event;
     int push_num = 0;
-    printf("%s thread_id:%d push start\n", out_title, id);
-    //ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push start");
+    //printf("%s thread_id:%d push start\n", out_title, id);
+    ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push start");
     zrsocket::SteadyClockCounter scc;
     {
         zrsocket::MeasureCounterGuard<zrsocket::SteadyClockCounter, false> mcg(scc);
@@ -115,8 +115,8 @@ int test_stage(int id, zrsocket::ISedaStage *stage, const char *out_title)
             }
         }
     }
-    printf("%s thread_id:%d push end num:%d spend_time:%lld ns\n", out_title, id, push_num, scc.diff());
-    //ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push end num:" << push_num << " spend_time:" << scc.diff() << " ns");
+    //printf("%s thread_id:%d push end num:%d spend_time:%lld ns\n", out_title, id, push_num, scc.diff());
+    ZRSOCKET_LOG_INFO(out_title << " thread_id:" << id << " push end num:" << push_num << " spend_time:" << scc.diff() << " ns");
     app.push_num_.fetch_add(push_num, std::memory_order_relaxed);
 
     return 0;
@@ -169,50 +169,75 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    zrsocket::Logger logger2;
+
     TestApp &app = TestApp::instance();
     if (argc > 6) {
         auto level = static_cast<zrsocket::LogLevel>(std::atoi(argv[6]));
         ZRSOCKET_LOG_SET_LOG_LEVEL(level);
+        ZRSOCKET_LOG_SET_LOG_LEVEL2(logger2, level);
     }
     if (argc > 7) {
         auto type = static_cast<zrsocket::LogAppenderType>(std::atoi(argv[7]));
         ZRSOCKET_LOG_SET_APPENDER_TYPE(type);
+        ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger2, type);
         if (type == zrsocket::LogAppenderType::kFILE) {
             ZRSOCKET_LOG_SET_FILE_NAME("./test_seda.log");
+            ZRSOCKET_LOG_SET_FILE_NAME2(logger2, "./test_seda.log");
         }
         if (type == zrsocket::LogAppenderType::kCALLBACK) {
             ZRSOCKET_LOG_SET_CALLBACK_FUNC(send_to_remote, nullptr);
+            ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger2, send_to_remote, nullptr);
         }
     }
     if (argc > 8) {
         auto mode = static_cast<zrsocket::LogWorkMode>(std::atoi(argv[8]));
         ZRSOCKET_LOG_SET_WORK_MODE(mode);
+        ZRSOCKET_LOG_SET_WORK_MODE2(logger2, mode);
     }
     if (argc > 9) {
         auto type = static_cast<zrsocket::LogLockType>(std::atoi(argv[9]));
         ZRSOCKET_LOG_SET_LOCK_TYPE(type);
+        ZRSOCKET_LOG_SET_LOCK_TYPE2(logger2, type);
     }
     if (argc > 10) {
         auto size = std::atoi(argv[10]);
         ZRSOCKET_LOG_SET_BUFFER_SIZE(size);
+        ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger2, size);
     }
     ZRSOCKET_LOG_INIT;
 
+    ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
+    ZRSOCKET_LOG_INIT2(logger2);
     
 #if 0
     //测试log性能
     {
+        //const int LOG_TIMES = 1000000;
         const int LOG_TIMES = 1000000;
         zrsocket::SteadyClockCounter scc;
+
         scc.update_start_counter();
         for (int i = 0; i < LOG_TIMES; ++i) {
-            //ZRSOCKET_LOG_TRACE(i<<"-"<<i+1);
+            //ZRSOCKET_LOG_INFO(i << "-" << i + 1);
             //ZRSOCKET_LOG_INFO(i);
-            ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
-            //ZRSOCKET_LOG_INFO("start...01234567890123456789");
+            //ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+            ZRSOCKET_LOG_INFO("start...[" << i << "] 0123456789");
+            //ZRSOCKET_LOG_INFO("start...01234567890");
         }
         scc.update_end_counter();
-        printf("log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+        printf("text log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+
+        //scc.update_start_counter();
+        //for (int i = 0; i < LOG_TIMES; ++i) {
+        //    ZRSOCKET_LOG_INFO2(logger2, i << "-" << i + 1);
+        //    //ZRSOCKET_LOG_INFO2(logger2, i);
+        //    //ZRSOCKET_LOG_INFO2(logger2, "start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+        //    //ZRSOCKET_LOG_INFO2(logger2, "start...[" << i << "] 0123456789");
+        //    //ZRSOCKET_LOG_INFO2(logger2, "start...01234567890");
+        //}
+        //scc.update_end_counter();
+        //printf("binary log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
 
         return 0;
     }
