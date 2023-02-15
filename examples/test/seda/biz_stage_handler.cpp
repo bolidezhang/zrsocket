@@ -18,7 +18,7 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
 {
     TestApp &app = TestApp::instance();
 
-    switch (event->type_) {
+    switch (event->type()) {
         case zrsocket::SedaEventTypeId::TIMER_EXPIRE:
             {
                 zrsocket::SedaTimerExpireEvent *timer_event = (zrsocket::SedaTimerExpireEvent *)event;
@@ -95,7 +95,7 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
             {
                 thread_local int default_num = 0;
                 ++default_num;
-                printf("default_num:%ld, event->type:%d event->len:%d\n", default_num, event->type_, event->len_);
+                printf("default_num:%ld, event->type:%d event->len:%d\n", default_num, event->type(), event->event_len());
             }
             break;
     }

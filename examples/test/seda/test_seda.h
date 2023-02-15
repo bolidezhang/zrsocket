@@ -71,8 +71,8 @@ public:
     }
 
 public:
-    //zrsocket::SedaStage<BizStageHandler, zrsocket::MPSCEventTypeQueue>                                      mpsc_stage_;
-    //zrsocket::SedaStage<BizStageHandler, zrsocket::MPMCEventTypeQueue>                                      mpmc_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::MPSCEventTypeQueue>                                      mpsc_stage_;
+    zrsocket::SedaStage<BizStageHandler, zrsocket::MPMCEventTypeQueue>                                      mpmc_stage_;
     zrsocket::SedaStage<BizStageHandler, zrsocket::DoubleBufferEventTypeQueue<zrsocket::SpinlockMutex> >    doublebuffer_spinlock_stage_;
     zrsocket::SedaStage<BizStageHandler, zrsocket::DoubleBufferEventTypeQueue<zrsocket::ThreadMutex> >      doublebuffer_mutex_stage_;
     zrsocket::SedaStage<BizStageHandler, zrsocket::SPSCSteadyEventTypeQueue>                                spsc_steady_stage_;

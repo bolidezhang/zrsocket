@@ -69,7 +69,7 @@ public:
     ILogAppender() = default;
     virtual ~ILogAppender() = default;
 
-    virtual int open() = 0;
+    virtual int open()  = 0;
     virtual int close() = 0;
     virtual int write(const char *log, uint_t len) = 0;
 };
@@ -83,7 +83,7 @@ public:
     }
     virtual ~ILogWorker() = default;
 
-    virtual int open() = 0;
+    virtual int open()  = 0;
     virtual int close() = 0;
     virtual int push(ByteBuffer &log) = 0;
 
@@ -99,7 +99,7 @@ protected:
 class LogConfig
 {
 public:
-    LogConfig() = default;
+    LogConfig()  = default;
     ~LogConfig() = default;
 
     inline void set_log_level(LogLevel level)
@@ -409,7 +409,7 @@ public:
         return *this;
     }
 
-    inline self& operator<<(int8_t c)
+    inline self& operator<<(char c)
     {
         buf_.write(c);
         return *this;
@@ -500,10 +500,10 @@ public:
     }
 
 private:
-    LogLevel level_ = LogLevel::kTRACE;
-    uint_t   line_  = 0;
     const char *file_ = nullptr;
     const char *function_ = nullptr;
+    LogLevel level_ = LogLevel::kTRACE;
+    uint_t   line_  = 0;
 
     ByteBuffer buf_;
 };
@@ -521,7 +521,7 @@ public:
         dfbuf_.set_max_size(buffer_size);
     }
 
-    virtual ~AsyncWorker()
+    ~AsyncWorker()
     {
         close();
     }
@@ -616,22 +616,23 @@ template<typename TMutex>
 class SyncWorker : public ILogWorker
 {
 public:
-    SyncWorker(ILogAppender* appender)
+    SyncWorker(ILogAppender *appender)
         : ILogWorker(appender)
     {
     }
-    virtual ~SyncWorker() = default;
+    ~SyncWorker() = default;
 
     int open() override
     {
         return 0;
     }
+
     int close() override
     {
         return 0;
     }
 
-    inline int push(ByteBuffer& log) override
+    inline int push(ByteBuffer &log) override
     {
         int ret;
         mutex_.lock();
@@ -647,19 +648,15 @@ private:
 class ConsoleAppender : public ILogAppender
 {
 public:
-    ConsoleAppender()
-    {
-    }
-    virtual ~ConsoleAppender()
-    {
-    }
+    ConsoleAppender() = default;
+    ~ConsoleAppender() = default;
 
-    int open()
+    int open() override
     {
         return 0;
     }
 
-    int close()
+    int close() override
     {
         return 0;
     }
@@ -678,22 +675,22 @@ public:
         : filename_(filename)
     {
     }
-    virtual ~OSApiFileAppender()
+    ~OSApiFileAppender()
     {
         close();
     }
 
-    int open()
+    int open() override
     {
         return file_.open(filename_, O_WRONLY|O_APPEND|O_CREAT, S_IWRITE|S_IREAD);
     }
 
-    int close()
+    int close() override
     {
         return file_.close();
     }
 
-    inline int write(const char *log, uint_t len)
+    inline int write(const char *log, uint_t len) override
     {
         return file_.writen(log, len);
     }
@@ -707,19 +704,19 @@ class NullAppender : public ILogAppender
 {
 public:
     NullAppender() = default;
-    virtual ~NullAppender() = default;
+    ~NullAppender() = default;
 
-    int open()
+    int open() override
     {
         return 0;
     }
 
-    int close()
+    int close() override
     {
         return 0;
     }
 
-    inline int write(const char *log, uint_t len)
+    inline int write(const char *log, uint_t len) override
     {
         return 0;
     }
@@ -734,19 +731,19 @@ public:
         , callback_context_(context)
     {
     }
-    virtual ~CallbackAppender() = default;
+    ~CallbackAppender() = default;
 
-    int open()
+    int open() override
     {
         return 0;
     }
 
-    int close()
+    int close() override
     {
         return 0;
     }
 
-    inline int write(const char *log, uint_t len)
+    inline int write(const char *log, uint_t len) override
     {
         return callback_func_(callback_context_, log, len);
     }
@@ -764,22 +761,22 @@ public:
         : filename_(filename)
     {
     }
-    virtual ~StdioFileAppender()
+    ~StdioFileAppender()
     {
         close();
     }
 
-    int open()
+    int open() override
     {
         return file_.open(filename_, "a+");
     }
 
-    int close()
+    int close() override
     {
         return file_.close();
     }
 
-    inline int write(const char *log, uint_t len)
+    inline int write(const char *log, uint_t len) override
     {
         int ret = file_.writen(log, len);
         if (ret > 0) {

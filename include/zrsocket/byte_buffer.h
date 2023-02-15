@@ -371,34 +371,34 @@ public:
         }
     }
 
-    inline bool write(int8_t c)
+    inline bool write(char c)
     {
-        return write((const char *)&c, sizeof(int8_t));
+        return write((const char *)&c, sizeof(char));
     }
 
-    inline bool write(uint8_t c)
+    inline bool write(unsigned char c)
     {
-        return write((const char *)&c, sizeof(uint8_t));
+        return write((const char *)&c, sizeof(char));
     }
 
-    inline bool write(int16_t n)
+    inline bool write(short n)
     {
-        return write((const char *)&n, sizeof(int16_t));
+        return write((const char *)&n, sizeof(short));
     }
 
-    inline bool write(uint16_t n)
+    inline bool write(unsigned short n)
     {
-        return write((const char *)&n, sizeof(uint16_t));
+        return write((const char *)&n, sizeof(short));
     }
 
-    inline bool write(int32_t n)
+    inline bool write(int n)
     {
-        return write((const char *)&n, sizeof(int32_t));
+        return write((const char *)&n, sizeof(int));
     }
 
-    inline bool write(uint32_t n)
+    inline bool write(unsigned int n)
     {
-        return write((const char *)&n, sizeof(uint32_t));
+        return write((const char *)&n, sizeof(unsigned int));
     }
 
     inline bool write(int64_t n)
@@ -691,44 +691,36 @@ public:
         return write(data, static_cast<uint_t>(strlen(data)));
     }
 
-    inline bool write(int8_t c)
+    inline bool write(bool b)
     {
-        return write((const char *)&c, sizeof(int8_t));
+        if (b) {
+            static const char c = 1;
+            return write((const char *)&c, sizeof(char));
+        }
+        else {
+            static const char c = 0;
+            return write((const char *)&c, sizeof(char));
+        }
     }
 
-    inline bool write(uint8_t c)
+    inline bool write(char c)
     {
-        return write((const char *)&c, sizeof(uint8_t));
+        return write((const char *)&c, sizeof(char));
     }
 
-    inline bool write(int16_t n)
+    inline bool write(short n)
     {
-        return write((const char *)&n, sizeof(int16_t));
+        return write((const char *)&n, sizeof(short));
     }
 
-    inline bool write(uint16_t n)
+    inline bool write(int n)
     {
-        return write((const char*)&n, sizeof(uint16_t));
-    }
-
-    inline bool write(int32_t n)
-    {
-        return write((const char *)&n, sizeof(int32_t));
-    }
-
-    inline bool write(uint32_t n)
-    {
-        return write((const char*)&n, sizeof(uint32_t));
+        return write((const char *)&n, sizeof(uint_t));
     }
 
     inline bool write(int64_t n)
     {
         return write((const char *)&n, sizeof(int64_t));
-    }
-
-    inline bool write(uint64_t n)
-    {
-        return write((const char*)&n, sizeof(uint64_t));
     }
 
     inline bool write(float32_t f)

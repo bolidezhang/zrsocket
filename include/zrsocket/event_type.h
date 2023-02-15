@@ -42,9 +42,7 @@ public:
         , type_(type)
     {
     }
-    inline ~IEventType()
-    {
-    }
+    inline ~IEventType() = default;
 
     TDataType len_;     //len of data, include sizeof(EventType)
     TDataType type_;    //type of EventType

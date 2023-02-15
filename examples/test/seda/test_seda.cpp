@@ -169,46 +169,46 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    zrsocket::Logger logger2;
+    //zrsocket::Logger logger2;
 
     TestApp &app = TestApp::instance();
     if (argc > 6) {
         auto level = static_cast<zrsocket::LogLevel>(std::atoi(argv[6]));
         ZRSOCKET_LOG_SET_LOG_LEVEL(level);
-        ZRSOCKET_LOG_SET_LOG_LEVEL2(logger2, level);
+        //ZRSOCKET_LOG_SET_LOG_LEVEL2(logger2, level);
     }
     if (argc > 7) {
         auto type = static_cast<zrsocket::LogAppenderType>(std::atoi(argv[7]));
         ZRSOCKET_LOG_SET_APPENDER_TYPE(type);
-        ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger2, type);
+        //ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger2, type);
         if (type == zrsocket::LogAppenderType::kFILE) {
             ZRSOCKET_LOG_SET_FILE_NAME("./test_seda.log");
-            ZRSOCKET_LOG_SET_FILE_NAME2(logger2, "./test_seda.log");
+            //ZRSOCKET_LOG_SET_FILE_NAME2(logger2, "./test_seda.log");
         }
         if (type == zrsocket::LogAppenderType::kCALLBACK) {
             ZRSOCKET_LOG_SET_CALLBACK_FUNC(send_to_remote, nullptr);
-            ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger2, send_to_remote, nullptr);
+            //ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger2, send_to_remote, nullptr);
         }
     }
     if (argc > 8) {
         auto mode = static_cast<zrsocket::LogWorkMode>(std::atoi(argv[8]));
         ZRSOCKET_LOG_SET_WORK_MODE(mode);
-        ZRSOCKET_LOG_SET_WORK_MODE2(logger2, mode);
+        //ZRSOCKET_LOG_SET_WORK_MODE2(logger2, mode);
     }
     if (argc > 9) {
         auto type = static_cast<zrsocket::LogLockType>(std::atoi(argv[9]));
         ZRSOCKET_LOG_SET_LOCK_TYPE(type);
-        ZRSOCKET_LOG_SET_LOCK_TYPE2(logger2, type);
+        //ZRSOCKET_LOG_SET_LOCK_TYPE2(logger2, type);
     }
     if (argc > 10) {
         auto size = std::atoi(argv[10]);
         ZRSOCKET_LOG_SET_BUFFER_SIZE(size);
-        ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger2, size);
+        //ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger2, size);
     }
     ZRSOCKET_LOG_INIT;
 
-    ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
-    ZRSOCKET_LOG_INIT2(logger2);
+    //ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
+    //ZRSOCKET_LOG_INIT2(logger2);
     
 #if 0
     //测试log性能
@@ -219,10 +219,10 @@ int main(int argc, char* argv[])
 
         scc.update_start_counter();
         for (int i = 0; i < LOG_TIMES; ++i) {
-            //ZRSOCKET_LOG_INFO(i << "-" << i + 1);
+            //ZRSOCKET_LOG_DEBUG(i << "-" << i + 1);
             //ZRSOCKET_LOG_INFO(i);
             //ZRSOCKET_LOG_INFO("start...["<<i<<"] 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
-            ZRSOCKET_LOG_INFO("start...[" << i << "] 0123456789");
+            ZRSOCKET_LOG_INFO("start...[" << i << "]0123456789");
             //ZRSOCKET_LOG_INFO("start...01234567890");
         }
         scc.update_end_counter();
