@@ -98,8 +98,6 @@ public:
     virtual int update_lru_timer(int slot, SedaTimer *timer) = 0;
     virtual int enable_lru_timers(SedaStageThreadLRUSlotInfo *slots, int slot_count) = 0;
 
-    virtual int enable_idle_event(bool enabled) = 0;
-    virtual int set_idle_interval(uint_t idle_interval_ms) = 0;
     virtual int set_sleep_interval(uint_t sleep_interval_ms) = 0;
     virtual int set_timedwait_interval(uint_t timedwait_interval_ms) = 0;
 

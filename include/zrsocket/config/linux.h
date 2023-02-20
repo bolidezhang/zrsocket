@@ -21,6 +21,8 @@
 #include <sys/uio.h>
 #include <sys/socket.h>
 #include <sys/times.h>
+#include <sys/syscall.h>
+#include <linux/unistd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>

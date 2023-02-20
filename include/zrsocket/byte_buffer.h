@@ -251,8 +251,8 @@ public:
             new_begin_index = buffer_size_;
         }
         data_begin_index_ = new_begin_index;
-        if (data_begin_index_ > data_end_index_) {
-            data_end_index_ = data_begin_index_;
+        if (data_end_index_ < new_begin_index) {
+            data_end_index_ = new_begin_index;
         }
     }
 
@@ -267,8 +267,8 @@ public:
             new_end_index = buffer_size_;
         }
         data_end_index_ = new_end_index;
-        if (data_begin_index_ > data_end_index_) {
-            data_begin_index_ = data_end_index_;
+        if (data_begin_index_ > new_end_index) {
+            data_begin_index_ = new_end_index;
         }
     }
 
@@ -334,7 +334,7 @@ public:
             return false;
         }
 
-        if (free_size() >= size) {
+        if (buffer_size_ - data_end_index_ >= size) {
             zrsocket_memcpy(buffer_ + data_end_index_, data, size);
             data_end_index_ += size;
         }
@@ -423,7 +423,7 @@ public:
 
     inline uint_t read(char *data, uint_t size)
     {
-        if (data_size() >= size) {
+        if (data_end_index_ - data_begin_index_ >= size) {
             zrsocket_memcpy(data, buffer_ + data_begin_index_, size);
             data_begin_index_ += size;
             return size;
@@ -433,7 +433,7 @@ public:
 
     inline char * read(uint_t size)
     {
-        if (data_size() >= size) {
+        if (data_end_index_ - data_begin_index_ >= size) {
             char *ret = (buffer_ + data_begin_index_);
             data_begin_index_ += size;
             return ret;
@@ -635,8 +635,8 @@ public:
             new_begin_index = buffer_->buffer_size_;
         }
         data_begin_index_ = new_begin_index;
-        if (data_begin_index_ > data_end_index_) {
-            data_end_index_ = data_begin_index_;
+        if (data_end_index_ < new_begin_index) {
+            data_end_index_ = new_begin_index;
         }
     }
 
@@ -651,11 +651,11 @@ public:
             new_end_index = buffer_->buffer_size_;
         }
         data_end_index_ = new_end_index;
-        if (data_begin_index_ > data_end_index_) {
-            data_begin_index_ = data_end_index_;
+        if (data_begin_index_ > new_end_index) {
+            data_begin_index_ = new_end_index;
         }
-        if (data_end_index_ > buffer_->use_size_) {
-            buffer_->use_size_ = data_end_index_;
+        if (buffer_->use_size_ < new_end_index) {
+            buffer_->use_size_ = new_end_index;
         }
     }
 

@@ -10,6 +10,7 @@
 #include <cstdarg>         // for va_list, va_start, va_end
 #include <thread>
 #include <functional>
+#include <sstream>
 
 #include "config.h"
 #include "base_type.h"
@@ -1139,20 +1140,57 @@ public:
         return rc;
     }
 
+    //取当前线程id
+    /*说明:
+    1.windows下直接用GetCurrentThreadId()
+    2.linux当前线程id方法:
+        1)用系统调用gettid(2)获取内核中的线程id;
+        2)POSIX线程库提供的pthread_self(3)方法获取分配的线程id;
+        3)C++11 std::thread的get_id()方法，封装的也是POSIX pthread线程库的线程id;
+        在Linux中，线程本质上是一个进程（实现）,也就是说通过系统调用gettid获取的线程id跟进程id是一样的
+        glibc的Pthreads实现，把pthread_self返回值类型pthread_t用作一个结构体指针（类型为unsigned long），指向一个动态分配的内存，而且该内存是反复使用的。
+        这也就是说，pthread_t的值很容易重复。Pthreads只能保证同一个进程内，同一时刻的各个线程id不同；但不能保证同一进程先后多个线程具有不同id，不能保证一台机器上多个进程间的id不同。
+        因此，pthread_t不适合作为程序中对线程的标识符id
+        建议用gettid(2)系统调用返回值作为线程id，好处在于：
+            类型是pid_t，其值是一个小整数（最大值 / proc / sys / kernel / pid_max，默认32768），便于log输出；
+            表示内核的任务调度id，在 / proc文件系统中，可以找到对应项： / proc / tid，或 / prod / pid / task / tid；
+            在其他系统工具中容易定位到具体某个线程，如top(1)命令中，可以按线程列出任务，然后找出CPU使用率最高的线程id，再根据log判断到底哪个线程在耗费CPU；
+            任何时刻都是全局唯一的，且由于Linux分配新pid采用递增轮回办法，短时间内启动的多个线程也会具有不同的线程id；
+            0是非法值，因为操作系统的第一个进程init的pid是1，而gettid采用的线程tid本质上是进程pid，因此不能再为1
 
+       The gettid() system call first appeared on Linux in kernel 2.4.11;
+       Library support was added in glibc 2.30;
+       Earlier glibc versions did not provide a wrapper for this system call, necessitating the use of syscall(2);
+
+    由于系统调用会陷入内核，频繁系统调用可能会影响系统性能，有没有办法可以避免这个问题？
+    答案是有的.考虑到线程id在线程创建后,并不会随意改变,因此可以用每个线程自带的thread_local/__thread(gcc)变量来缓存其线程id值,初值设为0或负数即可
+    */
     static inline uint64_t this_thread_id()
     {
-        static thread_local uint64_t id_ = 0;
-        uint64_t id = id_;
-        if (0 == id) {
-            std::hash<std::thread::id> hasher;
-            id = hasher(std::this_thread::get_id());
-            id_ = id;
+        static zrsocket_fast_thread_local uint64_t id_ = 0;
+        if (0 != id_) {
+            return id_;
         }
-        return id;
+
+    #if 1
+        //方法1: 调用操作系统api
+        #ifdef  ZRSOCKET_OS_WINDOWS
+            id_ = ::GetCurrentThreadId();
+        #else
+            //因glibc2.30才有::gettid(), 所以用syscall间接实现
+            id_ = static_cast<uint64_t>(::syscall(SYS_gettid));
+        #endif
+    #else
+        //方法2: c++11的std::this_thread::get_id()
+        std::stringstream ss;
+        ss << std::this_thread::get_id();
+        ss >> id_;
+    #endif
+
+        return id_;
     }
 
-    static struct tm* gmtime_s(const time_t *time, struct tm *buf_tm)
+    static inline struct tm* gmtime_s(const time_t *time, struct tm *buf_tm)
     {
     #ifdef ZRSOCKET_OS_WINDOWS
         if (::gmtime_s(buf_tm, time) != 0) {
@@ -1164,7 +1202,7 @@ public:
     #endif
     }
 
-    static struct tm* localtime_s(const time_t *time, struct tm *buf_tm)
+    static inline struct tm* localtime_s(const time_t *time, struct tm *buf_tm)
     {
     #ifdef ZRSOCKET_OS_WINDOWS
         //windows下::localtime_s这个函数, 特费时: 700-900us. 不知什么原因

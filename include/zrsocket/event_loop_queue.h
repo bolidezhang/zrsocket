@@ -33,9 +33,8 @@ public:
     {
         EventType *event;
         for (int i = 0; i<times; ++i) {
-            event = queue_.pop();
+            event = queue_.pop(handler_);
             if (nullptr != event) {
-                handler_.handle_event(event);
                 if (EventTypeId::QUIT_EVENT == event->type()) {
                     break;
                 }

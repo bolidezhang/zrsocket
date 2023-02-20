@@ -49,7 +49,6 @@ protected:
     TObject o2_;
 };
 
-
 // 双定长缓冲: double fixed length buffer
 //  用于单消费者场景
 template <typename TMutex>
@@ -107,6 +106,7 @@ public:
     {
         mutex_.lock();
         if (!standby_ptr_->empty()) {
+            active_ptr_->reset();
             std::swap(standby_ptr_, active_ptr_);
             mutex_.unlock();
             return true;

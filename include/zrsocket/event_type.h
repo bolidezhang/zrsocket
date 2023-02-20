@@ -16,9 +16,9 @@ template <typename TDataType>
 class IEventType
 {
 public:
-    inline uint8_t * event_ptr() const
+    inline char * event_ptr() const
     {
-        return ((uint8_t *)this);
+        return ((char *)this);
     }
 
     inline int event_len() const

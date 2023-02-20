@@ -23,8 +23,6 @@ public:
     SedaStageThread(ISedaStage *stage, uint_t thread_index, uint_t queue_max_size, uint_t event_len, uint_t timedwait_interval_us, bool timedwait_signal)
         : stage_(stage)
         , thread_index_(thread_index)
-        , idle_event_flag_(false)
-        , idle_interval_ms_(ZRSOCKET_SEDA_DEFAULT_IDLE_INTERVAL)
         , timer_event_flag_(false)
         , timer_min_interval_ms_(ZRSOCKET_SEDA_DEFAULT_IDLE_INTERVAL)
         , timedwait_interval_us_(timedwait_interval_us)
@@ -133,18 +131,6 @@ public:
         return -1;
     }
 
-    inline int enable_idle_event(bool enabled)
-    {
-        idle_event_flag_ = enabled;
-        return 0;
-    }
-
-    inline int set_idle_interval(uint_t idle_interval_ms)
-    {
-        idle_interval_ms_ = idle_interval_ms;
-        return 0;
-    }
-
     inline int set_sleep_interval(uint_t sleep_interval_us)
     {
         timedwait_interval_us_ = sleep_interval_us;
@@ -203,20 +189,17 @@ private:
 
         if (timer_event_flag) {
             for (;;) {
-                event = event_queue.pop();
+                event = event_queue.pop(stage_handler);
                 if (nullptr != event) {
                     if (SedaEventTypeId::QUIT_EVENT != event->type()) {
-                        stage_handler.handle_event(event);
-
                         ++timer_event_count;
                         if (ZRSOCKET_SEDA_TIMER_EVENT_FACTOR == timer_event_count) {
                             stage_thread->check_timers(OSApi::timestamp_ms(), &timer_expire_event);
                             timer_event_count = 0;
                         }
                     }
-                    else
-                    {
-                        goto QUIT_THREAD_PROC;
+                    else {
+                        break;
                     }
                 }
                 else {
@@ -236,15 +219,12 @@ private:
                 }
             }
         }
-        else {  // timer_event_flag == false
+        else { // timer_event_flag == false
             for (;;) {
-                event = event_queue.pop();
+                event = event_queue.pop(stage_handler);
                 if (nullptr != event) {
-                    if (SedaEventTypeId::QUIT_EVENT != event->type()) {
-                        stage_handler.handle_event(event);
-                    }
-                    else {
-                        goto QUIT_THREAD_PROC;
+                    if (SedaEventTypeId::QUIT_EVENT == event->type()) {
+                        break;
                     }
                 }
                 else if (!event_queue.swap_buffer()) {
@@ -259,7 +239,6 @@ private:
             }
         }
 
-QUIT_THREAD_PROC:
         stage_handler.handle_close();
         return 0;
     }
@@ -270,8 +249,6 @@ private:
     Thread                          thread_;
     uint_t                          thread_index_;          //线程在线程集合中索引
 
-    bool                            idle_event_flag_;
-    uint_t                          idle_interval_ms_;
     bool                            timer_event_flag_;      //定时器事件触发标志
     uint_t                          timer_min_interval_ms_; //定时器最小间隔(ms)
     SedaTimerQueue                  timer_queue_;

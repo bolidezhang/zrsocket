@@ -87,7 +87,7 @@ public:
     virtual int close() = 0;
     virtual int push(ByteBuffer &log) = 0;
 
-    inline ILogAppender * get_appender() const
+    inline ILogAppender * appender() const
     {
         return appender_;
     }
@@ -480,16 +480,16 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float>::max_digits10 + 30, "%.12g", f);
+        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
         buf_.data_end(end + len);
         return *this;
     }
 
-    inline self& operator<<(float64_t d)
+    inline self& operator<<(float64_t f)
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<double>::max_digits10 + 30, "%.12g", d);
+        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
         buf_.data_end(end + len);
         return *this;
     }
@@ -509,7 +509,7 @@ private:
 };
 
 //每线程的输出流
-static thread_local zrsocket::LogStream stream_;
+static thread_local LogStream stream_;
 
 template<typename TMutex>
 class AsyncWorker: public ILogWorker
@@ -581,7 +581,6 @@ private:
             }
             if (data_size > 0) {
                 if (appender->write(buf->data(), data_size) > 0) {
-                    buf->reset();
                     data_size = 0;
                 }
             }
