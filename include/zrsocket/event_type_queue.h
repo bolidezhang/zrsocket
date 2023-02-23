@@ -5,17 +5,16 @@
 #ifndef ZRSOCKET_EVENT_TYPE_QUEUE_H
 #define ZRSOCKET_EVENT_TYPE_QUEUE_H
 #include <cmath>
+#include <algorithm>
 #include "config.h"
 #include "base_type.h"
 #include "event_type.h"
 #include "atomic.h"
 #include "malloc.h"
 #include "memory.h"
+#include "lockfree.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
-
-static const int CACHE_LINE_SIZE = 64;
-static const int SPIN_LOOP_TIMES = 1000;
 
 // 双缓冲队列: double buffer event_type_queue
 //  一般用于单消费者场景
@@ -46,7 +45,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity   = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len转换为 移位掩码<<
+        //将对event_type_len乘法转换为 移位掩码<<
         uint8_t type_len_mask = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         buf1_.init(capacity, type_len_mask);
@@ -180,6 +179,7 @@ private:
             return nullptr;
         }
 
+        //THandler类实现handle_event(EventType *event)
         template <typename THandler>
         EventType * pop(THandler &handler)
         {
@@ -239,7 +239,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
@@ -346,8 +346,8 @@ public:
             return 0;
         }
 
-        uint_t pop_size = ZRSOCKET_MIN(queue_size, push_free_size);
-        pop_size = ZRSOCKET_MIN(batch_size, pop_size);
+        uint_t pop_size = std::min<uint_t>(queue_size, push_free_size);
+        pop_size = std::min<uint_t>(batch_size, pop_size);
         for (uint_t i = 0; i < pop_size; ++i) {
             push_queue->push(pop());
         }
@@ -393,7 +393,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity   = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
@@ -507,7 +507,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity   = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint8_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
@@ -606,10 +606,7 @@ private:
 class MPSCEventTypeQueue
 {
 public:
-    MPSCEventTypeQueue()
-    {
-    }
-
+    inline MPSCEventTypeQueue() = default;
     inline ~MPSCEventTypeQueue()
     {
         clear();
@@ -627,7 +624,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity   = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
@@ -768,7 +765,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;
@@ -792,6 +789,7 @@ public:
         read_index_.store(0, std::memory_order_relaxed);
         write_index_.store(0, std::memory_order_relaxed);
         max_read_index_.store(0, std::memory_order_relaxed);
+        min_write_index_.store(0, std::memory_order_relaxed);
     }
 
     inline uint64_t capacity() const
@@ -811,7 +809,7 @@ public:
 
     inline bool empty() const
     {
-        return read_index_.load(std::memory_order_relaxed) == write_index_.load(std::memory_order_relaxed);
+        return write_index_.load(std::memory_order_relaxed) == read_index_.load(std::memory_order_relaxed);
     }
 
     inline int push(const EventType *event)
@@ -926,7 +924,7 @@ public:
         auto log2x = std::log2(capacity);
         capacity   = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
 
-        //将event_type_len换算为移位掩码
+        //将对event_type_len乘法转换为 移位掩码<<
         type_len_mask_ = static_cast<uint16_t>(std::ceil(std::log2(event_type_len)));
 
         uint_t buffer_size = capacity << type_len_mask_;

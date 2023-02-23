@@ -20,6 +20,8 @@ zrsocket
     6.其他
         跨平台api
         测量计数器(MeasureCounter)
+        lockfree_queue
+            spsc_queue/mpmc_queue
         ......
     
 支持平台

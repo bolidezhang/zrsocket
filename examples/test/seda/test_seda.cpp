@@ -234,9 +234,81 @@ void twoCacheLinerThread() {
 
 int main(int argc, char* argv[])
 {
-#if 1
-    std::cout << "this_thread::get_id():" << std::this_thread::get_id() << " osapi::this_thread_id:" << zrsocket::OSApi::this_thread_id() << std::endl;
-    //return 0;
+#if 0
+    {
+
+        std::cout << "this_thread::get_id():" << std::this_thread::get_id() << " osapi::this_thread_id:" << zrsocket::OSApi::this_thread_id() << std::endl;
+        //return 0;
+
+        struct Test {
+        public:
+            Test()
+            {
+                printf("Test::Test()\n");
+            };
+
+            Test(const Test& t) 
+            {
+                printf("Test::Test(const Test& t)\n");
+            }
+
+            //Test(Test&& t)
+            //{
+            //    printf("Test::Test(Test&& t)\n");
+            //}
+
+            //Test & operator= (const Test& t)
+            //{
+            //    printf("Test::operator=(const Test& t)\n");
+            //    this->a = t.a;
+            //    this->b = t.b;
+            //    return *this;
+            //}
+
+            //Test& operator= (Test&& t)
+            //{
+            //    printf("Test::operator=((Test&& t)\n");
+            //    this->a = t.a;
+            //    this->b = t.b;
+            //    return *this;
+            //}
+
+            ~Test() 
+            {
+            }
+
+            int a = 0;
+            int b = 0;
+        };
+
+        Test t;
+        t.a = 1;
+        t.b = 1;
+        zrsocket::SPSCArrayLockfreeQueue<Test, 1000> q;
+        zrsocket::MPMCArrayLockfreeQueue<Test, 1000> q2;
+        zrsocket::SPMCArrayLockfreeQueue<Test, 1000> q1;
+        zrsocket::MPSCArrayLockfreeQueue<Test, 1000> q3;
+        q.push(t);
+        q1.push(t);
+        q2.push(t);
+        q3.push(t);
+        t.b = 8;
+        q.push(std::move(t));
+        q1.push(std::move(t));
+        q2.push(std::move(t));
+        q3.push(std::move(t));
+
+        q.pop( [](const Test &t) {return printf("t a:%d b:%d ", t.a, t.b); });
+        q.pop( [](Test  &t) {return printf("t a:%d b:%d ", t.a, t.b); });
+        q.pop( [](const Test &t) {return printf("t a:%d b:%d ", t.a, t.b); });
+        q.pop( [](const Test &t) {return printf("t a:%d b:%d ", t.a, t.b); });
+
+        q1.pop( [](Test &t){return printf("t a:%d b:%d ", t.a, t.b);});
+        q2.pop( [](Test &t){return printf("t a:%d b:%d ", t.a, t.b);});
+        q3.pop( [](const Test &t){return printf("t a:%d b:%d ", t.a, t.b); });
+
+        return 0;
+    }
 #endif
 
 #if 0

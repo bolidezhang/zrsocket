@@ -9,6 +9,9 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
+static const int CACHE_LINE_SIZE = 64;          //缓存行大小 x86一般为64
+static const int SPIN_LOOP_TIMES = 1000;        //旋转次数
+
 // 双指针对象: double pointer object
 //  用于动态更新配置信息的场景
 template <typename TObject>
@@ -36,8 +39,8 @@ public:
     //只能在standby线程调用
     inline bool swap_pointer()
     {
-        TObject *tmp = active_ptr_.load();
-        active_ptr_.store(standby_ptr_.load(), std::memory_order_relaxed);
+        TObject *tmp = active_ptr_.load(std::memory_order_relaxed);
+        active_ptr_.store(standby_ptr_.load(std::memory_order_relaxed), std::memory_order_relaxed);
         standby_ptr_.store(tmp, std::memory_order_relaxed);
         return true;
     }

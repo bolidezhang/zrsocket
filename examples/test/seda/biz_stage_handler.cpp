@@ -19,12 +19,12 @@ int BizStageHandler::handle_event(const zrsocket::SedaEvent *event)
     TestApp &app = TestApp::instance();
 
     int type = event->type();
-    int len  = event->event_len();
-    if (!((type == TestEventType::EVENT_TEST8) || (type == zrsocket::SedaEventTypeId::TIMER_EXPIRE))) {
-        int type1 = event->type();
-        int len1  = event->event_len();
-        printf("type:%d, len:%d, type1:%d len1:%d\n", type, len, type1, len1);
-    }
+    //int len  = event->event_len();
+    //if (!((type == TestEventType::EVENT_TEST8) || (type == zrsocket::SedaEventTypeId::TIMER_EXPIRE))) {
+    //    int type1 = event->type();
+    //    int len1  = event->event_len();
+    //    printf("type:%d, len:%d, type1:%d len1:%d\n", type, len, type1, len1);
+    //}
 
     switch (type) {
         case zrsocket::SedaEventTypeId::TIMER_EXPIRE:
