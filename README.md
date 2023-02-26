@@ -18,10 +18,10 @@ zrsocket
         支持同步和异步的高性能日志
         经测试每秒写入可达500万以上条日志消息(每条300个字节)
     6.其他
-        跨平台api
+        无锁队列lockfree_queue
+            spsc_queue/mpmc_queue/mpsc_queue/spmc_queue
         测量计数器(MeasureCounter)
-        lockfree_queue
-            spsc_queue/mpmc_queue
+        跨平台api        
         ......
     
 支持平台

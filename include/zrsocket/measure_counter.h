@@ -13,7 +13,7 @@ ZRSOCKET_NAMESPACE_BEGIN
 class SteadyClockCounter
 {
 public:
-    inline SteadyClockCounter() = default;
+    inline SteadyClockCounter()  = default;
     inline ~SteadyClockCounter() = default;
     inline SteadyClockCounter(const SteadyClockCounter&) = default;
     inline SteadyClockCounter(SteadyClockCounter&&) = default;

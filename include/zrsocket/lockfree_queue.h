@@ -174,9 +174,11 @@ public:
 
 protected:
     static constexpr const int PADDING_SIZE = (CACHE_LINE_SIZE - sizeof(uint64_t));
-    volatile uint64_t read_index_  = 0;      //读下标(单调递增:只增不减)
+
+    volatile uint64_t read_index_  = 0;      //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE];
-    volatile uint64_t write_index_ = 0;      //写下标(单调递增:只增不减)
+
+    volatile uint64_t write_index_ = 0;      //写位置(单调递增:只增不减)
     char padding2_[PADDING_SIZE];
 
     std::vector<T> array_;
@@ -207,7 +209,7 @@ public:
 
     inline uint64_t size()
     {
-        return write_index_ - read_index_;
+        return write_index_.load(std::memory_order_relaxed) - read_index_.load(std::memory_order_relaxed);
     }
 
     inline uint64_t free_size()
@@ -438,7 +440,7 @@ private:
     volatile uint64_t read_index_ = 0;      //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE1];
 
-    AtomicUInt64 write_index_     = { 0 };      //写位置(单调递增:只增不减)
+    AtomicUInt64 write_index_     = { 0 };  //写位置(单调递增:只增不减)
     char padding2_[PADDING_SIZE2];
 
     //更新write_index_和真实的写入数据是两个步骤
