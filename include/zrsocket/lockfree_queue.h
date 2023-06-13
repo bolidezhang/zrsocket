@@ -13,84 +13,6 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-// 双指针交换队列: double pointer swap queue
-//  用于单消费者场景
-template <typename T, typename TMutex = SpinlockMutex, typename TContainer = std::deque<T> >
-class DoublePointerSwapQueue
-{
-public:
-    inline DoublePointerSwapQueue()
-    {
-        active_queue_   = &queue1_;
-        standby_queue_  = &queue2_;
-    }
-    inline ~DoublePointerSwapQueue() = default;
-    
-    inline int push(const T &value)
-    {
-        mutex_.lock();
-        standby_queue_->push_back(value);
-        mutex_.unlock();
-
-        return 1;
-    }
-
-    inline int push(T &&value)
-    {
-        mutex_.lock();
-        standby_queue_->push_back(std::move(value));
-        mutex_.unlock();
-
-        return 1;
-    }
-
-    //取队列头
-    //只能在消费者线程调用
-    inline T* front()
-    {
-        if (!active_queue_->empty()) {
-            return &active_queue_->front();
-        }
-
-        return nullptr;
-    }
-
-    //删除队列头
-    //只能在消费者线程调用
-    inline int pop()
-    {
-        active_queue_->pop_front();
-        return 1;
-    }
-
-    //交换active_queue_/standby_queue_指针
-    //只能在消费者线程且active_queue_->empty()==true时调用
-    inline bool swap_pointer()
-    {
-        mutex_.lock();
-        if (!standby_queue_->empty()) {
-            std::swap(standby_queue_, active_queue_);
-            mutex_.unlock();
-            return true;
-        }
-        mutex_.unlock();
-
-        return false;
-    }
-
-    inline const TContainer* active_queue() const
-    {
-        return active_queue_;
-    }
-
-protected:
-    TContainer *active_queue_;
-    TContainer *standby_queue_;
-    TContainer  queue1_;
-    TContainer  queue2_;
-    TMutex      mutex_;
-};
-
 // 单生产者单消费者 数组无锁队列
 //  signle producer single consumer array lockfree queue
 template <typename T, uint_t N>
@@ -102,8 +24,7 @@ public:
         //将取模(求余数%)转换为 算术位运算与(&)
         //计算大于等于capacity的最小 2的N次方整数
         auto log2x = std::log2(N);
-        auto size = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
-        array_.reserve(size);
+        auto size  = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
         array_.resize(size);
     }
 
@@ -195,8 +116,7 @@ public:
         //将取模(求余数%)转换为 算术位运算与(&)
         //计算大于等于capacity的最小 2的N次方整数
         auto log2x = std::log2(N);
-        auto size = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
-        array_.reserve(size);
+        auto size  = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
         array_.resize(size);
     }
 
@@ -336,8 +256,7 @@ public:
         //将取模(求余数%)转换为 算术位运算与(&)
         //计算大于等于capacity的最小 2的N次方整数
         auto log2x = std::log2(N);
-        auto size = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
-        array_.reserve(size);
+        auto size  = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
         array_.resize(size);
     }
 
@@ -466,7 +385,6 @@ public:
         //计算大于等于capacity的最小 2的N次方整数
         auto log2x = std::log2(N);
         auto size = static_cast<uint_t>(std::pow(2, std::ceil(log2x)));
-        array_.reserve(size);
         array_.resize(size);
     }
 
@@ -574,6 +492,84 @@ protected:
     char padding3_[PADDING_SIZE1];
 
     std::vector<T> array_;
+};
+
+// 双指针交换队列: double pointer swap queue
+//  用于单消费者场景
+template <typename T, typename TMutex = SpinlockMutex, typename TContainer = std::deque<T> >
+class DoublePointerSwapQueue
+{
+public:
+    inline DoublePointerSwapQueue()
+    {
+        active_queue_ = &queue1_;
+        standby_queue_ = &queue2_;
+    }
+    inline ~DoublePointerSwapQueue() = default;
+
+    inline int push(const T& value)
+    {
+        mutex_.lock();
+        standby_queue_->push_back(value);
+        mutex_.unlock();
+
+        return 1;
+    }
+
+    inline int push(T&& value)
+    {
+        mutex_.lock();
+        standby_queue_->push_back(std::move(value));
+        mutex_.unlock();
+
+        return 1;
+    }
+
+    //取队列头
+    //只能在消费者线程调用
+    inline T* front()
+    {
+        if (!active_queue_->empty()) {
+            return &active_queue_->front();
+        }
+
+        return nullptr;
+    }
+
+    //删除队列头
+    //只能在消费者线程调用
+    inline int pop()
+    {
+        active_queue_->pop_front();
+        return 1;
+    }
+
+    //交换active_queue_/standby_queue_指针
+    //只能在消费者线程且active_queue_->empty()==true时调用
+    inline bool swap_pointer()
+    {
+        mutex_.lock();
+        if (!standby_queue_->empty()) {
+            std::swap(standby_queue_, active_queue_);
+            mutex_.unlock();
+            return true;
+        }
+        mutex_.unlock();
+
+        return false;
+    }
+
+    inline const TContainer *active_queue() const
+    {
+        return active_queue_;
+    }
+
+protected:
+    TContainer *active_queue_;
+    TContainer *standby_queue_;
+    TContainer  queue1_;
+    TContainer  queue2_;
+    TMutex      mutex_;
 };
 
 ZRSOCKET_NAMESPACE_END
