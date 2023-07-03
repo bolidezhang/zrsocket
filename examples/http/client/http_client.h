@@ -23,22 +23,7 @@ public:
         return 0;
     }
 
-    int do_message()
-    {
-        printf("http version:%d, status_code:%d desc:%s\n", 
-            response_.version_id_, response_.status_code_, response_.reason_phrase_.c_str());
-        for (auto &iter : response_.headers_) {
-            printf("%s:%s\n", iter.first.c_str(), iter.second.c_str());
-        }
-        //printf("body:%s\n", response_.body_ptr_);
-        
-        //std::string body;
-        //body.append(response_.body_ptr_, response_.content_length_);
-        //printf("body:%s\n", body.c_str());
-
-        return 0;
-    }
-
+    int do_message();
 };
 
 class HttpAppTimer : public zrsocket::Timer
@@ -62,6 +47,10 @@ public:
     int do_signal(int signum)
     {
         printf("do_signal signum:%d\n", signum);
+        printf("do_signal signum:%d begin...\n", signum);
+        stop_flag_.store(true, std::memory_order_relaxed);
+        main_event_loop_.loop_wakeup();
+        printf("do_signal signum:%d end!\n", signum);
         return 0;
     }
 
@@ -74,6 +63,8 @@ public:
     zrsocket::ushort_t port_ = 8080;
     AtomicUInt64       recv_messge_count_;
     HttpDecoderConfig  decoder_config_;
+
+    SteadyClockCounter scc_;
 };
 
 #endif

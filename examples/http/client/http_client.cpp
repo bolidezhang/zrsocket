@@ -1,15 +1,33 @@
 ﻿#include <cstdio>
 #include "http_client.h"
+int ClientHttpHandler::do_message()
+{
+    ClientHttpApp &app = ClientHttpApp::instance();
+    app.scc_.update_end_counter();
+    printf("http client request tack_time:%lld ns\n", app.scc_.diff());
+    printf("http version:%d, status_code:%d desc:%s\n", 
+        response_.version_id_, response_.status_code_, response_.reason_phrase_.c_str());
+    for (auto &iter : response_.headers_) {
+        printf("%s:%s\n", iter.first.c_str(), iter.second.c_str());
+    }
+    //printf("body:%s\n", response_.body_ptr_);
+    
+    //std::string body;
+    //body.append(response_.body_ptr_, response_.content_length_);
+    //printf("body:%s\n", body.c_str());
+
+    return 0;
+}
 
 int HttpAppTimer::handle_timeout()
 {
     ClientHttpApp &app = ClientHttpApp::instance();
 
-    auto now = Time::instance().current_timestamp_us();
-    printf("id:%llu, current_timestamp:%llu, recv_messge_count:%llu\n", 
-        data_.id, 
-        now, 
-        ClientHttpApp::instance().recv_messge_count_.load(std::memory_order_relaxed));
+    app.scc_.update_start_counter();
+    // printf("id:%llu, current_timestamp:%llu, recv_messge_count:%llu\n", 
+    //     data_.id, 
+    //     app.scc_.get_start_counter(), 
+    //     ClientHttpApp::instance().recv_messge_count_.load(std::memory_order_relaxed));
 
     HttpRequest req;
     req.method_id_ = HttpMethodId::kGET;
@@ -22,8 +40,8 @@ int HttpAppTimer::handle_timeout()
     out.reserve(128);
     req.encode(out);
     ClientHttpApp::instance().http_client_.handler()->send(out);
-    ClientHttpApp::instance().http_client_.handler()->send(out);
-    ClientHttpApp::instance().http_client_.handler()->send(out);
+    //ClientHttpApp::instance().http_client_.handler()->send(out);
+    //ClientHttpApp::instance().http_client_.handler()->send(out);
     //ClientHttpApp::instance().http_client_.handler()->send(out);
     //ClientHttpApp::instance().http_client_.handler()->send(out);
 

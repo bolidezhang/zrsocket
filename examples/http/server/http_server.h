@@ -46,7 +46,12 @@ public:
 
     int do_signal(int signum)
     {
-        printf("do_signal signum:%d\n", signum);
+        printf("do_signal signum:%d begin...\n", signum);
+        stop_flag_.store(true, std::memory_order_relaxed);
+        main_event_loop_.loop_wakeup();
+        sub_event_loop_.loop_thread_stop();
+        sub_event_loop_.loop_wakeup();
+        printf("do_signal signum:%d end!\n", signum);
         return 0;
     }
 

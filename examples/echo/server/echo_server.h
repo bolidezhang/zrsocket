@@ -202,6 +202,8 @@ public:
 
     //stage2
     SedaStage2<BizStageHandler> stage2_;
+
+    bool send_flag_ = false;
 };
 
 #endif

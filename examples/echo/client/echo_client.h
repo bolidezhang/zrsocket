@@ -108,7 +108,7 @@ public:
     zrsocket::uint_t    connect_count_;
     zrsocket::uint_t    send_count_;
     zrsocket::Thread    send_thread_;
-    uint64_t            send_start_time_;
+    SteadyClockCounter  scc_;
     zrsocket::uint_t    recv_count_;
     zrsocket::uint_t    message_size_ = 12;
 
@@ -116,6 +116,8 @@ public:
     LengthFieldMessageDecoderConfig decoder_config_;
 
     zrsocket::UdpSource<ClientUdpHandler> udp_source_;
+
+    bool send_flag_ = false;    
 };
 
 #endif

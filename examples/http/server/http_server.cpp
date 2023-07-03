@@ -82,7 +82,7 @@ int ServerHttpApp::init()
 
 int main(int argc, char *argv[])
 {
-#define TEST 1
+#define TEST 0
 #if defined(TEST) && (TEST != 0)
     {
         std::vector<int> testVec = { 1,4,5 };

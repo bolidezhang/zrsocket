@@ -5,10 +5,11 @@
 
 int TcpHandler::do_message(const char *message, uint_t len)
 {
-    TestAppServer::instance().recv_messge_count_.fetch_add(1, std::memory_order_relaxed);
+    auto &app = TestAppServer::instance();
+    app.recv_messge_count_.fetch_add(1, std::memory_order_relaxed);
     Message *msg = (Message *)message;
     msg->head.type = MessageType::MT_ECHO_RES;
-    send(message, len, false);
+    send(message, len, app.send_flag_);
     return 0;
 }
 
@@ -46,8 +47,8 @@ int TestAppServer::init()
 
     handler_object_pool_.init(10000, 100, 10);
     tcp_server_.set_config(std::thread::hardware_concurrency(), 1000000, 4096);
-    tcp_server_.set_interface(&handler_object_pool_, &sub_event_loop_, &decoder_config_, &main_event_loop_);
-    //tcp_server_.set_interface(&handler_object_pool_, &main_event_loop_, &decoder_config_, &main_event_loop_);
+    //tcp_server_.set_interface(&handler_object_pool_, &sub_event_loop_, &decoder_config_, &main_event_loop_);
+    tcp_server_.set_interface(&handler_object_pool_, &main_event_loop_, &decoder_config_, &main_event_loop_);
     tcp_server_.open(port_, 1024, nullptr);
 
     udp_source_.set_config();
@@ -86,6 +87,9 @@ int main(int argc, char *argv[])
     TestAppServer &app = TestAppServer::instance();
     if (argc > 1) {
         app.port_ = atoi(argv[1]);
+    }
+    if (argc > 2) {
+        app.send_flag_= static_cast<bool>(atoi(argv[2]));
     }
 
     printf("zrsocket version:%s\n", ZRSOCKET_VERSION_STR);
