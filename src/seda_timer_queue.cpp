@@ -179,7 +179,8 @@ SedaLRUTimerQueue::~SedaLRUTimerQueue()
     clear();
 }
 
-int SedaLRUTimerQueue::init(uint_t queue_max_size, uint_t interval_ms, ISedaStageHandler *stage_handler, int slot)
+int SedaLRUTimerQueue::init(uint_t queue_max_size, uint_t interval_ms, 
+    ISedaStageHandler *stage_handler, int slot)
 {
     clear();
 

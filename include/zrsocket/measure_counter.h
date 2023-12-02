@@ -94,7 +94,9 @@ template <typename TMeasureCounter, bool owner = true>
 class MeasureCounterGuard
 {
 public:
-    inline MeasureCounterGuard(const char *out_prefix = "", const char *out_postfix = "\n", std::ostream &out = std::cout)
+    inline MeasureCounterGuard(const char *out_prefix = "", 
+        const char *out_postfix = "\n", 
+        std::ostream &out = std::cout)
         : out_prefix_(out_prefix)
         , out_postfix_(out_postfix)
         , out_(out)

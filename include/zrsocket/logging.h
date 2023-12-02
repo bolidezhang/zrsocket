@@ -18,8 +18,8 @@ ZRSOCKET_NAMESPACE_BEGIN
 
 //为了输出美观对齐
 //所有level_name长度相同,不足的用空格补齐
-static const int   LEVEL_NAME_LEN = sizeof("TRACE") - 1;
-static const char *LEVEL_NAMES[]  = { "TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL" };
+static constexpr const int   LEVEL_NAME_LEN = sizeof("TRACE") - 1;
+static constexpr const char *LEVEL_NAMES[]  = { "TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL" };
 enum class LogLevel : uint8_t
 {
     kTRACE,
@@ -480,7 +480,8 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
+        int len = std::snprintf(buf_.buffer() + end, 
+            std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
         buf_.data_end(end + len);
         return *this;
     }
@@ -489,7 +490,8 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
+        int len = std::snprintf(buf_.buffer() + end, 
+            std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
         buf_.data_end(end + len);
         return *this;
     }
@@ -554,7 +556,7 @@ public:
 private:
     static int worker_thread_proc(void *arg)
     {
-        static const uint_t WRITE_BLOCK_SIZE = 8192;
+        static constexpr const uint_t WRITE_BLOCK_SIZE = 8192;
 
         AsyncWorker<TMutex> *worker = static_cast<AsyncWorker<TMutex> *>(arg);
         Thread &thread = worker->worker_thread_;
@@ -988,14 +990,14 @@ ZRSOCKET_NAMESPACE_END
 
 //全局logger
 
-#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)               ZRSOCKET_LOG_SET_LOG_LEVEL2(zrsocket::Logger::instance(),level)
-#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)            ZRSOCKET_LOG_SET_APPENDER_TYPE2(zrsocket::Logger::instance(),type)
-#define ZRSOCKET_LOG_SET_FILE_NAME(name)                ZRSOCKET_LOG_SET_FILE_NAME2(zrsocket::Logger::instance(),name)
-#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context)    ZRSOCKET_LOG_SET_CALLBACK_FUNC2(zrsocket::Logger::instance(),func,context)
-#define ZRSOCKET_LOG_SET_WORK_MODE(mode)                ZRSOCKET_LOG_SET_WORK_MODE2(zrsocket::Logger::instance(),mode)
-#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)                ZRSOCKET_LOG_SET_LOCK_TYPE2(zrsocket::Logger::instance(),type)
-#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)              ZRSOCKET_LOG_SET_BUFFER_SIZE2(zrsocket::Logger::instance(),size)
-#define ZRSOCKET_LOG_INIT                               ZRSOCKET_LOG_INIT2(zrsocket::Logger::instance())
+#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)            ZRSOCKET_LOG_SET_LOG_LEVEL2(zrsocket::Logger::instance(),level)
+#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)         ZRSOCKET_LOG_SET_APPENDER_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_FILE_NAME(name)             ZRSOCKET_LOG_SET_FILE_NAME2(zrsocket::Logger::instance(),name)
+#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context) ZRSOCKET_LOG_SET_CALLBACK_FUNC2(zrsocket::Logger::instance(),func,context)
+#define ZRSOCKET_LOG_SET_WORK_MODE(mode)             ZRSOCKET_LOG_SET_WORK_MODE2(zrsocket::Logger::instance(),mode)
+#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)             ZRSOCKET_LOG_SET_LOCK_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)           ZRSOCKET_LOG_SET_BUFFER_SIZE2(zrsocket::Logger::instance(),size)
+#define ZRSOCKET_LOG_INIT                            ZRSOCKET_LOG_INIT2(zrsocket::Logger::instance())
 
 #define ZRSOCKET_LOG_TRACE(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kTRACE)
 #define ZRSOCKET_LOG_DEBUG(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kDEBUG)

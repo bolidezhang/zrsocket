@@ -26,7 +26,10 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler, class TQueue = DoubleBufferEventTypeQueue<TMutex> >
+template <class TMutex, 
+    class TLoopData = nullptr_t, 
+    class TEventTypeHandler = EventTypeHandler, 
+    class TQueue = DoubleBufferEventTypeQueue<TMutex> >
 class SelectEventLoop : public EventLoop
 {
 public:
@@ -47,7 +50,8 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = 0, uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = 0, 
+        uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
     {
         return event_queue_.init(event_queue_max_size, event_type_len);
     }
@@ -596,7 +600,8 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        SelectEventLoop<TMutex,TLoopData, TEventTypeHandler, TQueue> *event_loop = static_cast<SelectEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
+        SelectEventLoop<TMutex,TLoopData, TEventTypeHandler, TQueue> *event_loop = 
+            static_cast<SelectEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
         Thread &thread = event_loop->thread_;
         while (thread.state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);

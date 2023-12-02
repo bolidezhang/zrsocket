@@ -129,7 +129,8 @@ public:
 
     inline uint64_t size()
     {
-        return write_index_.load(std::memory_order_relaxed) - read_index_.load(std::memory_order_relaxed);
+        return (write_index_.load(std::memory_order_relaxed) - 
+            read_index_.load(std::memory_order_relaxed));
     }
 
     inline uint64_t free_size()
@@ -139,7 +140,8 @@ public:
 
     inline bool empty() const
     {
-        return write_index_.load(std::memory_order_relaxed) == read_index_.load(std::memory_order_relaxed);
+        return (write_index_.load(std::memory_order_relaxed) == 
+            read_index_.load(std::memory_order_relaxed));
     }
 
     inline int push(const T &t) 
@@ -150,14 +152,16 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             write_index = write_index_.load(std::memory_order_relaxed);
             if (write_index - min_write_index_.load(std::memory_order_relaxed) < capacity) {
-                if (write_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (write_index_.compare_exchange_weak(write_index, write_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在write_index(不能用write_index_)位置写入数据
                     uint64_t offset = (write_index & (capacity - 1));
                     array_[offset]  = t;
 
                     //发布刚写入数据的位置(更新最大读位置)
-                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, 
+                        std::memory_order_relaxed, std::memory_order_relaxed));
 
                     return 1;
                 }
@@ -175,14 +179,16 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             write_index = write_index_.load(std::memory_order_relaxed);
             if (write_index - min_write_index_.load(std::memory_order_relaxed) < capacity) {
-                if (write_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (write_index_.compare_exchange_weak(write_index, write_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在write_index(不能用write_index_)位置写入数据
                     uint64_t offset = (write_index & (capacity - 1));
                     array_[offset]  = std::move(t);
 
                     //发布刚写入数据的位置(更新最大读位置)
-                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, 
+                        std::memory_order_relaxed, std::memory_order_relaxed));
 
                     return 1;
                 }
@@ -202,7 +208,8 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             read_index = read_index_.load(std::memory_order_relaxed);
             if (max_read_index_.load(std::memory_order_relaxed) > read_index) {
-                if (read_index_.compare_exchange_weak(read_index, read_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (read_index_.compare_exchange_weak(read_index, read_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在read_index(不能用read_index_)位置读数据
                     uint64_t offset = read_index & (capacity - 1);
@@ -211,7 +218,8 @@ public:
                     handler(array_[offset]);
 
                     //发布刚读数据的位置(更新最小写位置)                                             
-                    while (!min_write_index_.compare_exchange_weak(read_index, read_index + 1, std::memory_order_relaxed));
+                    while (!min_write_index_.compare_exchange_weak(read_index, read_index + 1, 
+                        std::memory_order_relaxed));
 
                     return 1;
                 }
@@ -292,14 +300,16 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             write_index = write_index_.load(std::memory_order_relaxed);
             if (write_index - read_index_ < capacity) {
-                if (write_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (write_index_.compare_exchange_weak(write_index, write_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在write_index(不能用write_index_)位置写入数据
                     uint64_t offset = write_index & (capacity - 1);
                     array_[offset]  = t;
 
                     //发布刚写入数据的位置(更新最大读位置)
-                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, 
+                        std::memory_order_relaxed, std::memory_order_relaxed));
 
                     return 1;
                 }
@@ -317,14 +327,16 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             write_index = write_index_.load(std::memory_order_relaxed);
             if (write_index - read_index_ < capacity) {
-                if (write_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (write_index_.compare_exchange_weak(write_index, write_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在write_index(不能用write_index_)位置写入数据
                     uint64_t offset = (write_index & (capacity - 1));
                     array_[offset]  = std::move(t);
 
                     //发布刚写入数据的位置(更新最大读位置)
-                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, std::memory_order_relaxed, std::memory_order_relaxed));
+                    while (!max_read_index_.compare_exchange_weak(write_index, write_index + 1, 
+                        std::memory_order_relaxed, std::memory_order_relaxed));
 
                     return 1;
                 }
@@ -456,7 +468,8 @@ public:
         for (int i = 0; i < SPIN_LOOP_TIMES; ++i) {
             read_index = read_index_.load(std::memory_order_relaxed);
             if (write_index_ > read_index) {
-                if (read_index_.compare_exchange_weak(read_index, read_index + 1, std::memory_order_relaxed, std::memory_order_relaxed)) {
+                if (read_index_.compare_exchange_weak(read_index, read_index + 1, 
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {
 
                     //在read_index(不能用read_index_)位置读数据
                     uint64_t offset = read_index & (capacity - 1);
@@ -465,7 +478,8 @@ public:
                     handler(array_[offset]);
 
                     //发布刚读数据的位置(更新最小写位置)                                             
-                    while (!min_write_index_.compare_exchange_weak(read_index, read_index + 1, std::memory_order_relaxed));
+                    while (!min_write_index_.compare_exchange_weak(read_index, 
+                        read_index + 1, std::memory_order_relaxed));
 
                     return 1;
                 }

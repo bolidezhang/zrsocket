@@ -46,11 +46,13 @@ public:
 
     inline int join()
     {
-        State thread_state = state();
-        if ( (thread_state == State::RUNNING) || (thread_state == State::STOPPED) ) {
-            state_.store(static_cast<int>(State::JOINED), std::memory_order_relaxed);
-            thread_.join();
-            return 0;
+        if (thread_.joinable()) {
+            State thread_state = state();
+            if ((thread_state == State::RUNNING) || (thread_state == State::STOPPED)) {
+                state_.store(static_cast<int>(State::JOINED), std::memory_order_relaxed);
+                thread_.join();
+                return 0;
+            }
         }
         return -1;
     }

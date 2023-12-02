@@ -9,8 +9,8 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-static const int CACHE_LINE_SIZE = 64;          //缓存行大小 x86一般为64
-static const int SPIN_LOOP_TIMES = 1000;        //旋转次数
+static constexpr const int CACHE_LINE_SIZE = 64;          //缓存行大小 x86一般为64
+static constexpr const int SPIN_LOOP_TIMES = 1000;        //旋转次数
 
 // 双指针对象: double pointer object
 //  用于动态更新配置信息的场景

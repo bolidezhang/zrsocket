@@ -27,7 +27,10 @@ enum class EPOLL_MODE
     ET = 2,
 };
 
-template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler, class TQueue = DoubleBufferEventTypeQueue<TMutex> >
+template <class TMutex, 
+    class TLoopData = nullptr_t, 
+    class TEventTypeHandler = EventTypeHandler, 
+    class TQueue = DoubleBufferEventTypeQueue<TMutex> >
 class EpollEventLoop : public EventLoop
 {
 public:
@@ -44,7 +47,8 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT, uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::LT, 
+        uint_t event_queue_max_size = 100000, uint_t event_type_len = 8)
     {
         max_events_ = max_events;
         epoll_mode_ = event_mode;
@@ -413,7 +417,9 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = static_cast<EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
+        EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = 
+            static_cast<EpollEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
+
         Thread &thread = event_loop->thread_;
         while (thread.state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);
@@ -447,7 +453,10 @@ private:
 };
 
 //only support epoll mode: ET
-template <class TMutex, class TLoopData = nullptr_t, class TEventTypeHandler = EventTypeHandler, class TQueue = DoubleBufferEventTypeQueue<TMutex> >
+template <class TMutex, 
+    class TLoopData = nullptr_t, 
+    class TEventTypeHandler = EventTypeHandler, 
+    class TQueue = DoubleBufferEventTypeQueue<TMutex> >
 class EpollETEventLoop : public EventLoop
 {
 public:
@@ -464,7 +473,8 @@ public:
         close();
     }
 
-    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::ET, uint_t event_queue_max_size = 100000, uint_t event_type_len = 64)
+    int init(uint_t num = 1, uint_t max_events = 10000, int event_mode = EPOLL_MODE::ET, 
+        uint_t event_queue_max_size = 100000, uint_t event_type_len = 64)
     {
         max_events_ = max_events;
         epoll_mode_ = event_mode;
@@ -785,7 +795,9 @@ public:
 private:
     static int loop_thread_proc(void *arg)
     {
-        EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = static_cast<EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
+        EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *event_loop = 
+            static_cast<EpollETEventLoop<TMutex, TLoopData, TEventTypeHandler, TQueue> *>(arg);
+
         Thread *thread = &(event_loop->thread_);
         while (thread->state() == Thread::State::RUNNING) {
             event_loop->loop(event_loop->max_timeout_us_);

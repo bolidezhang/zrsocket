@@ -50,7 +50,8 @@ public:
     int handle_open()
     {
         super::message_buffer_.reset();
-        super::message_buffer_.reserve(static_cast<FixedLengthMessageDecoderConfig *>(super::source_->message_decoder_config())->message_length_);
+        super::message_buffer_.reserve(static_cast<FixedLengthMessageDecoderConfig *>(
+            super::source_->message_decoder_config())->message_length_);
         super::queue1_.clear();
         super::queue2_.clear();
         return do_open();
@@ -59,7 +60,8 @@ public:
 protected:
     int decode(const char *data, uint_t len)
     {
-        uint_t  message_length = static_cast<FixedLengthMessageDecoderConfig *>(super::source_->message_decoder_config())->message_length_;
+        uint_t  message_length = 
+            static_cast<FixedLengthMessageDecoderConfig*>(super::source_->message_decoder_config())->message_length_;
         char   *remain         = const_cast<char *>(data);
         uint_t  remain_len     = len;
 
