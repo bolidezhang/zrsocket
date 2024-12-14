@@ -31,6 +31,7 @@
 #include <cstdio>
 #include "config.h"
 #include "base_type.h"
+#include "os_api.h"
 
 #ifdef ZRSOCKET_OS_WINDOWS
 #include <io.h>
@@ -200,10 +201,10 @@ public:
     }
 
     //因windows下没有writev, 
-    //  当mode==0时,将iov指向内容拷贝到一个buffer中
-    //    mode!=0时,循环调write
+    //  mode未使用,保持向下兼容性
     static int writev(int fd, const ZRSOCKET_IOVEC *iov, int iovcnt, int mode = 0)
     {
+#if 0
 #ifdef ZRSOCKET_OS_WINDOWS
         if (0 == mode) {
             static thread_local ByteBuffer buf_(4096);
@@ -231,6 +232,10 @@ public:
 #else
         return ::writev(fd, iov, iovcnt);
 #endif
+#endif
+
+        int error = 0;
+        return OSApi::socket_sendv(fd, iov, iovcnt, 0, nullptr, error);
     }
 
     OSApiFile() = default;
