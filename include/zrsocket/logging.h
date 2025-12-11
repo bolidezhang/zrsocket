@@ -6,6 +6,7 @@
 #define ZRSOCKET_LOGGING_H
 #include <cstdio>
 #include <string>
+#include <charconv>
 #include "byte_buffer.h"
 #include "data_convert.h"
 #include "lockfree.h"
@@ -13,6 +14,7 @@
 #include "mutex.h"
 #include "os_api_file.h"
 #include "seda_stage.h"
+#include "time.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
@@ -72,6 +74,10 @@ public:
     virtual int open()  = 0;
     virtual int close() = 0;
     virtual int write(const char *log, uint_t len) = 0;
+    virtual int flush() 
+    {
+        return 0;
+    }
 };
 
 class ILogWorker
@@ -129,8 +135,9 @@ public:
 
     inline void set_buffer_size(uint_t size)
     {
-        if (size < 4096) {
-            size = 4096;
+        static const int min_buffer_size = 1024 * 1024 * 4;
+        if (size < min_buffer_size) {
+            size = min_buffer_size;
         }
         obj_.standby_ptr()->buffer_size_ = size;
     }
@@ -205,6 +212,10 @@ public:
     DoublePointerObject<Config> obj_;
 };
 
+
+//前向声明
+class Logger;
+
 //输出格式
 //[datetime(UTC时区)] level [......] file line thread_id
 class LogStream
@@ -229,9 +240,12 @@ public:
         static const uint_t DATETIME_S_LEN = sizeof("1900-01-01 00:00:00.") - 1;
         static thread_local struct timespec last_ts_ = { 0 };
 
-        //取当前精确到纳秒的时间
+        //计算当前时间(精确到纳秒)
         struct timespec ts;
-        OSApi::gettimeofday(&ts);
+        uint64_t current_timestamp_ns = OSApi::steady_clock_counter();
+        uint64_t current_time_ns = (current_timestamp_ns - Time::instance().startup_timestamp_ns()) + Time::instance().startup_time_ns();
+        ts.tv_sec  = current_time_ns / OSApi::NANOS_PER_SEC;
+        ts.tv_nsec = static_cast<long>(current_time_ns - ts.tv_sec * OSApi::NANOS_PER_SEC);
 
         //output current datetime(format: [YYYY-MM-DD HH:MM:SS.SSSSSSSSSZ] UTC时区)
         if (ts.tv_sec != last_ts_.tv_sec) {
@@ -260,6 +274,11 @@ public:
             ++datetime_s_len;
 
             //output mday
+            if (buf_tm.tm_mon + 1 < 10) {
+                datetime_s[datetime_s_len] = '0';
+                ++datetime_s_len;
+            }
+            len = DataConvert::uitoa(buf_tm.tm_mon + 1, datetime_s + datetime_s_len);
             if (buf_tm.tm_mday < 10) {
                 datetime_s[datetime_s_len] = '0';
                 ++datetime_s_len;
@@ -314,7 +333,7 @@ public:
                     buf_.write("00", 2);
                 }
                 else {
-                    buf_.write("003", 3);
+                    buf_.write("000", 3);
                 }
             }
         }
@@ -364,7 +383,7 @@ public:
 
         //output line
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
         int len = DataConvert::uitoa(line_, buf_.buffer() + end);
         buf_.data_end(end + len);
         buf_.write(' ');
@@ -392,7 +411,7 @@ public:
         return *this;
     }
 
-    inline self& operator<<(std::string &s)
+    inline self& operator<<(const std::string &s)
     {
         buf_.write(s.data(), static_cast<uint_t>(s.length()));
         return *this;
@@ -424,7 +443,7 @@ public:
     inline self& operator<<(int16_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<int16_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<int16_t>::digits10 + 50);
         int len = DataConvert::itoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
         return *this;
@@ -433,7 +452,7 @@ public:
     inline self& operator<<(uint16_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<uint16_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<uint16_t>::digits10 + 50);
         int len = DataConvert::itoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
         return *this;
@@ -442,7 +461,7 @@ public:
     inline self& operator<<(int32_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<int32_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<int32_t>::digits10 + 50);
         int len = DataConvert::itoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
         return *this;
@@ -451,7 +470,7 @@ public:
     inline self& operator<<(uint32_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
         int len = DataConvert::uitoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
         return *this;
@@ -460,7 +479,7 @@ public:
     inline self& operator<<(int64_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<int64_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<int64_t>::digits10 + 50);
         int len = DataConvert::lltoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
 
@@ -470,7 +489,7 @@ public:
     inline self& operator<<(uint64_t i)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<uint64_t>::digits10 + 30);
+        buf_.reserve(end + std::numeric_limits<uint64_t>::digits10 + 50);
         int len = DataConvert::ulltoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
         return *this;
@@ -479,20 +498,38 @@ public:
     inline self& operator<<(float32_t f)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, 
-            std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
-        buf_.data_end(end + len);
+        buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 50);
+        
+        //方案1
+        std::to_chars_result res = std::to_chars(buf_.buffer() + end, 
+            buf_.buffer() + end + std::numeric_limits<float32_t>::max_digits10 + 50, f);
+        if (res.ec == std::errc()) {
+            buf_.data_end(static_cast<uint_t>(res.ptr - buf_.buffer()));
+        }
+
+        //方案2
+        //len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
+        //buf_.data_end(end + len);
+
         return *this;
     }
 
     inline self& operator<<(float64_t f)
     {
         uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 30);
-        int len = std::snprintf(buf_.buffer() + end, 
-            std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
-        buf_.data_end(end + len);
+        buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 50);
+
+        //方案1
+        std::to_chars_result res = std::to_chars(buf_.buffer() + end,
+            buf_.buffer() + end + std::numeric_limits<float64_t>::max_digits10 + 50, f);
+        if (res.ec == std::errc()) {
+            buf_.data_end(static_cast<uint_t>(res.ptr - buf_.buffer()));
+        }
+
+        //方案2
+        //int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
+        //buf_.data_end(end + len);
+
         return *this;
     }
 
@@ -514,16 +551,16 @@ private:
 static thread_local LogStream stream_;
 
 template<typename TMutex>
-class AsyncWorker: public ILogWorker
+class AsyncLogWorker: public ILogWorker
 {
 public:
-    AsyncWorker(ILogAppender *appender, uint_t buffer_size)
+    AsyncLogWorker(ILogAppender *appender, uint_t buffer_size)
         : ILogWorker(appender)
     {
         dfbuf_.set_max_size(buffer_size);
     }
 
-    ~AsyncWorker()
+    ~AsyncLogWorker()
     {
         close();
     }
@@ -550,15 +587,20 @@ public:
             }
             return 1;
         }
+
+        //日志写入共享缓冲失败(共享缓冲满)
         return 0;
     }
 
 private:
     static int worker_thread_proc(void *arg)
     {
-        static constexpr const uint_t WRITE_BLOCK_SIZE = 8192;
+        //static constexpr const uint_t WRITE_BLOCK_SIZE = 8192;        //8k
+        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 *  64;  //64k
+        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 128;  //128k
+        static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 256;    //这是个经验值
 
-        AsyncWorker<TMutex> *worker = static_cast<AsyncWorker<TMutex> *>(arg);
+        AsyncLogWorker<TMutex> *worker = static_cast<AsyncLogWorker<TMutex> *>(arg);
         Thread &thread = worker->worker_thread_;
         AtomicInt &timedwait_flag = worker->timedwait_flag_;
         DoubleFixedLengthBuffer<TMutex> &dfbuf = worker->dfbuf_;
@@ -609,19 +651,19 @@ public:
     Thread      worker_thread_;
     Mutex       timedwait_mutex_;
     Condition   timedwait_condition_;
-    uint_t      timedwait_interval_us_ = 50000;
+    uint_t      timedwait_interval_us_ = 10000;
     AtomicInt   timedwait_flag_ = ATOMIC_VAR_INIT(0);   //条件触发标识
 };
 
 template<typename TMutex>
-class SyncWorker : public ILogWorker
+class SyncLogWorker : public ILogWorker
 {
 public:
-    SyncWorker(ILogAppender *appender)
+    SyncLogWorker(ILogAppender *appender)
         : ILogWorker(appender)
     {
     }
-    ~SyncWorker() = default;
+    ~SyncLogWorker() = default;
 
     int open() override
     {
@@ -646,11 +688,11 @@ private:
     TMutex mutex_;
 };
 
-class ConsoleAppender : public ILogAppender
+class ConsoleLogAppender : public ILogAppender
 {
 public:
-    ConsoleAppender() = default;
-    ~ConsoleAppender() = default;
+    ConsoleLogAppender() = default;
+    ~ConsoleLogAppender() = default;
 
     int open() override
     {
@@ -668,15 +710,15 @@ public:
     }
 };
 
-class OSApiFileAppender : public ILogAppender
+class OSApiFileLogAppender : public ILogAppender
 {
 public:
-    OSApiFileAppender() = delete;
-    OSApiFileAppender(const char* filename)
+    OSApiFileLogAppender() = delete;
+    OSApiFileLogAppender(const char *filename)
         : filename_(filename)
     {
     }
-    ~OSApiFileAppender()
+    ~OSApiFileLogAppender()
     {
         close();
     }
@@ -696,16 +738,21 @@ public:
         return file_.writen(log, len);
     }
 
+    inline int flush()
+    {
+        return file_.fsync();
+    }
+
 private:
     const char *filename_;
     OSApiFile file_;
 };
 
-class NullAppender : public ILogAppender
+class NullLogAppender : public ILogAppender
 {
 public:
-    NullAppender() = default;
-    ~NullAppender() = default;
+    NullLogAppender() = default;
+    ~NullLogAppender() = default;
 
     int open() override
     {
@@ -723,16 +770,16 @@ public:
     }
 };
 
-class CallbackAppender : public ILogAppender
+class CallbackLogAppender : public ILogAppender
 {
 public:
-    CallbackAppender() = delete;
-    CallbackAppender(LogCallbackFunc func, void *context)
+    CallbackLogAppender() = delete;
+    CallbackLogAppender(LogCallbackFunc func, void *context)
         : callback_func_(func)
         , callback_context_(context)
     {
     }
-    ~CallbackAppender() = default;
+    ~CallbackLogAppender() = default;
 
     int open() override
     {
@@ -754,15 +801,15 @@ private:
     void           *callback_context_ = nullptr;
 };
 
-class StdioFileAppender : public ILogAppender
+class StdioFileLogAppender : public ILogAppender
 {
 public:
-    StdioFileAppender() = delete;
-    StdioFileAppender(const char *filename)
+    StdioFileLogAppender() = delete;
+    StdioFileLogAppender(const char *filename)
         : filename_(filename)
     {
     }
-    ~StdioFileAppender()
+    ~StdioFileLogAppender()
     {
         close();
     }
@@ -779,11 +826,12 @@ public:
 
     inline int write(const char *log, uint_t len) override
     {
-        int ret = file_.writen(log, len);
-        if (ret > 0) {
-            file_.flush();
-        }
-        return ret;
+        return file_.writen(log, len);
+    }
+
+    inline int flush()
+    {
+        return file_.flush();
     }
 
 private:
@@ -819,64 +867,65 @@ public:
             return 1;
         }
 
+        Time::instance();
         config_.update_config();
         switch (config_.get_appender_type()) {
         case LogAppenderType::kCONSOLE:
-            appender_ = new ConsoleAppender();
+            appender_ = new ConsoleLogAppender();
             if (config_.get_work_mode() == LogWorkMode::kSYNC) {
-                worker_ = new SyncWorker<NullMutex>(appender_);
+                worker_ = new SyncLogWorker<NullMutex>(appender_);
             }
             break;
         case LogAppenderType::kFILE:
-            appender_ = new OSApiFileAppender(config_.filename());
+            appender_ = new OSApiFileLogAppender(config_.filename());
             if (config_.get_work_mode() == LogWorkMode::kSYNC) {
                 switch (config_.get_lock_type()) {
                 case LogLockType::kNULL:
-                    worker_ = new SyncWorker<NullMutex>(appender_);
+                    worker_ = new SyncLogWorker<NullMutex>(appender_);
                     break;
                 case LogLockType::kSPINLOCK:
-                    worker_ = new SyncWorker<SpinlockMutex>(appender_);
+                    worker_ = new SyncLogWorker<SpinlockMutex>(appender_);
                     break;
                 case LogLockType::kMUTEX:
                 default:
-                    worker_ = new SyncWorker<ThreadMutex>(appender_);
+                    worker_ = new SyncLogWorker<ThreadMutex>(appender_);
                     break;
                 }
             }
             break;
         case LogAppenderType::kNULL:
-            appender_ = new NullAppender();
-            worker_   = new SyncWorker<NullMutex>(appender_);
+            appender_ = new NullLogAppender();
+            worker_   = new SyncLogWorker<NullMutex>(appender_);
             break;
         case LogAppenderType::kCALLBACK:
             {
                 auto conf = config_.obj_.active_ptr();
                 if (nullptr != conf->callback_func_) {
-                    appender_ = new CallbackAppender(conf->callback_func_, conf->callback_context_);
+                    appender_ = new CallbackLogAppender(conf->callback_func_, conf->callback_context_);
                     if (config_.get_work_mode() == LogWorkMode::kSYNC) {
                         switch (config_.get_lock_type()) {
                         case LogLockType::kNULL:
-                            worker_ = new SyncWorker<NullMutex>(appender_);
+                            worker_ = new SyncLogWorker<NullMutex>(appender_);
                             break;
                         case LogLockType::kSPINLOCK:
-                            worker_ = new SyncWorker<SpinlockMutex>(appender_);
+                            worker_ = new SyncLogWorker<SpinlockMutex>(appender_);
                             break;
                         case LogLockType::kMUTEX:
                         default:
-                            worker_ = new SyncWorker<ThreadMutex>(appender_);
+                            worker_ = new SyncLogWorker<ThreadMutex>(appender_);
                             break;
                         }
                     }
                 }
                 else {
-                    appender_ = new NullAppender();
-                    worker_ = new SyncWorker<NullMutex>(appender_);
+                    appender_ = new NullLogAppender();
+                    worker_ = new SyncLogWorker<NullMutex>(appender_);
                 }
             }
             break;
         default:
-            appender_ = new NullAppender();
-            worker_   = new SyncWorker<NullMutex>(appender_);
+            appender_ = new NullLogAppender();
+            worker_   = new SyncLogWorker<NullMutex>(appender_);
             break;
         }
 
@@ -884,14 +933,14 @@ public:
             if (nullptr == worker_) {
                 switch (config_.get_lock_type()) {
                 case LogLockType::kNULL:
-                    worker_ = new AsyncWorker<NullMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<NullMutex>(appender_, config_.get_buffer_size());
                     break;
                 case LogLockType::kSPINLOCK:
-                    worker_ = new AsyncWorker<SpinlockMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<SpinlockMutex>(appender_, config_.get_buffer_size());
                     break;
                 case LogLockType::kMUTEX:
                 default:
-                    worker_ = new AsyncWorker<ThreadMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<ThreadMutex>(appender_, config_.get_buffer_size());
                     break;
                 }
             }

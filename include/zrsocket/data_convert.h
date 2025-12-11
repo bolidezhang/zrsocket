@@ -25,10 +25,10 @@ public:
     static uint64_t  atoull(const char *str);
     static uint64_t  atoull(const char *str, uint_t len, char **endptr);
 
-    //4字节无符号整数转10进制字串
+    //4字节无符号整数转10进制字符串
     static int uitoa(uint32_t value, char str[12]);
 
-    //4字节整数转10进制字串
+    //4字节整数转10进制字符串
     static inline int itoa(int32_t value, char str[12])
     {
         if (value >= 0) {
@@ -40,7 +40,7 @@ public:
         }
     }
 
-    //8字节无符号整数转10进制字串
+    //8字节无符号整数转10进制字符串
     static int ulltoa(uint64_t value, char str[21]);
 
     //8字节整数转10进制字串
@@ -53,6 +53,41 @@ public:
             *str++ = '-';
             return ulltoa(-value, str) + 1;
         }
+    }
+    
+    static constexpr const int max_digits10_int32 = 12;
+    static constexpr const int max_digits10_int64 = 21;
+
+    //64位的浮点数转字符串,自定义轻量级转换函数（适合简单场景）
+    //浮点数的小数点后位数
+    static constexpr const int max_decimal_places = 20;
+    //整数部分(21位)+小数点(1)+小数部分(20)
+    static constexpr const int max_digits10_float64 = 21 + 1 + 20;
+
+    //64位的浮点数转字符串,自定义轻量级转换函数(适合简单场景)
+    //参数说明: 
+    //  value: 浮点数
+    //  decimal_places: 小数点后位数
+    static inline int ftoa(float64_t value, uint_t decimal_places, char str[42])
+    {
+        if (decimal_places > max_decimal_places) {
+            decimal_places = max_decimal_places;
+        }
+
+        // 整数部分
+        int64_t int_part = static_cast<int64_t>(value);
+        char *p = str;
+        p += DataConvert::lltoa(int_part, p);
+        *p++ = '.';
+        // 小数部分
+        value -= int_part;
+        for (uint_t i = 0; i < decimal_places; ++i) {
+            value *= 10;
+            *p++ = static_cast<char>('0' + static_cast<int>(value));
+            value -= static_cast<int>(value);
+        }
+        *p = '\0';
+        return static_cast<int>(p - str);
     }
 
     //计算整数转为10进制字符串的长度

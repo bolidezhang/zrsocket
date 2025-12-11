@@ -51,6 +51,11 @@ enum class ByteOrder
 class ZRSOCKET_EXPORT OSApi
 {  
 public:
+    static const uint64_t TIME_INTERVAL_UNIT = 1000ULL;     //时间间隔进制单位(s/ms/us/ns)
+    static const uint64_t MILLI_PER_SEC = 1000ULL;          //每秒毫秒数
+    static const uint64_t MICRO_PER_SEC = 1000000ULL;       //每秒微秒数
+    static const uint64_t NANOS_PER_SEC = 1000000000ULL;    //每秒纳秒数
+
     //socket_init
     //参数timer_resolution含义:
     //  1) =0 自动设置OS允许定时精度的最小值
@@ -747,17 +752,12 @@ public:
         //方法4
         //struct _timeb tb;
         //_ftime_s(&tb);
-        //return (tb.time * 1000000000LL + tb.millitm * 1000000LL);
+        //return (tb.time * NANOS_PER_SEC + tb.millitm * 1000000LL);
 #else
         //方法1
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
-        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
-
-        ////方法2
-        //struct timeval tv;
-        //gettimeofday(&tv, nullptr);
-        //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000LL);
+        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
 #endif
     }
 
@@ -771,7 +771,7 @@ public:
     static inline uint64_t time_us()
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return system_clock_counter() / 1000LL;
+        return system_clock_counter() / TIME_INTERVAL_UNIT;
 #else
         struct timeval tv;
         gettimeofday(&tv, nullptr);
@@ -807,13 +807,26 @@ public:
         return ::time(nullptr);
     }
 
+    //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数,可以精确到纳秒)
+    static inline int clock_gettime(struct timespec *ts)
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        uint64_t now = system_clock_counter();
+        ts->tv_sec  = now / NANOS_PER_SEC;
+        ts->tv_nsec = now % NANOS_PER_SEC;
+        return 0;
+#else 
+        return clock_gettime(CLOCK_REALTIME, ts);
+#endif
+    }
+
     //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数,可以精确到微秒)
     static inline int gettimeofday(struct timeval *tv, struct timezone *tz)
     {
         #ifdef ZRSOCKET_OS_WINDOWS
             uint64_t now = system_clock_counter();
-            tv->tv_sec   = static_cast<long>(now / 1000000000LL);
-            tv->tv_usec  = static_cast<long>(now % 1000000000LL) / 1000LL;
+            tv->tv_sec   = static_cast<long>(now / NANOS_PER_SEC);
+            tv->tv_usec  = static_cast<long>(now % NANOS_PER_SEC) / TIME_INTERVAL_UNIT;
             return 0;
 
             //struct _timeb tb;
@@ -828,14 +841,7 @@ public:
     //取得当前系统时间(自公元1970/1/1 00:00:00以来经过秒数,可以精确到纳秒)
     static inline int gettimeofday(struct timespec *ts)
     {
-    #ifdef ZRSOCKET_OS_WINDOWS
-        uint64_t now = system_clock_counter();
-        ts->tv_sec   = now / 1000000000LL;
-        ts->tv_nsec  = now % 1000000000LL;
-        return 0;
-    #else 
-        return clock_gettime(CLOCK_REALTIME, ts);
-    #endif
+        return clock_gettime(ts);
     }
 
     //时间操作函数
@@ -898,18 +904,25 @@ public:
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         //方法1
-        //LARGE_INTEGER li;
-        //QueryPerformanceFrequency(&li);
-        //return li.QuadPart;
-
-        //方法2
-        static uint64_t counter_frequency = 1;
-        if (1 == counter_frequency) {
+        // C++11 魔法:
+        //  1.static 局部变量只会被初始化一次;
+        //  2.初始化过程是线程安全的(不用担心多线程竞争)
+        //  3.这是一个 lambda 立即执行函数 IIFE
+        static const uint64_t freq = []() -> uint64_t {
             LARGE_INTEGER li;
             QueryPerformanceFrequency(&li);
-            counter_frequency = li.QuadPart;
-        }
-        return counter_frequency;
+            return static_cast<uint64_t>(li.QuadPart);
+        }();
+        return freq;
+
+        //方法2
+        //static uint64_t counter_frequency = 1;
+        //if (1 == counter_frequency) {
+        //    LARGE_INTEGER li;
+        //    QueryPerformanceFrequency(&li);
+        //    counter_frequency = li.QuadPart;
+        //}
+        //return counter_frequency;
 #else
         return 1;
 #endif
@@ -925,26 +938,26 @@ public:
 #else
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
 #endif
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
     static inline int64_t os_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
     {
-        return (counter_end - counter_start) * 1000LL / os_counter_frequency();
+        return (counter_end - counter_start) * MILLI_PER_SEC / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以微秒为时间单位)
     static inline int64_t os_counter_time_us(uint64_t counter_end, uint64_t counter_start)
     {
-        return (counter_end - counter_start) * 1000000LL / os_counter_frequency();
+        return (counter_end - counter_start) * MICRO_PER_SEC / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以纳秒为时间单位)
     static inline int64_t os_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
     {
-        return (counter_end - counter_start) * 1000000000LL / os_counter_frequency();
+        return (counter_end - counter_start) * NANOS_PER_SEC / os_counter_frequency();
     }
 
     //取得稳定时钟计数值(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
@@ -952,31 +965,28 @@ public:
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         //方法1
-        const long long freq  = os_counter_frequency();  // doesn't change after system boot
-        const long long ctr   = os_counter();
-        const long long whole = ctr / freq * 1000000000i64;
-        const long long part  = (ctr % freq) * 1000000000i64 / freq;
-        return whole + part;
-
+        static uint64_t freq = os_counter_frequency();
+        uint64_t ctr = os_counter();
+#if 1
+        //写法1
+        uint64_t whole_seconds = ctr / freq;
+        uint64_t part_nanos    = (ctr - whole_seconds * freq) * NANOS_PER_SEC / freq;
+        return whole_seconds * NANOS_PER_SEC + part_nanos;
+#else
+        //写法2
+        uint64_t whole_seconds = ctr / freq;      // 1.算出整数秒
+        uint64_t remainder     = ctr % freq;      // 2.算出余数部分
+        //余数部分乘以 10亿 再除以频率
+        uint64_t part_nanos = (remainder * NANOS_PER_SEC) / freq;
+        return whole_seconds * NANOS_PER_SEC + part_nanos;
+#endif
         //方法2
-        //std::chrono::system_clock::now().time_since_epoch().count();
-
-        //const long long freq    = system_counter_frequency();  // doesn't change after system boot
-        //const long long ctr     = system_counter();
-        //const long long tmp     = ctr / freq;
-        //const long long whole   = tmp * 1000000000i64;
-        //const long long part    = (ctr - tmp * freq) * 1000000000i64 / freq;
-        //return whole + part;
+        //return std::chrono::steady_clock().now().time_since_epoch().count();
 #else
         //方法1
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
-
-        //方法2
-        //struct timeval tv;
-        //gettimeofday(&tv, nullptr);
-        //return (tv.tv_sec * 1000000000LL + tv.tv_usec * 1000L);
+        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
 #endif
     }
 
@@ -990,12 +1000,12 @@ public:
     static inline uint64_t timestamp_us()
     {
 #ifdef ZRSOCKET_OS_WINDOWS
-        return steady_clock_counter() / 1000LL;
+        return steady_clock_counter() / TIME_INTERVAL_UNIT;
 #else
         //方法1
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (ts.tv_sec * 1000000LL + ts.tv_nsec / 1000LL);
+        return (ts.tv_sec * MICRO_PER_SEC + ts.tv_nsec / TIME_INTERVAL_UNIT);
 
         //方法2
         //struct timeval tv;
@@ -1034,10 +1044,10 @@ public:
     {
 #ifdef ZRSOCKET_OS_WINDOWS
         //方法1 精度低些, 精确到 10-16ms
-        return GetTickCount() / 1000LL;
+        return GetTickCount() / TIME_INTERVAL_UNIT;
 
         //方法2 精度高些, 最高精确到 1ms
-        //return (timeGetTime() / 1000LL);
+        //return (timeGetTime() / TIME_INTERVAL_UNIT);
 #else
         
         //方法1
@@ -1171,27 +1181,24 @@ public:
     */
     static inline uint64_t this_thread_id()
     {
-        static zrsocket_fast_thread_local uint64_t id_ = 0;
-        if (0 != id_) {
-            return id_;
-        }
-
-    #if 1
-        //方法1: 调用操作系统api
-        #ifdef  ZRSOCKET_OS_WINDOWS
-            id_ = ::GetCurrentThreadId();
-        #else
+        static thread_local uint64_t tid_ = []() -> uint64_t {
+#ifdef  ZRSOCKET_OS_WINDOWS
+            return static_cast<uint64_t>(::GetCurrentThreadId());
+#elif defined(ZRSOCKET_OS_LINUX)
             //因glibc2.30才有::gettid(), 所以用syscall间接实现
-            id_ = static_cast<uint64_t>(::syscall(SYS_gettid));
-        #endif
-    #else
-        //方法2: c++11的std::this_thread::get_id()
-        std::stringstream ss;
-        ss << std::this_thread::get_id();
-        ss >> id_;
-    #endif
+            return static_cast<uint64_t>(::syscall(SYS_gettid));
+#else
+            return static_cast<uint64_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 
-        return id_;
+            ////方法2: c++11的std::this_thread::get_id()
+            //uint64_t id;
+            //std::stringstream ss;
+            //ss << std::this_thread::get_id();
+            //ss >> id;
+#endif
+        }();
+
+        return tid_;
     }
 
     static inline struct tm* gmtime_s(const time_t *time, struct tm *buf_tm)

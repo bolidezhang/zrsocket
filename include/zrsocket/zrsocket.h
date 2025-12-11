@@ -56,6 +56,7 @@
 #include "global.h"
 #include "measure_counter.h"
 #include "logging.h"
+#include "logging_nano.h"
 #include "lockfree.h"
 #include "lockfree_queue.h"
 #include "application.h"

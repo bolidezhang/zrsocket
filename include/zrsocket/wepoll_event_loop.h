@@ -343,11 +343,11 @@ public:
         int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_handle_, events_, max_events_, timeout_ms);
         if (ready > 0) {
-            EventHandler* handler;
-            EventSource* source;
+            EventHandler *handler;
+            EventSource *source;
             int events;
             for (int i = 0; i < ready; ++i) {
-                handler = static_cast<EventHandler*>(events_[i].data.ptr);
+                handler = static_cast<EventHandler *>(events_[i].data.ptr);
                 events = events_[i].events;
                 if (events & EPOLLIN) {
                     if (handler->handle_read() < 0) {

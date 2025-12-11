@@ -122,10 +122,10 @@ ${OUTPUT}: ${OBJS}
 
 # Rules for compiling source files to object files
 %.o : %.cpp
-	${CXX} -c -std=c++11 ${CXXFLAGS} ${INCS} $< -o $@
+	${CXX} -c -std=c++17 ${CXXFLAGS} ${INCS} $< -o $@
 
 %.o : %.c
-	${CC} -c -std=c11 ${CFLAGS} ${INCS} $< -o $@
+	${CC} -c -std=c17 ${CFLAGS} ${INCS} $< -o $@
 
 dist:
 	bash makedistlinux

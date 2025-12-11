@@ -22,14 +22,14 @@ public:
     inline void update_time()
     {
         current_timestamp_ns_   = OSApi::steady_clock_counter();
-        current_timestamp_us_   = current_timestamp_ns_ / 1000LL;
-        current_timestamp_ms_   = current_timestamp_ns_ / 1000000LL;
-        current_timestamp_s_    = current_timestamp_ns_ / 1000000000LL;
+        current_timestamp_us_   = current_timestamp_ns_ / OSApi::TIME_INTERVAL_UNIT;
+        current_timestamp_ms_   = current_timestamp_us_ / OSApi::TIME_INTERVAL_UNIT;
+        current_timestamp_s_    = current_timestamp_ms_ / OSApi::TIME_INTERVAL_UNIT;
 
         current_time_ns_        = OSApi::system_clock_counter();
-        current_time_us_        = current_time_ns_ / 1000LL;
-        current_time_ms_        = current_time_ns_ / 1000000LL;
-        current_time_s_         = current_time_ns_ / 1000000000LL;
+        current_time_us_        = current_time_ns_ / OSApi::TIME_INTERVAL_UNIT;
+        current_time_ms_        = current_time_us_ / OSApi::TIME_INTERVAL_UNIT;
+        current_time_s_         = current_time_ms_ / OSApi::TIME_INTERVAL_UNIT;
     }
 
     inline uint64_t current_timestamp_ns() const
@@ -72,10 +72,22 @@ public:
         return current_time_s_;
     }
 
+    inline uint64_t startup_timestamp_ns() const
+    {
+        return startup_timestamp_ns_;
+    }
+
+    inline uint64_t startup_time_ns() const
+    {
+        return startup_time_ns_;
+    }
+
 private:
     Time()
     {
         update_time();
+        startup_time_ns_ = current_time_ns_;
+        startup_timestamp_ns_ = current_timestamp_ns_;
     }
 
     ~Time() = default;
@@ -94,6 +106,10 @@ private:
     uint64_t current_time_us_;
     uint64_t current_time_ms_;
     uint64_t current_time_s_;
+
+    //启动时间戳和启动时间
+    uint64_t startup_timestamp_ns_;
+    uint64_t startup_time_ns_;
 };
 
 ZRSOCKET_NAMESPACE_END

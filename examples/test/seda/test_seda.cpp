@@ -170,7 +170,7 @@ int send_to_remote(void *context, const char *log, zrsocket::uint_t len)
 
 int main(int argc, char* argv[])
 {
-#if 1
+#if 0
     {
 
         std::cout << "this_thread::get_id():" << std::this_thread::get_id() << " osapi::this_thread_id:" << zrsocket::OSApi::this_thread_id() << std::endl;
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
         q2.pop( [](Test &t){return printf("t a:%d b:%d ", t.a, t.b);});
         q3.pop( [](const Test &t){return printf("t a:%d b:%d ", t.a, t.b); });
 
-        return 0;
+        //return 0;
     }
 #endif
 
@@ -295,11 +295,16 @@ int main(int argc, char* argv[])
     //ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
     //ZRSOCKET_LOG_INIT2(logger2);
     
-#if 0
+#if 1
     //测试log性能
-    {
+    {        
+        auto current_time = zrsocket::OSApi::system_clock_counter();
+        struct tm buf_tm;
+        auto time_s = static_cast<time_t>(current_time / 1000000000LL);
+        zrsocket::OSApi::gmtime_s(&time_s, &buf_tm);
+
         //const int LOG_TIMES = 1000000;
-        static const int LOG_TIMES = 1000000;
+        static const int LOG_TIMES = 1;
         zrsocket::SteadyClockCounter scc;
 
         scc.update_start_counter();

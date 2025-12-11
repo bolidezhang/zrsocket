@@ -288,6 +288,18 @@ int main(int argc, char *argv[])
 
     printf("thread number:%d, number_times:%ld\n", thread_num, times);
 
+    auto f = 6.522544;
+    char fa[100] = {};
+    zrsocket::DataConvert::ftoa(f, 10, fa);
+    
+    char fa2[100] = {};
+    std::to_chars_result res = std::to_chars(fa2, fa2+100, f);
+    if (res.ec == std::errc()) {
+        auto i = res.ptr - fa2;
+        auto j = i;
+    }
+
+
 #if TEST_GET_TIME
     startup_test(test_time, thread_num, times);
 #endif // TEST_GET_TIME
