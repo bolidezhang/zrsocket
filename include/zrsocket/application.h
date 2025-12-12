@@ -100,6 +100,7 @@ protected:
         OSConstant::instance();
         Time::instance();
         Global::instance();
+        Logger::instance();
         stop_flag_.store(false, std::memory_order_relaxed);
         ::signal(SIGTERM, Application<TApp, TMutex>::signal);
         ::signal(SIGINT,  Application<TApp, TMutex>::signal);

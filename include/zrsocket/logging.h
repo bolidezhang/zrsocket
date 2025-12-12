@@ -62,8 +62,189 @@ enum class LogFormatType : uint8_t
     kBINARY,
 };
 
+enum class LogTimeSource : uint8_t
+{
+    kOSTime,        //OS时间
+    kFrameworkTime  //框架时间(class Time)
+};
+
 //日志回调函数
 typedef int (* LogCallbackFunc)(void *context, const char *log, uint_t len);
+
+class LogConfig
+{
+public:
+    LogConfig() = default;
+    ~LogConfig() = default;
+
+    inline void log_level(LogLevel level)
+    {
+        obj_.standby_ptr()->log_level_ = level;
+    }
+
+    inline void appender_type(LogAppenderType type)
+    {
+        obj_.standby_ptr()->appender_type_ = type;
+    }
+
+    inline void filename(const char* name)
+    {
+        obj_.standby_ptr()->filename_ = name;
+    }
+
+    inline void work_mode(LogWorkMode mode)
+    {
+        obj_.standby_ptr()->work_mode_ = mode;
+    }
+
+    inline void lock_type(LogLockType type)
+    {
+        obj_.standby_ptr()->lock_type_ = type;
+    }
+
+    inline void buffer_size(uint_t size)
+    {
+        static const int min_buffer_size = 1024 * 1024 * 4;
+        if (size < min_buffer_size) {
+            size = min_buffer_size;
+        }
+        obj_.standby_ptr()->buffer_size_ = size;
+    }
+
+    inline void format_type(LogFormatType type)
+    {
+        obj_.standby_ptr()->format_type_ = type;
+    }
+
+    inline void callback_func(LogCallbackFunc func, void* context)
+    {
+        auto conf = obj_.standby_ptr();
+        conf->callback_func_ = func;
+        conf->callback_context_ = context;
+    }
+
+    inline void log_time_source(LogTimeSource source)
+    {
+        obj_.standby_ptr()->log_time_source_ = source;
+    }
+
+    inline void update_framework_time(bool update_flag)
+    {
+        auto conf = obj_.standby_ptr();
+        conf->update_framework_time_ = update_flag;
+        if (update_flag) {
+            conf->log_time_source_ = LogTimeSource::kFrameworkTime;
+        }
+    }
+
+    inline void timedwait_interval_us(uint_t interval_us)
+    {
+        auto conf = obj_.standby_ptr();
+        if (interval_us < 1) {
+            interval_us = 1;
+        }
+        conf->timedwait_interval_us_ = interval_us;
+    }
+
+    inline void write_block_size(uint_t block_size)
+    {
+        auto conf = obj_.standby_ptr();
+        if (block_size < 8192) {
+            block_size = 8192;
+        }
+        conf->write_block_size_ = block_size;
+    }
+
+    inline LogLevel log_level() const
+    {
+        return obj_.active_ptr()->log_level_;
+    }
+
+    inline LogAppenderType appender_type() const
+    {
+        return obj_.active_ptr()->appender_type_;
+    }
+
+    inline LogWorkMode work_mode() const
+    {
+        return obj_.active_ptr()->work_mode_;
+    }
+
+    inline LogLockType lock_type() const
+    {
+        return obj_.active_ptr()->lock_type_;
+    }
+
+    inline LogFormatType format_type() const
+    {
+        return obj_.active_ptr()->format_type_;
+    }
+
+    inline uint_t buffer_size() const
+    {
+        return obj_.active_ptr()->buffer_size_;
+    }
+
+    inline LogTimeSource log_time_source() const
+    {
+        return obj_.active_ptr()->log_time_source_;
+    }
+
+    inline uint_t write_block_size() const
+    {
+        return obj_.active_ptr()->write_block_size_;
+    }
+
+    inline uint_t timedwait_interval_us() const
+    {
+        return obj_.active_ptr()->timedwait_interval_us_;
+    }
+
+    inline bool update_framework_time() const
+    {
+        return obj_.active_ptr()->update_framework_time_;
+    }
+
+    inline const char* filename() const
+    {
+        return obj_.active_ptr()->filename_;
+    }
+
+    inline bool update_config()
+    {
+        return obj_.swap_pointer();
+    }
+
+public:
+    struct Config
+    {
+        LogLevel        log_level_          = LogLevel::kTRACE;
+        LogAppenderType appender_type_      = LogAppenderType::kCONSOLE;
+        LogWorkMode     work_mode_          = LogWorkMode::kASYNC;
+        LogLockType     lock_type_          = LogLockType::kMUTEX;
+        LogFormatType   format_type_        = LogFormatType::kTEXT;
+        const char     *filename_           = nullptr;
+        LogCallbackFunc callback_func_      = nullptr;    //回调函数
+        void           *callback_context_   = nullptr;    //回调上下文
+        LogTimeSource   log_time_source_    = LogTimeSource::kOSTime;
+
+        //异步相关参数
+        uint_t          buffer_size_ = 1024 * 1024 * 16;  //缓冲大小
+        uint_t          write_block_size_ = 1024 * 256;   //async_worker_thread写块大小(默认256k)
+        uint_t          timedwait_interval_us_ = 10000;   //async_worker_thread空闲时等待时长(默认10ms)
+        bool            update_framework_time_ = false;   //在async_worker_thread中更新框架时间
+};
+
+    DoublePointerObject<Config> obj_;
+};
+
+class ILogger
+{
+public:
+    ILogger() = default;
+    virtual ~ILogger() = default;
+    virtual LogConfig & config() = 0;
+};
 
 class ILogAppender
 {
@@ -102,117 +283,6 @@ protected:
     ILogAppender *appender_ = nullptr;
 };
 
-class LogConfig
-{
-public:
-    LogConfig()  = default;
-    ~LogConfig() = default;
-
-    inline void set_log_level(LogLevel level)
-    {
-        obj_.standby_ptr()->log_level_ = level;
-    }
-
-    inline void set_appender_type(LogAppenderType type)
-    {
-        obj_.standby_ptr()->appender_type_ = type;
-    }
-
-    inline void set_filename(const char *name)
-    {
-        obj_.standby_ptr()->filename_ = name;
-    }
-
-    inline void set_work_mode(LogWorkMode mode)
-    {
-        obj_.standby_ptr()->work_mode_ = mode;
-    }
-
-    inline void set_lock_type(LogLockType type)
-    {
-        obj_.standby_ptr()->lock_type_ = type;
-    }
-
-    inline void set_buffer_size(uint_t size)
-    {
-        static const int min_buffer_size = 1024 * 1024 * 4;
-        if (size < min_buffer_size) {
-            size = min_buffer_size;
-        }
-        obj_.standby_ptr()->buffer_size_ = size;
-    }
-
-    inline void set_format_type(LogFormatType type)
-    {
-        obj_.standby_ptr()->format_type_ = type;
-    }
-
-    inline void set_callback_func(LogCallbackFunc func, void *context)
-    {
-        auto conf = obj_.standby_ptr();
-        conf->callback_func_ = func;
-        conf->callback_context_ = context;
-    }
-
-    inline LogLevel get_log_level() const
-    {
-        return obj_.active_ptr()->log_level_;
-    }
-
-    inline LogAppenderType get_appender_type() const
-    {
-        return obj_.active_ptr()->appender_type_;
-    }
-
-    inline LogWorkMode get_work_mode() const
-    {
-        return obj_.active_ptr()->work_mode_;
-    }
-
-    inline LogLockType get_lock_type() const
-    {
-        return obj_.active_ptr()->lock_type_;
-    }
-
-    inline LogFormatType get_format_type() const
-    {
-        return obj_.active_ptr()->format_type_;
-    }
-
-    inline uint_t get_buffer_size() const
-    {
-        return obj_.active_ptr()->buffer_size_;
-    }
-
-    inline const char * filename() const
-    {
-        return obj_.active_ptr()->filename_;
-    }
-   
-    inline bool update_config()
-    {
-        return obj_.swap_pointer();
-    }
-
-public:
-    struct Config
-    {
-        LogLevel        log_level_      = LogLevel::kTRACE;
-        LogAppenderType appender_type_  = LogAppenderType::kCONSOLE;
-        LogWorkMode     work_mode_      = LogWorkMode::kASYNC;
-        LogLockType     lock_type_      = LogLockType::kMUTEX;
-        uint_t          buffer_size_    = 1024 * 1024 * 16;
-        LogFormatType   format_type_    = LogFormatType::kTEXT;
-        const char     *filename_       = nullptr;
-
-        LogCallbackFunc callback_func_  = nullptr;      //回调函数
-        void           *callback_context_ = nullptr;    //回调上下文
-    };
-
-    DoublePointerObject<Config> obj_;
-};
-
-
 //前向声明
 class Logger;
 
@@ -228,176 +298,8 @@ public:
     }
     ~LogStream() = default;
 
-    inline int init(LogLevel level, const char *file, uint_t line, const char *function)
-    {
-        level_  = level;
-        file_   = file;
-        line_   = line;
-        function_ = function;
-
-        //每线程本地缓存精确到秒的时间字符串
-        //buf_的前DATETIME_S_LEN个字节就是 精确到秒的时间字符串
-        static const uint_t DATETIME_S_LEN = sizeof("1900-01-01 00:00:00.") - 1;
-        static thread_local struct timespec last_ts_ = { 0 };
-
-        //计算当前时间(精确到纳秒)
-        struct timespec ts;
-        uint64_t current_timestamp_ns = OSApi::steady_clock_counter();
-        uint64_t current_time_ns = (current_timestamp_ns - Time::instance().startup_timestamp_ns()) + Time::instance().startup_time_ns();
-        ts.tv_sec  = current_time_ns / OSApi::NANOS_PER_SEC;
-        ts.tv_nsec = static_cast<long>(current_time_ns - ts.tv_sec * OSApi::NANOS_PER_SEC);
-
-        //output current datetime(format: [YYYY-MM-DD HH:MM:SS.SSSSSSSSSZ] UTC时区)
-        if (ts.tv_sec != last_ts_.tv_sec) {
-            last_ts_.tv_sec = ts.tv_sec;
-
-            struct tm buf_tm;
-            OSApi::gmtime_s(&ts.tv_sec, &buf_tm);
-
-            int  datetime_s_len = 0;
-            char *datetime_s    = buf_.data();
-
-            //output year
-            int len = DataConvert::uitoa(buf_tm.tm_year + 1900, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = '-';
-            ++datetime_s_len;
-
-            //output month
-            if (buf_tm.tm_mon + 1 < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_mon + 1, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = '-';
-            ++datetime_s_len;
-
-            //output mday
-            if (buf_tm.tm_mon + 1 < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_mon + 1, datetime_s + datetime_s_len);
-            if (buf_tm.tm_mday < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_mday, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = ' ';
-            ++datetime_s_len;
-
-            //output hours
-            if (buf_tm.tm_hour < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_hour, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = ':';
-            ++datetime_s_len;
-
-            //output minutes
-            if (buf_tm.tm_min < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_min, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = ':';
-            ++datetime_s_len;
-
-            //output seconds
-            if (buf_tm.tm_sec < 10) {
-                datetime_s[datetime_s_len] = '0';
-                ++datetime_s_len;
-            }
-            len = DataConvert::uitoa(buf_tm.tm_sec, datetime_s + datetime_s_len);
-            datetime_s_len += len;
-            datetime_s[datetime_s_len] = '.';
-        }
-        buf_.data_end(DATETIME_S_LEN);
-
-        //output nanoseconds
-        //补零写法三
-        //性能提高不明显(与编译器优化有关)
-        if (ts.tv_nsec >= 100000) {
-            if (ts.tv_nsec >= 10000000) {
-                if (ts.tv_nsec < 100000000) {
-                    buf_.write("0", 1);
-                }
-            }
-            else {
-                if (ts.tv_nsec >= 1000000) {
-                    buf_.write("00", 2);
-                }
-                else {
-                    buf_.write("000", 3);
-                }
-            }
-        }
-        else {
-            if (ts.tv_nsec >= 1000) {
-                if (ts.tv_nsec >= 10000) {
-                    buf_.write("0000", 4);
-                }
-                else {
-                    buf_.write("00000", 5);
-                }
-            }
-            else {
-                if (ts.tv_nsec >= 10) {
-                    if (ts.tv_nsec >= 100) {
-                        buf_.write("000000", 6);
-                    }
-                    else {
-                        buf_.write("0000000", 7);
-                    }
-                }
-                else {
-                    buf_.write("00000000", 8);
-                }
-            }
-        }
-        uint_t end = buf_.data_end();
-        int len = DataConvert::uitoa(ts.tv_nsec, buf_.buffer() + end);
-        buf_.data_end(end + len);
-        buf_.write("Z ", 2);
-
-        //output level        
-        buf_.write(LEVEL_NAMES[static_cast<int>(level)], LEVEL_NAME_LEN);
-        buf_.write(' ');
-
-        return 1;
-    }
-
-    inline int fini()
-    {
-        //加空格分隔符
-        buf_.write(' ');
-
-        //output file
-        buf_.write(file_);
-        buf_.write(':');
-
-        //output line
-        uint_t end = buf_.data_end();
-        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
-        int len = DataConvert::uitoa(line_, buf_.buffer() + end);
-        buf_.data_end(end + len);
-        buf_.write(' ');
-
-        //output thread id
-        end = buf_.data_end();
-        len = DataConvert::ulltoa(OSApi::this_thread_id(), buf_.buffer() + end);
-        buf_.data_end(end + len);
-
-        //加换行符
-        buf_.write('\n');
-
-        return 1;
-    }
+    int init(LogLevel level, const char* file, uint_t line, const char* function, Logger *logger);
+    int fini();
 
     inline self& operator<<(char *s)
     {
@@ -554,10 +456,11 @@ template<typename TMutex>
 class AsyncLogWorker: public ILogWorker
 {
 public:
-    AsyncLogWorker(ILogAppender *appender, uint_t buffer_size)
+    AsyncLogWorker(ILogAppender *appender, ILogger *logger)
         : ILogWorker(appender)
+        , logger_(logger)
     {
-        dfbuf_.set_max_size(buffer_size);
+        dfbuf_.set_max_size(logger->config().buffer_size());
     }
 
     ~AsyncLogWorker()
@@ -588,7 +491,7 @@ public:
             return 1;
         }
 
-        //日志写入共享缓冲失败(共享缓冲满)
+        //日志写入共享缓冲失败(可能是共享缓冲满)
         return 0;
     }
 
@@ -598,26 +501,38 @@ private:
         //static constexpr const uint_t WRITE_BLOCK_SIZE = 8192;        //8k
         //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 *  64;  //64k
         //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 128;  //128k
-        static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 256;    //这是个经验值
+        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 256;  //经验值
 
         AsyncLogWorker<TMutex> *worker = static_cast<AsyncLogWorker<TMutex> *>(arg);
+        LogConfig &conf = worker->logger_->config();
         Thread &thread = worker->worker_thread_;
         AtomicInt &timedwait_flag = worker->timedwait_flag_;
         DoubleFixedLengthBuffer<TMutex> &dfbuf = worker->dfbuf_;
         Mutex &timedwait_mutex = worker->timedwait_mutex_;
         Condition &timedwait_condition = worker->timedwait_condition_;
-        uint_t timedwait_interval_us = worker->timedwait_interval_us_;
         ILogAppender *appender = worker->appender_;
+        Time &time = Time::instance();
 
-        uint_t data_size;
-        ByteBuffer *buf;
+        ByteBuffer *buf = nullptr;
+        uint_t data_size = 0;
+        uint_t write_block_size = 0;
+        uint_t timedwait_interval_us = 0;
+        bool   update_framework_time_flag = false;
         while (thread.state() == Thread::State::RUNNING) {
+            write_block_size = conf.write_block_size();
+            timedwait_interval_us = conf.timedwait_interval_us();
+            update_framework_time_flag = conf.update_framework_time();
+
+            if (update_framework_time_flag) {
+                time.update_time();
+            }
+
             buf = dfbuf.active_ptr();
             data_size = buf->data_size();
-            while (data_size >= WRITE_BLOCK_SIZE) {
-                if (appender->write(buf->data(), WRITE_BLOCK_SIZE) > 0) {
-                    buf->data_begin(buf->data_begin() + WRITE_BLOCK_SIZE);
-                    data_size -= WRITE_BLOCK_SIZE;
+            while (data_size >= write_block_size) {
+                if (appender->write(buf->data(), write_block_size) > 0) {
+                    buf->data_begin(buf->data_begin() + write_block_size);
+                    data_size -= write_block_size;
                 }
                 else {
                     break;
@@ -630,9 +545,13 @@ private:
             }
 
             if (0 == data_size) {
+                buf->reset();
                 if (!dfbuf.swap_buffer()) {
                     timedwait_flag.store(1, std::memory_order_relaxed);
                     {
+                        if (update_framework_time_flag) {
+                            time.update_time();
+                        }
                         std::unique_lock<std::mutex> lock(timedwait_mutex);
                         timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                     }
@@ -646,12 +565,12 @@ private:
     }
 
 public:
-    DoubleFixedLengthBuffer<TMutex> dfbuf_;
+    ILogger *logger_ = nullptr;
 
+    DoubleFixedLengthBuffer<TMutex> dfbuf_;
     Thread      worker_thread_;
     Mutex       timedwait_mutex_;
     Condition   timedwait_condition_;
-    uint_t      timedwait_interval_us_ = 10000;
     AtomicInt   timedwait_flag_ = ATOMIC_VAR_INIT(0);   //条件触发标识
 };
 
@@ -839,7 +758,7 @@ private:
     StdioFile file_;
 };
 
-class Logger
+class Logger : public ILogger
 {
 public:
 
@@ -856,7 +775,7 @@ public:
         fini();
     }
 
-    inline LogConfig & config()
+    LogConfig & config()
     {
         return config_;
     }
@@ -869,17 +788,17 @@ public:
 
         Time::instance();
         config_.update_config();
-        switch (config_.get_appender_type()) {
+        switch (config_.appender_type()) {
         case LogAppenderType::kCONSOLE:
             appender_ = new ConsoleLogAppender();
-            if (config_.get_work_mode() == LogWorkMode::kSYNC) {
+            if (config_.work_mode() == LogWorkMode::kSYNC) {
                 worker_ = new SyncLogWorker<NullMutex>(appender_);
             }
             break;
         case LogAppenderType::kFILE:
             appender_ = new OSApiFileLogAppender(config_.filename());
-            if (config_.get_work_mode() == LogWorkMode::kSYNC) {
-                switch (config_.get_lock_type()) {
+            if (config_.work_mode() == LogWorkMode::kSYNC) {
+                switch (config_.lock_type()) {
                 case LogLockType::kNULL:
                     worker_ = new SyncLogWorker<NullMutex>(appender_);
                     break;
@@ -902,8 +821,8 @@ public:
                 auto conf = config_.obj_.active_ptr();
                 if (nullptr != conf->callback_func_) {
                     appender_ = new CallbackLogAppender(conf->callback_func_, conf->callback_context_);
-                    if (config_.get_work_mode() == LogWorkMode::kSYNC) {
-                        switch (config_.get_lock_type()) {
+                    if (config_.work_mode() == LogWorkMode::kSYNC) {
+                        switch (config_.lock_type()) {
                         case LogLockType::kNULL:
                             worker_ = new SyncLogWorker<NullMutex>(appender_);
                             break;
@@ -929,18 +848,18 @@ public:
             break;
         }
 
-        if (config_.get_work_mode() == LogWorkMode::kASYNC) {
+        if (config_.work_mode() == LogWorkMode::kASYNC) {
             if (nullptr == worker_) {
-                switch (config_.get_lock_type()) {
+                switch (config_.lock_type()) {
                 case LogLockType::kNULL:
-                    worker_ = new AsyncLogWorker<NullMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<NullMutex>(appender_, this);
                     break;
                 case LogLockType::kSPINLOCK:
-                    worker_ = new AsyncLogWorker<SpinlockMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<SpinlockMutex>(appender_, this);
                     break;
                 case LogLockType::kMUTEX:
                 default:
-                    worker_ = new AsyncLogWorker<ThreadMutex>(appender_, config_.get_buffer_size());
+                    worker_ = new AsyncLogWorker<ThreadMutex>(appender_, this);
                     break;
                 }
             }
@@ -1010,24 +929,28 @@ ZRSOCKET_NAMESPACE_END
 
 //一个系统可以有多个logger
 
-#define ZRSOCKET_LOG_SET_LOG_LEVEL2(logger,level)               logger.config().set_log_level(level)
-#define ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger,type)            logger.config().set_appender_type(type)
-#define ZRSOCKET_LOG_SET_FILE_NAME2(logger,name)                logger.config().set_filename(name)
-#define ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger,func,context)    logger.config().set_callback_func(func, context)
-#define ZRSOCKET_LOG_SET_WORK_MODE2(logger,mode)                logger.config().set_work_mode(mode)
-#define ZRSOCKET_LOG_SET_LOCK_TYPE2(logger,type)                logger.config().set_lock_type(type)
-#define ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger,size)              logger.config().set_buffer_size(size)
-#define ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger,type)              logger.config().set_format_type(type)
+#define ZRSOCKET_LOG_SET_LOG_LEVEL2(logger,level)               logger.config().log_level(level)
+#define ZRSOCKET_LOG_SET_APPENDER_TYPE2(logger,type)            logger.config().appender_type(type)
+#define ZRSOCKET_LOG_SET_FILE_NAME2(logger,name)                logger.config().filename(name)
+#define ZRSOCKET_LOG_SET_CALLBACK_FUNC2(logger,func,context)    logger.config().callback_func(func, context)
+#define ZRSOCKET_LOG_SET_WORK_MODE2(logger,mode)                logger.config().work_mode(mode)
+#define ZRSOCKET_LOG_SET_LOCK_TYPE2(logger,type)                logger.config().lock_type(type)
+#define ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger,size)              logger.config().buffer_size(size)
+#define ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger,type)              logger.config().format_type(type)
+#define ZRSOCKET_LOG_SET_WRITE_BLOCK_SIZE2(logger, size)        logger.config().write_block_size(size)
+#define ZRSOCKET_LOG_SET_TIMEDWAIT_INTERVAL_US2(logger, us)     logger.config().timedwait_interval_us(us)
+#define ZRSOCKET_LOG_SET_UPDATE_FRAMEWORK_TIME2(logger, flag)   logger.config().update_framework_time(flag)
+#define ZRSOCKET_LOG_SET_LOG_TIME_SOURCE2(logger, source)       logger.config().log_time_source(source)
 #define ZRSOCKET_LOG_INIT2(logger)                              logger.init()
 
-#define ZRSOCKET_LOG_BODY(logger,logEvent,logLevel)             \
-    do {                                                        \
-        if (logger.is_logged(logLevel)) {                       \
-            zrsocket::LogStream &stream = zrsocket::stream_;    \
-            stream.init(logLevel,__FILE__,__LINE__,__func__);   \
-            stream << logEvent;                                 \
-            logger.log(stream);                                 \
-        }                                                       \
+#define ZRSOCKET_LOG_BODY(logger,logEvent,logLevel)                     \
+    do {                                                                \
+        if (logger.is_logged(logLevel)) {                               \
+            zrsocket::LogStream &stream = zrsocket::stream_;            \
+            stream.init(logLevel,__FILE__,__LINE__,__func__, &logger);  \
+            stream << logEvent;                                         \
+            logger.log(stream);                                         \
+        }                                                               \
     } while (0)
 
 #define ZRSOCKET_LOG_TRACE2(logger,e)   ZRSOCKET_LOG_BODY(logger,e,zrsocket::LogLevel::kTRACE)
@@ -1039,14 +962,18 @@ ZRSOCKET_NAMESPACE_END
 
 //全局logger
 
-#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)            ZRSOCKET_LOG_SET_LOG_LEVEL2(zrsocket::Logger::instance(),level)
-#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)         ZRSOCKET_LOG_SET_APPENDER_TYPE2(zrsocket::Logger::instance(),type)
-#define ZRSOCKET_LOG_SET_FILE_NAME(name)             ZRSOCKET_LOG_SET_FILE_NAME2(zrsocket::Logger::instance(),name)
-#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context) ZRSOCKET_LOG_SET_CALLBACK_FUNC2(zrsocket::Logger::instance(),func,context)
-#define ZRSOCKET_LOG_SET_WORK_MODE(mode)             ZRSOCKET_LOG_SET_WORK_MODE2(zrsocket::Logger::instance(),mode)
-#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)             ZRSOCKET_LOG_SET_LOCK_TYPE2(zrsocket::Logger::instance(),type)
-#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)           ZRSOCKET_LOG_SET_BUFFER_SIZE2(zrsocket::Logger::instance(),size)
-#define ZRSOCKET_LOG_INIT                            ZRSOCKET_LOG_INIT2(zrsocket::Logger::instance())
+#define ZRSOCKET_LOG_SET_LOG_LEVEL(level)               ZRSOCKET_LOG_SET_LOG_LEVEL2(zrsocket::Logger::instance(),level)
+#define ZRSOCKET_LOG_SET_APPENDER_TYPE(type)            ZRSOCKET_LOG_SET_APPENDER_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_FILE_NAME(name)                ZRSOCKET_LOG_SET_FILE_NAME2(zrsocket::Logger::instance(),name)
+#define ZRSOCKET_LOG_SET_CALLBACK_FUNC(func,context)    ZRSOCKET_LOG_SET_CALLBACK_FUNC2(zrsocket::Logger::instance(),func,context)
+#define ZRSOCKET_LOG_SET_WORK_MODE(mode)                ZRSOCKET_LOG_SET_WORK_MODE2(zrsocket::Logger::instance(),mode)
+#define ZRSOCKET_LOG_SET_LOCK_TYPE(type)                ZRSOCKET_LOG_SET_LOCK_TYPE2(zrsocket::Logger::instance(),type)
+#define ZRSOCKET_LOG_SET_BUFFER_SIZE(size)              ZRSOCKET_LOG_SET_BUFFER_SIZE2(zrsocket::Logger::instance(),size)
+#define ZRSOCKET_LOG_SET_WRITE_BLOCK_SIZE(size)         ZRSOCKET_LOG_SET_WRITE_BLOCK_SIZE2(zrsocket::Logger::instance(), size)    
+#define ZRSOCKET_LOG_SET_TIMEDWAIT_INTERVAL_US(us)      ZRSOCKET_LOG_SET_TIMEDWAIT_INTERVAL_US2(zrsocket::Logger::instance(), us)
+#define ZRSOCKET_LOG_SET_UPDATE_FRAMEWORK_TIME(flag)    ZRSOCKET_LOG_SET_UPDATE_FRAMEWORK_TIME2(zrsocket::Logger::instance(), flag)
+#define ZRSOCKET_LOG_SET_LOG_TIME_SOURCE(source)        ZRSOCKET_LOG_SET_LOG_TIME_SOURCE2(zrsocket::Logger::instance(), source)
+#define ZRSOCKET_LOG_INIT                               ZRSOCKET_LOG_INIT2(zrsocket::Logger::instance())
 
 #define ZRSOCKET_LOG_TRACE(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kTRACE)
 #define ZRSOCKET_LOG_DEBUG(e)   ZRSOCKET_LOG_BODY(zrsocket::Logger::instance(),e,zrsocket::LogLevel::kDEBUG)

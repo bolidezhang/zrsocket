@@ -290,6 +290,9 @@ int main(int argc, char* argv[])
         ZRSOCKET_LOG_SET_BUFFER_SIZE(size);
         //ZRSOCKET_LOG_SET_BUFFER_SIZE2(logger2, size);
     }
+
+    ZRSOCKET_LOG_SET_UPDATE_FRAMEWORK_TIME(false);
+    ZRSOCKET_LOG_SET_LOG_TIME_SOURCE(zrsocket::LogTimeSource::kFrameworkTime);
     ZRSOCKET_LOG_INIT;
 
     //ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
@@ -303,16 +306,16 @@ int main(int argc, char* argv[])
         auto time_s = static_cast<time_t>(current_time / 1000000000LL);
         zrsocket::OSApi::gmtime_s(&time_s, &buf_tm);
 
-        //const int LOG_TIMES = 1000000;
-        static const int LOG_TIMES = 1;
+        const int LOG_TIMES = 1000000;
+        //static const int LOG_TIMES = 1;
         zrsocket::SteadyClockCounter scc;
 
         scc.update_start_counter();
         for (int i = 0; i < LOG_TIMES; ++i) {
             //ZRSOCKET_LOG_DEBUG(i << "-" << i + 1);
             //ZRSOCKET_LOG_INFO(i);
-            //ZRSOCKET_LOG_INFO("start...["<<i<<"-"<<i+1<<"]01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
-            ZRSOCKET_LOG_INFO("start...[" << i << "]0123456789");
+            ZRSOCKET_LOG_INFO("start...["<<i<<"-"<<i+1<<"]01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+            //ZRSOCKET_LOG_INFO("start...[" << i << "]0123456789");
             //ZRSOCKET_LOG_INFO("start...01234567890");
         }
         scc.update_end_counter();
@@ -330,7 +333,7 @@ int main(int argc, char* argv[])
         //printf("binary log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
         
         zrsocket::OSApi::sleep_s(5);
-        return 0;
+        return app.run();
     }
 
 #endif
@@ -378,7 +381,7 @@ int TestApp::do_init()
     //spsc_atomic_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
     //spsc_normal_stage_.open(seda_thread_num_, seda_queue_size_, seda_event_len_);
 
-    startup_test(test_stage, true,  thread_num_, &mpsc_stage_, "mpsc_stage");
+    //startup_test(test_stage, true,  thread_num_, &mpsc_stage_, "mpsc_stage");
     //startup_test(test_stage, true, thread_num_, &mpmc_stage_, "mpmc_stage");
     //startup_test(test_stage, true,  thread_num_, &doublebuffer_spinlock_stage_, "doublebuffer_spinlock_stage");
     //startup_test(test_stage, true,  thread_num_, &doublebuffer_mutex_stage_, "doublebuffer_mutex_stage");

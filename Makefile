@@ -98,6 +98,8 @@ all: ${OUTPUT}
 
 SRCS := ./src/data_convert.cpp \
 ./src/inet_addr.cpp \
+./src/logging.cpp \
+./src/loggin_nano.cpp \
 ./src/memory.cpp \
 ./src/os_api.cpp \
 ./src/seda_timer_queue.cpp

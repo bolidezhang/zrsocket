@@ -52,9 +52,9 @@ class ZRSOCKET_EXPORT OSApi
 {  
 public:
     static const uint64_t TIME_INTERVAL_UNIT = 1000ULL;     //时间间隔进制单位(s/ms/us/ns)
-    static const uint64_t MILLI_PER_SEC = 1000ULL;          //每秒毫秒数
-    static const uint64_t MICRO_PER_SEC = 1000000ULL;       //每秒微秒数
-    static const uint64_t NANOS_PER_SEC = 1000000000ULL;    //每秒纳秒数
+    static const uint64_t MILLIS_PER_SEC = 1000ULL;         //每秒毫秒数
+    static const uint64_t MICROS_PER_SEC = 1000000ULL;      //每秒微秒数
+    static const uint64_t NANOS_PER_SEC  = 1000000000ULL;   //每秒纳秒数
 
     //socket_init
     //参数timer_resolution含义:
@@ -945,13 +945,13 @@ public:
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
     static inline int64_t os_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
     {
-        return (counter_end - counter_start) * MILLI_PER_SEC / os_counter_frequency();
+        return (counter_end - counter_start) * MILLIS_PER_SEC / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以微秒为时间单位)
     static inline int64_t os_counter_time_us(uint64_t counter_end, uint64_t counter_start)
     {
-        return (counter_end - counter_start) * MICRO_PER_SEC / os_counter_frequency();
+        return (counter_end - counter_start) * MICROS_PER_SEC / os_counter_frequency();
     }
 
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以纳秒为时间单位)
