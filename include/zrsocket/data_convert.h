@@ -25,6 +25,10 @@ public:
     static uint64_t  atoull(const char *str);
     static uint64_t  atoull(const char *str, uint_t len, char **endptr);
 
+
+    //整数字符串itoa()比std::to_chars()快
+    //  vc2019下测试 比std::to_chars()2倍多,接近3倍
+
     //4字节无符号整数转10进制字符串
     static int uitoa(uint32_t value, char str[12]);
 

@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
     if (argc < 2) {
         return 0;
     }
-
+    
     //zrsocket::Logger logger2;
 
     TestApp &app = TestApp::instance();
@@ -300,6 +300,41 @@ int main(int argc, char* argv[])
     //ZRSOCKET_LOG_INIT2(logger2);
     
 #if 1
+
+#if 0
+    {
+        //测试std::to_chars/zrsocket::DataConvert::itoa性能
+        char vs[50] = { 0 };
+        std::srand(std::time(nullptr));
+        zrsocket::SteadyClockCounter scc;
+        static const int LOG_TIMES = 1000000;
+
+        scc.update_start_counter();
+        for (int i = 0; i < LOG_TIMES; ++i) {
+            std::to_chars(vs, vs + 50, i);
+        }
+        scc.update_end_counter();
+        printf("std::to_chars:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+
+        scc.update_start_counter();
+        for (int i = 0; i < LOG_TIMES; ++i) {
+            zrsocket::DataConvert::itoa(i, vs);
+        }
+        scc.update_end_counter();
+        printf("DataConvert::itoa:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+
+
+        scc.update_start_counter();
+        for (int i = 0; i < LOG_TIMES; ++i) {
+            _itoa(i, vs, 10);
+        }
+        scc.update_end_counter();
+        printf("crt itoa:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
+
+        return 0;
+    }
+#endif
+
     //测试log性能
     {        
         auto current_time = zrsocket::OSApi::system_clock_counter();
@@ -308,7 +343,7 @@ int main(int argc, char* argv[])
         zrsocket::OSApi::gmtime_s(&time_s, &buf_tm);
 
         //const int LOG_TIMES = 1000000;
-        static const int LOG_TIMES = 1;
+        static const int LOG_TIMES = 1000000;
         zrsocket::SteadyClockCounter scc;
 
         scc.update_start_counter();
@@ -333,7 +368,7 @@ int main(int argc, char* argv[])
         //scc.update_end_counter();
         //printf("binary log_times:%ld diff %lld ns\n", LOG_TIMES, scc.diff());
         
-        zrsocket::OSApi::sleep_s(5);
+        //zrsocket::OSApi::sleep_s(5);
         return app.run();
     }
 

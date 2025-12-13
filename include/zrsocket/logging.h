@@ -230,9 +230,9 @@ public:
 
         //后台处理线程相关参数
         uint_t          buffer_size_ = 1024 * 1024 * 16;  //缓冲大小
-        uint_t          write_block_size_ = 1024 * 256;   //async_worker_thread写块大小(默认256k)
-        uint_t          timedwait_interval_us_ = 10000;   //async_worker_thread空闲时等待时长(默认10ms)
-        bool            update_framework_time_ = false;   //在async_worker_thread中更新框架时间
+        uint_t          write_block_size_ = 1024 * 256;   //写块大小(默认256k)
+        uint_t          timedwait_interval_us_ = 10000;   //空闲时等待时长(条件变量等待时长,默认10ms)
+        bool            update_framework_time_ = false;   //更新框架时间标识
 };
 
     DoublePointerObject<Config> obj_;
@@ -255,7 +255,7 @@ public:
     virtual int open()  = 0;
     virtual int close() = 0;
     virtual int write(const char *log, uint_t len) = 0;
-    virtual int flush() 
+    virtual int flush()
     {
         return 0;
     }
@@ -390,8 +390,20 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int32_t>::digits10 + 50);
+
+#if 1
+        //方案1
         int len = DataConvert::itoa(i, buf_.buffer() + end);
         buf_.data_end(end + len);
+#else
+        //方案2
+        std::to_chars_result res = std::to_chars(buf_.buffer() + end,
+            buf_.buffer() + end + std::numeric_limits<int32_t>::max_digits10 + 50, i);
+        if (res.ec == std::errc()) {
+            buf_.data_end(static_cast<uint_t>(res.ptr - buf_.buffer()));
+        }
+#endif
+
         return *this;
     }
 
@@ -428,16 +440,18 @@ public:
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float32_t>::max_digits10 + 50);
         
+#if 1
         //方案1
         std::to_chars_result res = std::to_chars(buf_.buffer() + end, 
             buf_.buffer() + end + std::numeric_limits<float32_t>::max_digits10 + 50, f);
         if (res.ec == std::errc()) {
             buf_.data_end(static_cast<uint_t>(res.ptr - buf_.buffer()));
         }
-
+#else
         //方案2
-        //len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
-        //buf_.data_end(end + len);
+        len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float32_t>::max_digits10 + 30, "%.12g", f);
+        buf_.data_end(end + len);
+#endif
 
         return *this;
     }
@@ -447,16 +461,18 @@ public:
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<float64_t>::max_digits10 + 50);
 
+#if 1
         //方案1
         std::to_chars_result res = std::to_chars(buf_.buffer() + end,
             buf_.buffer() + end + std::numeric_limits<float64_t>::max_digits10 + 50, f);
         if (res.ec == std::errc()) {
             buf_.data_end(static_cast<uint_t>(res.ptr - buf_.buffer()));
         }
-
+#else
         //方案2
-        //int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
-        //buf_.data_end(end + len);
+        int len = std::snprintf(buf_.buffer() + end, std::numeric_limits<float64_t>::max_digits10 + 30, "%.12g", f);
+        buf_.data_end(end + len);
+#endif
 
         return *this;
     }
@@ -624,6 +640,7 @@ private:
             }
         }
 
+        appender->flush();
         return 0;
     }
 
@@ -702,6 +719,7 @@ public:
     }
     ~OSApiFileLogAppender()
     {
+        flush();
         close();
     }
 
@@ -793,6 +811,7 @@ public:
     }
     ~StdioFileLogAppender()
     {
+        flush();
         close();
     }
 

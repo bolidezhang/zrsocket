@@ -967,19 +967,20 @@ public:
         //方法1
         static uint64_t freq = os_counter_frequency();
         uint64_t ctr = os_counter();
-#if 1
+    #if 1
         //写法1
         uint64_t whole_seconds = ctr / freq;
         uint64_t part_nanos    = (ctr - whole_seconds * freq) * NANOS_PER_SEC / freq;
         return whole_seconds * NANOS_PER_SEC + part_nanos;
-#else
+    #else
         //写法2
         uint64_t whole_seconds = ctr / freq;      // 1.算出整数秒
         uint64_t remainder     = ctr % freq;      // 2.算出余数部分
         //余数部分乘以 10亿 再除以频率
         uint64_t part_nanos = (remainder * NANOS_PER_SEC) / freq;
         return whole_seconds * NANOS_PER_SEC + part_nanos;
-#endif
+    #endif
+
         //方法2
         //return std::chrono::steady_clock().now().time_since_epoch().count();
 #else
@@ -1188,13 +1189,16 @@ public:
             //因glibc2.30才有::gettid(), 所以用syscall间接实现
             return static_cast<uint64_t>(::syscall(SYS_gettid));
 #else
+    #if 1
+            //方法1: c++11的std::std::hash<>
             return static_cast<uint64_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
-
-            ////方法2: c++11的std::this_thread::get_id()
-            //uint64_t id;
-            //std::stringstream ss;
-            //ss << std::this_thread::get_id();
-            //ss >> id;
+    #else
+            //方法2: c++11的stringstream性能很差
+            uint64_t id;
+            std::stringstream ss;
+            ss << std::this_thread::get_id();
+            ss >> id;
+    #endif
 #endif
         }();
 
