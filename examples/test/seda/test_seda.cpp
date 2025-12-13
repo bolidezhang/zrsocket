@@ -293,6 +293,7 @@ int main(int argc, char* argv[])
 
     ZRSOCKET_LOG_SET_UPDATE_FRAMEWORK_TIME(false);
     ZRSOCKET_LOG_SET_LOG_TIME_SOURCE(zrsocket::LogTimeSource::kFrameworkTime);
+    ZRSOCKET_LOG_SET_WRITE_BLOCK_SIZE(8192);
     ZRSOCKET_LOG_INIT;
 
     //ZRSOCKET_LOG_SET_FORMAT_TYPE2(logger2, zrsocket::LogFormatType::kBINARY);
@@ -306,8 +307,8 @@ int main(int argc, char* argv[])
         auto time_s = static_cast<time_t>(current_time / 1000000000LL);
         zrsocket::OSApi::gmtime_s(&time_s, &buf_tm);
 
-        const int LOG_TIMES = 1000000;
-        //static const int LOG_TIMES = 1;
+        //const int LOG_TIMES = 1000000;
+        static const int LOG_TIMES = 1;
         zrsocket::SteadyClockCounter scc;
 
         scc.update_start_counter();

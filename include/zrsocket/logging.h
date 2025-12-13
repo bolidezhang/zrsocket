@@ -228,7 +228,7 @@ public:
         void           *callback_context_   = nullptr;    //回调上下文
         LogTimeSource   log_time_source_    = LogTimeSource::kOSTime;
 
-        //异步相关参数
+        //后台处理线程相关参数
         uint_t          buffer_size_ = 1024 * 1024 * 16;  //缓冲大小
         uint_t          write_block_size_ = 1024 * 256;   //async_worker_thread写块大小(默认256k)
         uint_t          timedwait_interval_us_ = 10000;   //async_worker_thread空闲时等待时长(默认10ms)
@@ -298,8 +298,34 @@ public:
     }
     ~LogStream() = default;
 
-    int init(LogLevel level, const char* file, uint_t line, const char* function, Logger *logger);
-    int fini();
+    int init(LogLevel level, const char *file, uint_t line, const char *function, Logger *logger);
+
+    inline int fini()
+    {
+        //加空格分隔符
+        buf_.write(' ');
+
+        //output file
+        buf_.write(file_);
+        buf_.write(':');
+
+        //output line
+        uint_t end = buf_.data_end();
+        buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
+        int len = DataConvert::uitoa(line_, buf_.buffer() + end);
+        buf_.data_end(end + len);
+        buf_.write(' ');
+
+        //output thread id
+        end = buf_.data_end();
+        len = DataConvert::ulltoa(OSApi::this_thread_id(), buf_.buffer() + end);
+        buf_.data_end(end + len);
+
+        //加换行符
+        buf_.write('\n');
+
+        return 1;
+    }
 
     inline self& operator<<(char *s)
     {
@@ -517,46 +543,83 @@ private:
         uint_t data_size = 0;
         uint_t write_block_size = 0;
         uint_t timedwait_interval_us = 0;
-        bool   update_framework_time_flag = false;
-        while (thread.state() == Thread::State::RUNNING) {
-            write_block_size = conf.write_block_size();
-            timedwait_interval_us = conf.timedwait_interval_us();
-            update_framework_time_flag = conf.update_framework_time();
-
-            if (update_framework_time_flag) {
-                time.update_time();
-            }
-
-            buf = dfbuf.active_ptr();
-            data_size = buf->data_size();
-            while (data_size >= write_block_size) {
-                if (appender->write(buf->data(), write_block_size) > 0) {
-                    buf->data_begin(buf->data_begin() + write_block_size);
-                    data_size -= write_block_size;
-                }
-                else {
-                    break;
-                }
-            }
-            if (data_size > 0) {
-                if (appender->write(buf->data(), data_size) > 0) {
-                    data_size = 0;
-                }
-            }
-
-            if (0 == data_size) {
-                buf->reset();
-                if (!dfbuf.swap_buffer()) {
-                    timedwait_flag.store(1, std::memory_order_relaxed);
-                    {
-                        if (update_framework_time_flag) {
-                            time.update_time();
-                        }
-                        std::unique_lock<std::mutex> lock(timedwait_mutex);
-                        timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
+        bool   update_framework_time_flag = conf.update_framework_time();
+        if (!update_framework_time_flag) {
+            while (thread.state() == Thread::State::RUNNING) {
+                write_block_size = conf.write_block_size();
+                buf = dfbuf.active_ptr();
+                data_size = buf->data_size();
+                while (data_size >= write_block_size) {
+                    if (appender->write(buf->data(), write_block_size) > 0) {
+                        buf->data_begin(buf->data_begin() + write_block_size);
+                        data_size -= write_block_size;
                     }
-                    timedwait_flag.store(0, std::memory_order_relaxed);
-                    dfbuf.swap_buffer();
+                    else {
+                        break;
+                    }
+                }
+                if (data_size > 0) {
+                    if (appender->write(buf->data(), data_size) > 0) {
+                        data_size = 0;
+                    }
+                }
+
+                if (0 == data_size) {
+                    buf->reset();
+                    if (!dfbuf.swap_buffer()) {
+                        timedwait_flag.store(1, std::memory_order_relaxed);
+                        {
+                            timedwait_interval_us = conf.timedwait_interval_us();
+                            std::unique_lock<std::mutex> lock(timedwait_mutex);
+                            timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
+                        }
+                        timedwait_flag.store(0, std::memory_order_relaxed);
+                        dfbuf.swap_buffer();
+                    }
+                }
+            }
+        }
+        else {
+            while (thread.state() == Thread::State::RUNNING) {
+                update_framework_time_flag = conf.update_framework_time();
+                if (update_framework_time_flag) {
+                    time.update_time();
+                }
+
+                write_block_size = conf.write_block_size();
+                buf = dfbuf.active_ptr();
+                data_size = buf->data_size();
+                while (data_size >= write_block_size) {
+                    if (appender->write(buf->data(), write_block_size) > 0) {
+                        buf->data_begin(buf->data_begin() + write_block_size);
+                        data_size -= write_block_size;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                if (data_size > 0) {
+                    if (appender->write(buf->data(), data_size) > 0) {
+                        data_size = 0;
+                    }
+                }
+
+                if (0 == data_size) {
+                    buf->reset();
+                    if (!dfbuf.swap_buffer()) {
+                        timedwait_flag.store(1, std::memory_order_relaxed);
+                        {
+                            if (update_framework_time_flag) {
+                                time.update_time();
+                            }
+
+                            timedwait_interval_us = conf.timedwait_interval_us();
+                            std::unique_lock<std::mutex> lock(timedwait_mutex);
+                            timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
+                        }
+                        timedwait_flag.store(0, std::memory_order_relaxed);
+                        dfbuf.swap_buffer();
+                    }
                 }
             }
         }
