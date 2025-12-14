@@ -737,10 +737,10 @@ public:
 #ifdef ZRSOCKET_OS_WINDOWS
         //方法1 100-nanosecond intervals
         //vc实现c++11中chrono库的内部函数_Xtime_get_ticks(100-nanosecond intervals)
-        return _Xtime_get_ticks() * 100;
+        return static_cast<uint64_t>(_Xtime_get_ticks() * 100);
 
         //方法2
-        //std::chrono::system_clock::now().time_since_epoch().count();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         ////方法3 100-nanosecond intervals
         //#define EPOCH 0x19DB1DED53E8000i64

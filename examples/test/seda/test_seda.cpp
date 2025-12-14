@@ -337,7 +337,7 @@ int main(int argc, char* argv[])
 
     //测试log性能
     {        
-        auto current_time = zrsocket::OSApi::system_clock_counter();
+        uint64_t current_time = zrsocket::OSApi::system_clock_counter();
         struct tm buf_tm;
         auto time_s = static_cast<time_t>(current_time / 1000000000LL);
         zrsocket::OSApi::gmtime_s(&time_s, &buf_tm);
