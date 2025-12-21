@@ -35,6 +35,14 @@
     #include <byteswap.h>
 #endif
 
+#ifdef _MSC_VER
+    #include <intrin.h>
+    #include <immintrin.h>
+#else
+    // Linux/GCC/Clang
+    #include <x86intrin.h>  // GCC通常推荐包含此头文件来使用内置函数，或者继续使用内联汇编
+#endif
+
 ZRSOCKET_NAMESPACE_BEGIN
 
 //小端字节序 : 整数0x12345678 字节内容 78 56 34 12 与内存地址顺序一致(低字节 存在 低内存地址) 
@@ -761,6 +769,107 @@ public:
 #endif
     }
 
+    //取得系统高精度计数器频率(用于windows系统高精度计时)
+    static inline uint64_t os_counter_frequency()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1
+        // C++11 魔法:
+        //  1.static 局部变量只会被初始化一次;
+        //  2.初始化过程是线程安全的(不用担心多线程竞争)
+        //  3.这是一个 lambda 立即执行函数 IIFE
+        static const uint64_t freq = []() -> uint64_t {
+            LARGE_INTEGER li;
+            QueryPerformanceFrequency(&li);
+            return static_cast<uint64_t>(li.QuadPart);
+        }();
+        return freq;
+
+        //方法2
+        //static uint64_t counter_frequency = 1;
+        //if (1 == counter_frequency) {
+        //    LARGE_INTEGER li;
+        //    QueryPerformanceFrequency(&li);
+        //    counter_frequency = li.QuadPart;
+        //}
+        //return counter_frequency;
+#else
+        return 1;
+#endif
+    }
+
+    //取得系统高精度计数器的计数值
+    static inline uint64_t os_counter()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        LARGE_INTEGER li;
+        QueryPerformanceCounter(&li);
+        return li.QuadPart;
+#else
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
+#endif
+    }
+
+    //取得稳定时钟计数值(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
+    static inline uint64_t steady_clock_counter()
+    {
+#ifdef ZRSOCKET_OS_WINDOWS
+        //方法1
+        static uint64_t freq = os_counter_frequency();
+        uint64_t ctr = os_counter();
+#if 1
+        //写法1
+        uint64_t whole_seconds = ctr / freq;
+        uint64_t part_nanos = (ctr - whole_seconds * freq) * NANOS_PER_SEC / freq;
+        return whole_seconds * NANOS_PER_SEC + part_nanos;
+#else
+        //写法2
+        uint64_t whole_seconds = ctr / freq;        // 1.算出整数秒
+        uint64_t remainder = ctr % freq;            // 2.算出余数部分
+        //余数部分乘以 10亿 再除以频率
+        uint64_t part_nanos = (remainder * NANOS_PER_SEC) / freq;
+        return whole_seconds * NANOS_PER_SEC + part_nanos;
+#endif
+
+        //方法2
+        //return std::chrono::steady_clock().now().time_since_epoch().count();
+#else
+        //方法1
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
+#endif
+    }
+
+    //自启动以来的CPU周期计数(CPU周期:cycles)
+    static inline uint64_t tsc_clock_counter()
+    {
+#ifdef _MSC_VER
+        return __rdtsc();
+#elif defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+        //方法1
+        // --- Linux/GCC 实现 (原始版本) ---
+        // 使用 volatile 防止编译器优化掉该指令
+        //uint32_t hi, lo;
+        //__asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+        //return (((uint64_t)hi << 32) | lo);
+
+        //方法2
+        //它会起到和方法1那段 __asm__ __volatile__ 手写汇编完全相同的作用，但更加简洁、安全
+        return __builtin_ia32_rdtsc();
+
+
+        //方法3
+        //在 GCC/Clang/MSVC 下，__rdtsc() 几乎是通用的
+        //它在 GCC 中通常就是 __builtin_ia32_rdtsc() 的宏或别名
+        //return __rdtsc(); // 这样写更简洁，生成的汇编通常是一样的
+#else
+        return steady_clock_counter();
+#endif
+    }
+
     //取得当前系统时间(自公元1970/1/1 00:00:00以来经过纳秒)
     static inline uint64_t time_ns()
     {
@@ -899,49 +1008,6 @@ public:
         return 0;
     }
 
-    //取得系统高精度计数器频率(用于windows系统高精度计时)
-    static inline uint64_t os_counter_frequency()
-    {
-#ifdef ZRSOCKET_OS_WINDOWS
-        //方法1
-        // C++11 魔法:
-        //  1.static 局部变量只会被初始化一次;
-        //  2.初始化过程是线程安全的(不用担心多线程竞争)
-        //  3.这是一个 lambda 立即执行函数 IIFE
-        static const uint64_t freq = []() -> uint64_t {
-            LARGE_INTEGER li;
-            QueryPerformanceFrequency(&li);
-            return static_cast<uint64_t>(li.QuadPart);
-        }();
-        return freq;
-
-        //方法2
-        //static uint64_t counter_frequency = 1;
-        //if (1 == counter_frequency) {
-        //    LARGE_INTEGER li;
-        //    QueryPerformanceFrequency(&li);
-        //    counter_frequency = li.QuadPart;
-        //}
-        //return counter_frequency;
-#else
-        return 1;
-#endif
-    }
-
-    //取得系统高精度计数器的计数值
-    static inline uint64_t os_counter()
-    {
-#ifdef ZRSOCKET_OS_WINDOWS
-        LARGE_INTEGER li;
-        QueryPerformanceCounter(&li);
-        return li.QuadPart;
-#else
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
-#endif
-    }
-
     //计算系统高精度计数器的计时(两次计数值之差即时间差: 以毫秒为时间单位)
     static inline int64_t os_counter_time_ms(uint64_t counter_end, uint64_t counter_start)
     {
@@ -958,37 +1024,6 @@ public:
     static inline int64_t os_counter_time_ns(uint64_t counter_end, uint64_t counter_start)
     {
         return (counter_end - counter_start) * NANOS_PER_SEC / os_counter_frequency();
-    }
-
-    //取得稳定时钟计数值(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
-    static inline uint64_t steady_clock_counter()
-    {
-#ifdef ZRSOCKET_OS_WINDOWS
-        //方法1
-        static uint64_t freq = os_counter_frequency();
-        uint64_t ctr = os_counter();
-    #if 1
-        //写法1
-        uint64_t whole_seconds = ctr / freq;
-        uint64_t part_nanos    = (ctr - whole_seconds * freq) * NANOS_PER_SEC / freq;
-        return whole_seconds * NANOS_PER_SEC + part_nanos;
-    #else
-        //写法2
-        uint64_t whole_seconds = ctr / freq;      // 1.算出整数秒
-        uint64_t remainder     = ctr % freq;      // 2.算出余数部分
-        //余数部分乘以 10亿 再除以频率
-        uint64_t part_nanos = (remainder * NANOS_PER_SEC) / freq;
-        return whole_seconds * NANOS_PER_SEC + part_nanos;
-    #endif
-
-        //方法2
-        //return std::chrono::steady_clock().now().time_since_epoch().count();
-#else
-        //方法1
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec);
-#endif
     }
 
     //取得当前时间戳(不受修改系统时钟影响/调整系统时间无关 纳秒:ns 只能用于计时)
@@ -1230,7 +1265,7 @@ public:
         return ::localtime_r(time, buf_tm);
     #endif
     }
-    
+
 public:
     OSApi() = delete;
     ~OSApi() = delete;

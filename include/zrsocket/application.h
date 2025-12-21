@@ -98,6 +98,7 @@ protected:
     {
         OSApi::socket_init(2, 2);
         OSConstant::instance();
+        TscClock::instance();
         Time::instance();
         Global::instance();
         Logger::instance();

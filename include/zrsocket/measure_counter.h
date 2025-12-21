@@ -6,64 +6,30 @@
 #define ZRSOCKET_MEASURE_COUNTER_H
 #include <iostream>
 #include "os_api.h"
+#include "tsc_clock.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-//不受系统时钟的影响的计数器
-class SteadyClockCounter
+template<uint64_t (*TClock)()>
+class ClockCounter
 {
 public:
-    inline SteadyClockCounter()  = default;
-    inline ~SteadyClockCounter() = default;
-    inline SteadyClockCounter(const SteadyClockCounter&) = default;
-    inline SteadyClockCounter(SteadyClockCounter&&) = default;
-    inline SteadyClockCounter& operator=(const SteadyClockCounter&) = default;
+    inline ClockCounter() = default;
+    inline ~ClockCounter() = default;
+    inline ClockCounter(const ClockCounter&) = default;
+    inline ClockCounter(ClockCounter&&) = default;
+    inline ClockCounter& operator=(const ClockCounter&) = default;
 
-    static uint64_t now()
+    static inline uint64_t now()
     {
-        return OSApi::steady_clock_counter();
-    }
-
-    inline void update_start_counter()
-    {
-        start_counter_ = now();
-    }
-    inline void update_end_counter() 
-    {
-        end_counter_ = now();
-    }
-    inline uint64_t get_start_counter() const
-    {
-        return start_counter_;
-    }
-    inline uint64_t get_end_counter() const
-    {
-        return end_counter_;
-    }
-    inline int64_t diff() const
-    {
-        return end_counter_ - start_counter_;
+        return TClock();
     }
 
-private:
-    uint64_t start_counter_ = 0;
-    uint64_t end_counter_   = 0;
-};
-
-class SystemClockCounter
-{
-public:
-    inline SystemClockCounter()  = default;
-    inline ~SystemClockCounter() = default;
-    inline SystemClockCounter(const SystemClockCounter&) = default;
-    inline SystemClockCounter(SystemClockCounter&&) = default;
-    inline SystemClockCounter&operator=(const SystemClockCounter&) = default;
-
-    static uint64_t now()
+    inline void reset()
     {
-        return OSApi::system_clock_counter();
+        start_counter_ = 0;
+        end_counter_   = 0;
     }
-
     inline void update_start_counter()
     {
         start_counter_ = now();
@@ -72,6 +38,7 @@ public:
     {
         end_counter_ = now();
     }
+
     inline uint64_t get_start_counter() const
     {
         return start_counter_;
@@ -80,15 +47,22 @@ public:
     {
         return end_counter_;
     }
+
     inline int64_t diff() const
     {
-        return end_counter_ - start_counter_;
+        //使用 static_cast 避免无符号减法下溢的歧义
+        return static_cast<int64_t>(end_counter_) - static_cast<int64_t>(start_counter_);
     }
 
 private:
     uint64_t start_counter_ = 0;
     uint64_t end_counter_   = 0;
 };
+
+using SystemClockCounter   = ClockCounter<OSApi::system_clock_counter>;
+using SteadyClockCounter   = ClockCounter<OSApi::steady_clock_counter>;
+using TscClockCounter      = ClockCounter<TscClock::now>;
+using TscNsClockCounter    = ClockCounter<TscClock::now_ns>;
 
 template <typename TMeasureCounter, bool owner = true>
 class MeasureCounterGuard

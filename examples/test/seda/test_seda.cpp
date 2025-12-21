@@ -170,8 +170,28 @@ int send_to_remote(void *context, const char *log, zrsocket::uint_t len)
 
 int main(int argc, char* argv[])
 {
-#if 0
+#if 1
     {
+        zrsocket::TscClock::instance();
+
+        zrsocket::TscClockCounter    tsc_counter;
+        zrsocket::SteadyClockCounter steady_counter;
+        zrsocket::TscNsClockCounter  tsc_ns_counter;
+        for (int i = 0; i < 10; ++i) {
+            steady_counter.update_start_counter();
+            tsc_counter.update_start_counter();
+            tsc_ns_counter.update_start_counter();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            tsc_ns_counter.update_end_counter();
+            tsc_counter.update_end_counter();
+            steady_counter.update_end_counter();
+            printf("tsc.diff %lld\n", tsc_counter.diff());
+            uint64_t ns = zrsocket::TscClock::instance().tsc2ns(tsc_counter.diff());
+            printf("steady.diff %lld\n", steady_counter.diff());
+            printf("tsc2ns %lld\n", ns);
+            printf("tsc_ns clock %lld\n", tsc_ns_counter.diff());
+        }
+        return 0;
 
         std::cout << "this_thread::get_id():" << std::this_thread::get_id() << " osapi::this_thread_id:" << zrsocket::OSApi::this_thread_id() << std::endl;
         //return 0;
@@ -301,8 +321,21 @@ int main(int argc, char* argv[])
     
 #if 1
 
-#if 0
+#if 1
     {
+        //
+        //uint64_t a = zrsocket::OSApi::tsc_clock_counter();
+        //TSCClock
+        zrsocket::TscClockCounter tsc;
+        tsc.update_start_counter();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        tsc.update_end_counter();
+        printf("tsc.diff %lld\n", tsc.diff());
+        uint64_t ns = zrsocket::TscClock::instance().tsc2ns(tsc.diff());
+        printf("tsc2ns %lld\n", ns);
+        return 0;
+        
+
         //测试std::to_chars/zrsocket::DataConvert::itoa性能
         char vs[50] = { 0 };
         std::srand(std::time(nullptr));

@@ -155,6 +155,7 @@
     <ClInclude Include="include\zrsocket\timer.h" />
     <ClInclude Include="include\zrsocket\timer_interface.h" />
     <ClInclude Include="include\zrsocket\timer_queue.h" />
+    <ClInclude Include="include\zrsocket\tsc_clock.h" />
     <ClInclude Include="include\zrsocket\udpsource.h" />
     <ClInclude Include="include\zrsocket\udpsource_handler.h" />
     <ClInclude Include="include\zrsocket\version.h" />

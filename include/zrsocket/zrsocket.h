@@ -40,6 +40,7 @@
 #include "time.h"
 #include "timer.h"
 #include "timer_queue.h"
+#include "tsc_clock.h"
 #include "http_common.h"
 #include "http_request_handler.h"
 #include "http_response_handler.h"
