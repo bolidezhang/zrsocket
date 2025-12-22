@@ -15,7 +15,10 @@ ZRSOCKET_NAMESPACE_BEGIN
 
 class TscClock {
 public:
-    struct Anchor {
+    TscClock(const TscClock&) = delete;
+    TscClock& operator=(const TscClock&) = delete;
+
+    struct alignas(16) Anchor {
         uint64_t base_ns;
         uint64_t base_tsc;
     };
@@ -64,7 +67,7 @@ public:
     // rounds: odd so median is well-defined
     // interval_ms: 
     void init_calibrate(int rounds = 7, int interval_ms = 50) {
-        if (rounds < 0) {
+        if (rounds < 1) {
             rounds = 1;
         }
         if (interval_ms < 10) {
@@ -90,7 +93,7 @@ public:
 
             int64_t diff_ns  = end_ns - start_ns;
             int64_t diff_tsc = end_tsc - start_tsc;
-            if (diff_tsc <= 0) {
+            if ((diff_tsc <= 0) || (diff_ns <= 0)) {
                 continue;
             }
 
@@ -102,7 +105,7 @@ public:
             uint64_t multiplier = static_cast<uint64_t>((static_cast<double>(diff_ns * 4294967296.0) / static_cast<double>(diff_tsc)));            
 #else
             // 这里必须使用 __int128 防止左移 32 位时溢出
-            uint64_t multiplier = (uint64_t)(((unsigned __int128)diff_ns << shift) / tsc.diff());
+            uint64_t multiplier = (uint64_t)(((unsigned __int128)diff_ns << shift_) / diff_tsc);
 #endif
             multipliers[i] = multiplier;
         }
