@@ -13,6 +13,11 @@
 #include "base_type.h"
 #include "os_api.h"
 
+#ifdef _MSC_VER
+    #include <intrin.h>         // 必须包含此头文件才能使用 _umul128
+    #include <immintrin.h>
+#endif
+
 ZRSOCKET_NAMESPACE_BEGIN
 
 class TscClock {
@@ -21,8 +26,8 @@ public:
     TscClock& operator=(const TscClock&) = delete;
 
     struct alignas(16) Anchor {
-        uint64_t base_ns  = 0; 
-        uint64_t base_tsc = 0;
+        uint64_t base_ns  = 0;  //系统时间基准
+        uint64_t base_tsc = 0;  //TSC基准值
     };
 
     static TscClock& instance() {
@@ -62,13 +67,13 @@ public:
             return current_anchor.base_ns + tsc2ns(diff_tsc);
         }
 
-        return current_anchor.base_ns ? current_anchor.base_ns : OSApi::system_clock_counter();
+        return OSApi::system_clock_counter();
     }
 
     //初始化计算multiplier
     // rounds: odd so median is well-defined
     // interval_ms: 
-    void init_calibrate(int rounds = 7, int interval_ms = 50) {
+    void init_calibrate(int rounds = 3, int interval_ms = 50) {
         if (rounds < 1) {
             rounds = 1;
         }
@@ -77,40 +82,54 @@ public:
         }
 
         const std::chrono::milliseconds sleep_ms(interval_ms); // 50 ms between samples
-        std::vector<uint64_t> multipliers(rounds, 0);
+        std::vector<uint64_t> multipliers;
+        multipliers.reserve(rounds);
 
-        // 进行多次采样取中位数以提高校准精度
-        for (int i = 0; i < rounds; ++i) {
-            // Make sure to yield to OS before sampling to reduce scheduled-jitter correlation
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        do {
+            // 进行多次采样取中位数以提高校准精度
+            for (int i = 0; i < rounds; ++i) {
+                // Make sure to yield to OS before sampling to reduce scheduled-jitter correlation
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-            uint64_t start_ns  = OSApi::steady_clock_counter();
-            uint64_t start_tsc = OSApi::tsc_clock_counter();
+                uint64_t start_ns  = OSApi::steady_clock_counter();
+                uint64_t start_tsc = OSApi::tsc_clock_counter();
 
-            // sleep a little to get measurable delta (not too long to avoid drift)
-            std::this_thread::sleep_for(sleep_ms);
+                // sleep a little to get measurable delta (not too long to avoid drift)
+                std::this_thread::sleep_for(sleep_ms);
 
-            int64_t end_tsc = OSApi::tsc_clock_counter();
-            int64_t end_ns  = OSApi::steady_clock_counter();
+                int64_t end_tsc  = OSApi::tsc_clock_counter();
+                int64_t end_ns   = OSApi::steady_clock_counter();
+                int64_t diff_ns  = end_ns - start_ns;
+                int64_t diff_tsc = end_tsc - start_tsc;
+                if ((diff_tsc <= 0) || (diff_ns <= 0)) {
+                    continue;
+                }
 
-            int64_t diff_ns  = end_ns - start_ns;
-            int64_t diff_tsc = end_tsc - start_tsc;
-            if ((diff_tsc <= 0) || (diff_ns <= 0)) {
-                continue;
+                // 计算 multiplier: (ns << 32) / tsc
+#if defined(_MSC_VER)
+    #if defined(_M_X64)
+                //写法1
+                unsigned __int64 high;
+                unsigned __int64 low = _umul128(diff_ns, 1ULL << 32, &high);
+                unsigned __int64 rem;
+                uint64_t multiplier  = _udiv128(high, low, diff_tsc, &rem);
+    #else
+                //写法2
+                //MSVC 兼容写法：
+                // 虽然是用 double 计算，但仅在初始化使用，不影响性能
+                // 2^32 = 4294967296.0
+                uint64_t multiplier = static_cast<uint64_t>((static_cast<double>(diff_ns * 4294967296.0) / static_cast<double>(diff_tsc)));
+    #endif
+#else
+                // 这里必须使用 __int128 防止左移 32 位时溢出
+                uint64_t multiplier = (uint64_t)(((unsigned __int128)diff_ns << shift_) / diff_tsc);
+#endif
+                if (multiplier > 0) {
+                    multipliers.push_back(multiplier);
+                }
             }
 
-            // 计算 multiplier: (ns << 32) / tsc
-#if defined(_MSC_VER)
-            // MSVC 兼容写法：
-            // 虽然是用 double 计算，但仅在初始化使用，不影响性能
-            // 2^32 = 4294967296.0
-            uint64_t multiplier = static_cast<uint64_t>((static_cast<double>(diff_ns * 4294967296.0) / static_cast<double>(diff_tsc)));            
-#else
-            // 这里必须使用 __int128 防止左移 32 位时溢出
-            uint64_t multiplier = (uint64_t)(((unsigned __int128)diff_ns << shift_) / diff_tsc);
-#endif
-            multipliers[i] = multiplier;
-        }
+        } while (multipliers.size() < 3);
 
         //取中位值
         std::sort(multipliers.begin(), multipliers.end());
@@ -133,7 +152,7 @@ private:
         update_anchor();
     }
 
-    static constexpr const int shift_ = 32;
+    static constexpr int shift_ = 32;
     uint64_t multiplier_ = 0;
     std::atomic<Anchor> anchor_;
 };
