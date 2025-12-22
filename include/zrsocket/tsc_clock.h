@@ -9,6 +9,8 @@
 #include "os_api.h"
 #include <atomic>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <vector>
 
 ZRSOCKET_NAMESPACE_BEGIN
@@ -19,8 +21,8 @@ public:
     TscClock& operator=(const TscClock&) = delete;
 
     struct alignas(16) Anchor {
-        uint64_t base_ns;
-        uint64_t base_tsc;
+        uint64_t base_ns  = 0; 
+        uint64_t base_tsc = 0;
     };
 
     static TscClock& instance() {
@@ -53,14 +55,14 @@ public:
 
     //获取系统当前精确的纳秒时间
     inline uint64_t current_time_ns() const {
-        uint64_t current_tsc    = OSApi::tsc_clock_counter();
-        Anchor   current_anchor = anchor_.load(std::memory_order_acquire);
-        int64_t  diff_tsc       = static_cast<int64_t>(current_tsc) - static_cast<int64_t>(current_anchor.base_tsc);
+        Anchor current_anchor = anchor_.load(std::memory_order_acquire);
+        uint64_t current_tsc  = OSApi::tsc_clock_counter();
+        int64_t  diff_tsc     = static_cast<int64_t>(current_tsc) - static_cast<int64_t>(current_anchor.base_tsc);
         if (diff_tsc > 0) {
             return current_anchor.base_ns + tsc2ns(diff_tsc);
         }
 
-        return current_anchor.base_ns;
+        return current_anchor.base_ns ? current_anchor.base_ns : OSApi::system_clock_counter();
     }
 
     //初始化计算multiplier
