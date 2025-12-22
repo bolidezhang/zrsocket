@@ -4,14 +4,14 @@
 
 #ifndef ZRSOCKET_TSC_CLOCK_H
 #define ZRSOCKET_TSC_CLOCK_H
-#include "config.h"
-#include "base_type.h"
-#include "os_api.h"
 #include <atomic>
 #include <algorithm>
 #include <chrono>
 #include <thread>
 #include <vector>
+#include "config.h"
+#include "base_type.h"
+#include "os_api.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
@@ -115,8 +115,6 @@ public:
         //取中位值
         std::sort(multipliers.begin(), multipliers.end());
         multiplier_ = multipliers[multipliers.size() / 2];
-
-        update_anchor();
     }
 
     //更新锚点，消除与系统时间的长期累计误差
@@ -132,6 +130,7 @@ public:
 private:
     TscClock() {
         init_calibrate();
+        update_anchor();
     }
 
     static constexpr const int shift_ = 32;
