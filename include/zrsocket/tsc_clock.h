@@ -67,7 +67,7 @@ public:
             return current_anchor.base_ns + tsc2ns(diff_tsc);
         }
 
-        return OSApi::system_clock_counter();
+        return current_anchor.base_ns;
     }
 
     //初始化计算multiplier
