@@ -174,6 +174,7 @@ int main(int argc, char* argv[])
     {
         zrsocket::TscClock::instance();
 
+        auto current_ns = zrsocket::TscClock::instance().current_time_ns();
         zrsocket::TscClockCounter    tsc_counter;
         zrsocket::SteadyClockCounter steady_counter;
         zrsocket::TscNsClockCounter  tsc_ns_counter;

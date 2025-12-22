@@ -15,23 +15,22 @@ ZRSOCKET_NAMESPACE_BEGIN
 
 class TscClock {
 public:
+    struct Anchor {
+        uint64_t base_ns;
+        uint64_t base_tsc;
+    };
+
     static TscClock& instance() {
         static TscClock t;
         return t;
     }
-    
-    struct Anchor {
-        uint64_t ns_base;
-        uint64_t tsc_base;
-    };
 
     static inline uint64_t now() {
         return OSApi::tsc_clock_counter();
     }
 
     static inline uint64_t now_ns() {
-        TscClock &t = instance();
-        return t.tsc2ns(now());
+        return instance().tsc2ns(now());
     }
 
     //纯整数高精度转换
@@ -49,18 +48,21 @@ public:
 #endif
     }
 
-    //获取当前精确的系统纳秒时间
+    //获取系统当前精确的纳秒时间
     inline uint64_t current_time_ns() const {
-        uint64_t current_tsc = OSApi::tsc_clock_counter();
-        Anchor curr_anchor = anchor_.load(std::memory_order_acquire);
-        if (current_tsc <= curr_anchor.tsc_base) {
-            return curr_anchor.ns_base;
+        uint64_t current_tsc    = OSApi::tsc_clock_counter();
+        Anchor   current_anchor = anchor_.load(std::memory_order_acquire);
+        int64_t  diff_tsc       = static_cast<int64_t>(current_tsc) - static_cast<int64_t>(current_anchor.base_tsc);
+        if (diff_tsc > 0) {
+            return current_anchor.base_ns + tsc2ns(diff_tsc);
         }
 
-        return curr_anchor.ns_base + tsc2ns(current_tsc - curr_anchor.tsc_base);
+        return current_anchor.base_ns;
     }
 
+    //初始化计算multiplier
     // rounds: odd so median is well-defined
+    // interval_ms: 
     void init_calibrate(int rounds = 7, int interval_ms = 50) {
         if (rounds < 0) {
             rounds = 1;
