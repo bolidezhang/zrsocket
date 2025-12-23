@@ -24,8 +24,10 @@ class TscClock {
 public:
     TscClock(const TscClock&) = delete;
     TscClock& operator=(const TscClock&) = delete;
+    TscClock(TscClock&&) = delete;
+    TscClock& operator=(TscClock&&) = delete;
 
-    struct alignas(16) Anchor {
+    struct Anchor {
         uint64_t base_ns  = 0;  //系统时间基准
         uint64_t base_tsc = 0;  //TSC基准值
     };
@@ -62,7 +64,7 @@ public:
     inline uint64_t current_time_ns() const {
         Anchor current_anchor = anchor_.load(std::memory_order_acquire);
         uint64_t current_tsc  = OSApi::tsc_clock_counter();
-        int64_t  diff_tsc     = static_cast<int64_t>(current_tsc) - static_cast<int64_t>(current_anchor.base_tsc);
+        int64_t  diff_tsc     = current_tsc - current_anchor.base_tsc;
         if (diff_tsc > 0) {
             return current_anchor.base_ns + tsc2ns(diff_tsc);
         }
@@ -70,10 +72,11 @@ public:
         return current_anchor.base_ns;
     }
 
-    //初始化计算multiplier
+    //初始化时计算multiplier
     // rounds: odd so median is well-defined
     // interval_ms: 
-    void init_calibrate(int rounds = 3, int interval_ms = 50) {
+    // 返回值: 0:校准失败; !=0: 校准成功
+    int calibrate(int rounds = 3, int interval_ms = 50) {
         if (rounds < 1) {
             rounds = 1;
         }
@@ -85,6 +88,7 @@ public:
         std::vector<uint64_t> multipliers;
         multipliers.reserve(rounds);
 
+        int retry = 0;
         do {
             // 进行多次采样取中位数以提高校准精度
             for (int i = 0; i < rounds; ++i) {
@@ -97,10 +101,10 @@ public:
                 // sleep a little to get measurable delta (not too long to avoid drift)
                 std::this_thread::sleep_for(sleep_ms);
 
-                int64_t end_tsc  = OSApi::tsc_clock_counter();
-                int64_t end_ns   = OSApi::steady_clock_counter();
-                int64_t diff_ns  = end_ns - start_ns;
-                int64_t diff_tsc = end_tsc - start_tsc;
+                uint64_t end_tsc  = OSApi::tsc_clock_counter();
+                uint64_t end_ns   = OSApi::steady_clock_counter();
+                int64_t  diff_ns  = end_ns  - start_ns;
+                int64_t  diff_tsc = end_tsc - start_tsc;
                 if ((diff_tsc <= 0) || (diff_ns <= 0)) {
                     continue;
                 }
@@ -129,11 +133,16 @@ public:
                 }
             }
 
-        } while (multipliers.size() < 3);
+        } while ((multipliers.size() < 3) && (++retry < 10));
 
         //取中位值
-        std::sort(multipliers.begin(), multipliers.end());
-        multiplier_ = multipliers[multipliers.size() / 2];
+        if (!multipliers.empty()) {
+            std::sort(multipliers.begin(), multipliers.end());
+            multiplier_ = multipliers[multipliers.size() / 2];
+            return 1;
+        }
+
+        return 0;
     }
 
     //更新锚点，消除与系统时间的长期累计误差
@@ -148,12 +157,12 @@ public:
 
 private:
     TscClock() {
-        init_calibrate();
+        calibrate();
         update_anchor();
     }
 
     static constexpr int shift_ = 32;
-    uint64_t multiplier_ = 0;
+    uint64_t multiplier_ = 2147483648;  //(2^31) 适配 2~4GHz 主流CPU
     std::atomic<Anchor> anchor_;
 };
 
