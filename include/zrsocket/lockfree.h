@@ -6,11 +6,19 @@
 #define ZRSOCKET_LOCKFREE_H
 #include "atomic.h"
 #include "byte_buffer.h"
+#include <new>
 
 ZRSOCKET_NAMESPACE_BEGIN
 
-static constexpr const int CACHE_LINE_SIZE = 64;          //缓存行大小 x86一般为64
-static constexpr const int SPIN_LOOP_TIMES = 1000;        //旋转次数
+#ifdef __cpp_lib_hardware_interference_size
+    // 支持硬件干扰尺寸常量
+    inline constexpr std::size_t CACHE_LINE_SIZE = std::hardware_destructive_interference_size;
+    inline constexpr int SPIN_LOOP_TIMES = 1000;   //旋转次数
+#else
+    // 不支持，使用默认值
+    constexpr int CACHE_LINE_SIZE = 64;     //缓存行大小 x86一般为64
+    constexpr int SPIN_LOOP_TIMES = 1000;   //旋转次数
+#endif
 
 // 双指针对象: double pointer object
 //  用于动态更新配置信息的场景

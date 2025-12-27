@@ -94,7 +94,7 @@ public:
     }
 
 protected:
-    static constexpr const int PADDING_SIZE = (CACHE_LINE_SIZE - sizeof(uint64_t));
+    static constexpr int PADDING_SIZE = (CACHE_LINE_SIZE - sizeof(uint64_t));
 
     volatile uint64_t read_index_  = 0;      //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE];
@@ -233,7 +233,7 @@ public:
     }
 
 protected:
-    static constexpr const int PADDING_SIZE = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
+    static constexpr int PADDING_SIZE = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
 
     AtomicUInt64 read_index_      = { 0 };      //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE];
@@ -365,8 +365,8 @@ public:
     }
 
 private:
-    static constexpr const int PADDING_SIZE1 = (CACHE_LINE_SIZE - sizeof(uint64_t));
-    static constexpr const int PADDING_SIZE2 = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
+    static constexpr int PADDING_SIZE1 = (CACHE_LINE_SIZE - sizeof(uint64_t));
+    static constexpr int PADDING_SIZE2 = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
 
     volatile uint64_t read_index_ = 0;      //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE1];
@@ -493,8 +493,8 @@ public:
     }
 
 protected:
-    static constexpr const int PADDING_SIZE1 = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
-    static constexpr const int PADDING_SIZE2 = (CACHE_LINE_SIZE - sizeof(uint64_t));
+    static constexpr int PADDING_SIZE1 = (CACHE_LINE_SIZE - sizeof(AtomicUInt64));
+    static constexpr int PADDING_SIZE2 = (CACHE_LINE_SIZE - sizeof(uint64_t));
 
     AtomicUInt64 read_index_       = { 0 }; //读位置(单调递增:只增不减)
     char padding1_[PADDING_SIZE1];
