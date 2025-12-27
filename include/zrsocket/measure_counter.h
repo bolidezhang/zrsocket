@@ -50,8 +50,7 @@ public:
 
     inline int64_t diff() const
     {
-        //使用 static_cast 避免无符号减法下溢的歧义
-        return static_cast<int64_t>(end_counter_) - static_cast<int64_t>(start_counter_);
+        return end_counter_ - start_counter_;
     }
 
 private:

@@ -20,6 +20,7 @@
 
 ZRSOCKET_NAMESPACE_BEGIN
 
+//基于OS的tsc计时器的时钟
 class TscClock {
 public:
     TscClock(const TscClock&) = delete;
