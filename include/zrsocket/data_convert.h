@@ -6,78 +6,88 @@
 #define ZRSOCKET_DATA_CONVERT_H
 #include "config.h"
 #include "base_type.h"
+#include <charconv>
 
 ZRSOCKET_NAMESPACE_BEGIN
 
 class ZRSOCKET_EXPORT DataConvert
 {
 public:
+    static constexpr int max_digits10_int32 = 12;
+    static constexpr int max_digits10_int64 = 21;
+
     //字符串转4字节整数
-    static int32_t   atoi(const char *str);
-    static int32_t   atoi(const char *str, uint_t len, char **endptr);
+    static int32_t   atoi(const char* str);
+    static int32_t   atoi(const char* str, uint_t len, char** endptr);
     //字符串转4字节无符号整数
-    static uint32_t  atoui(const char *str);
-    static uint32_t  atoui(const char *str, uint_t len, char **endptr);
+    static uint32_t  atoui(const char* str);
+    static uint32_t  atoui(const char* str, uint_t len, char** endptr);
     //字符串转8字节整数
-    static int64_t   atoll(const char *str);
-    static int64_t   atoll(const char *str, uint_t len, char **endptr);
+    static int64_t   atoll(const char* str);
+    static int64_t   atoll(const char* str, uint_t len, char** endptr);
     //字符串转8字节无符号整数
-    static uint64_t  atoull(const char *str);
-    static uint64_t  atoull(const char *str, uint_t len, char **endptr);
+    static uint64_t  atoull(const char* str);
+    static uint64_t  atoull(const char* str, uint_t len, char** endptr);
 
 
     //整数字符串itoa()比std::to_chars()快
     //  vc2019下测试 比std::to_chars()2倍多,接近3倍
 
     //4字节无符号整数转10进制字符串
-    static int uitoa(uint32_t value, char str[12]);
+    static int uitoa(uint32_t value, char str[max_digits10_int32], int str_len);
 
     //4字节整数转10进制字符串
-    static inline int itoa(int32_t value, char str[12])
-    {
+    static inline int itoa(int32_t value, char str[max_digits10_int32], int str_len) {
         if (value >= 0) {
-            return uitoa(value, str);
+            return uitoa(value, str, str_len);
         }
-        else {
+        else if (str_len > 0) {
             *str++ = '-';
-            return uitoa(-value, str) + 1;
+            return uitoa(-value, str, str_len - 1) + 1;
         }
+        return 0;
     }
 
     //8字节无符号整数转10进制字符串
-    static int ulltoa(uint64_t value, char str[21]);
+    static int ulltoa(uint64_t value, char str[max_digits10_int64], int str_len);
 
     //8字节整数转10进制字串
-    static inline int lltoa(int64_t value, char str[21])
-    {
+    static inline int lltoa(int64_t value, char str[max_digits10_int64], int str_len) {
         if (value >= 0) {
-            return ulltoa(value, str);
+            return ulltoa(value, str, str_len);
         }
-        else {
+        else if (str_len > 0) {
             *str++ = '-';
-            return ulltoa(-value, str) + 1;
+            return ulltoa(-value, str, str_len - 1) + 1;
         }
+        return 0;
     }
     
-    static constexpr const int max_digits10_int32 = 12;
-    static constexpr const int max_digits10_int64 = 21;
-
     //64位的浮点数转字符串,自定义轻量级转换函数（适合简单场景）
     //浮点数的小数点后位数
-    static constexpr const int max_decimal_places = 20;
+    static constexpr int max_decimal_places = 20;
     //整数部分(21位)+小数点(1)+小数部分(20)
-    static constexpr const int max_digits10_float64 = 21 + 1 + 20;
+    static constexpr int max_digits10_float64 = 21 + 1 + 20 + 1;
 
     //64位的浮点数转字符串,自定义轻量级转换函数(适合简单场景)
     //参数说明: 
     //  value: 浮点数
     //  decimal_places: 小数点后位数
-    static inline int ftoa(float64_t value, uint_t decimal_places, char str[42])
-    {
+    static inline int ftoa(float64_t value, uint_t decimal_places, char str[max_digits10_float64], int str_len) {
+#if 1
+        //方法1: std::to_chars
+
+        std::to_chars_result result = std::to_chars(str, str + str_len, value);
+        if (result.ec == std::errc()) {
+            return static_cast<int>(result.ptr - str);
+        }
+        return 0;
+#else
+        //方法2: 先转整数部分,再转小数部分
+
         if (decimal_places > max_decimal_places) {
             decimal_places = max_decimal_places;
         }
-
         // 整数部分
         int64_t int_part = static_cast<int64_t>(value);
         char *p = str;
@@ -92,11 +102,11 @@ public:
         }
         *p = '\0';
         return static_cast<int>(p - str);
+#endif
     }
 
     //计算整数转为10进制字符串的长度
-    static inline int digits10(uint32_t value)
-    {
+    static inline int digits10(uint32_t value) {
         if (value < 10)
             return 1;
         if (value < 100)
@@ -119,8 +129,7 @@ public:
     }
 
     //计算整数转为10进制字符串的长度
-    static inline int digits10(uint64_t value)
-    {
+    static inline int digits10(uint64_t value) {
         if (value < 10ull)
             return 1;
         if (value < 100ull)

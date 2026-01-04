@@ -101,7 +101,7 @@ int32_t DataConvert::atoi(const char *str)
     bool  negative_flag  = false;   //负数标记
     bool  first_num_flag = false;   //是否找到第一个数字标记
 
-    for (;;) {
+    while (str != nullptr) {
         ZRSOCKET_CHAR_CONVERT_INTEGER;
         ++str;
     }
@@ -114,15 +114,14 @@ EXIT_PROC:
 }
 
 //字符串转4字节整数
-int32_t DataConvert::atoi(const char *str, uint_t len, char **endptr)
-{
+int32_t DataConvert::atoi(const char *str, uint_t len, char **endptr) {
     assert(str);
     int32_t ret = 0;
     bool  negative_flag  = false;   //负数标记
     bool  first_num_flag = false;   //是否找到第一个数字标记
 
     if (len < 1) {
-        for (;;) {
+        while (str != nullptr) {
             ZRSOCKET_CHAR_CONVERT_INTEGER;
             ++str;
         }
@@ -145,13 +144,12 @@ EXIT_PROC:
 }
 
 //字符串转4字节无符号整数
-uint32_t DataConvert::atoui(const char *str)
-{
+uint32_t DataConvert::atoui(const char *str) {
     assert(str);
     uint32_t ret = 0;
     bool   first_num_flag = false;  //是否找到第一个数字标记
 
-    for (;;) {
+    while (str != nullptr) {
         ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
         ++str;
     }
@@ -160,20 +158,19 @@ EXIT_PROC:
     return ret;
 }
 
-uint32_t DataConvert::atoui(const char *str, uint_t len, char **endptr)
-{
+uint32_t DataConvert::atoui(const char *str, uint_t len, char **endptr) {
     assert(str);
     uint32_t ret = 0;
     bool   first_num_flag = false;  //是否找到第一个数字标记
 
-    if (len < 1) {
-        for (;;) {
+    if (len > 0) {
+        for (uint_t i = 0; i < len; ++i) {
             ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
             ++str;
         }
     }
     else {
-        for (uint_t i = 0; i < len; ++i) {
+        while (str != nullptr) {
             ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
             ++str;
         }
@@ -187,14 +184,13 @@ EXIT_PROC:
 }
 
 //字符串转8字节整数
-int64_t DataConvert::atoll(const char *str)
-{
+int64_t DataConvert::atoll(const char *str) {
     assert(str);
     int64_t ret = 0;
     bool  negative_flag  = false;   //负数标记
     bool  first_num_flag = false;   //是否找到第一个数字标记
 
-    for (;;) {
+    while (str != nullptr) {
         ZRSOCKET_CHAR_CONVERT_INTEGER;
         ++str;
     }
@@ -206,22 +202,20 @@ EXIT_PROC:
     return ret;
 }
 
-int64_t DataConvert::atoll(const char *str, uint_t len, char **endptr)
-{
+int64_t DataConvert::atoll(const char *str, uint_t len, char **endptr) {
     assert(str);
     int64_t ret = 0;
     bool  negative_flag  = false;   //负数标记
     bool  first_num_flag = false;   //是否找到第一个数字标记
 
-    if (len < 1) {
-        for (;;) {
+    if (len > 0) {
+        for (uint_t i = 0; i < len; ++i) {
             ZRSOCKET_CHAR_CONVERT_INTEGER;
             ++str;
         }
     }
-    else
-    {
-        for (uint_t i = 0; i < len; ++i) {
+    else {
+        while (str != nullptr) {
             ZRSOCKET_CHAR_CONVERT_INTEGER;
             ++str;
         }
@@ -244,7 +238,7 @@ uint64_t DataConvert::atoull(const char *str)
     uint64_t ret = 0;
     bool first_num_flag = false;  //是否找到第一个数字标记
 
-    for (;;) {
+    while (str != nullptr) {
         ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
         ++str;
     }
@@ -259,14 +253,14 @@ uint64_t DataConvert::atoull(const char *str, uint_t len, char **endptr)
     uint64_t ret = 0;
     bool   first_num_flag = false;  //是否找到第一个数字标记
 
-    if (len < 1) {
-        for (;;) {
+    if (len > 0) {
+        for (uint_t i = 0; i < len; ++i) {
             ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
             ++str;
         }
     }
     else {
-        for (uint_t i = 0; i < len; ++i) {
+        while (str != nullptr) {
             ZRSOCKET_CHAR_CONVERT_UNSIGNED_INTEGER;
             ++str;
         }
@@ -287,8 +281,12 @@ EXIT_PROC:
 
 #ifdef ZRSOCKET_OS_WINDOWS
 
-int DataConvert::uitoa(uint32_t value, char str[12])
+int DataConvert::uitoa(uint32_t value, char str[max_digits10_int32], int str_len)
 {
+    if (str_len < digits10(value)) {
+        return 0;
+    }
+
 #define LESS10                                      \
     do {                                            \
         str[0] = '0' + (char)value;                 \
@@ -388,8 +386,11 @@ int DataConvert::uitoa(uint32_t value, char str[12])
 #undef MOD100
 }
 
-int DataConvert::ulltoa(uint64_t value, char str[21])
-{
+int DataConvert::ulltoa(uint64_t value, char str[max_digits10_int64], int str_len) {
+    if (str_len < digits10(value)) {
+        return 0;
+    }
+
 #define LESS10                                              \
     do {                                                    \
         str[0] = '0' + (char)value;                         \
@@ -411,8 +412,7 @@ int DataConvert::ulltoa(uint64_t value, char str[21])
         str[x - 1]  = digits_[i];                           \
     } while (0)
 
-    if (value < 10ull)
-    {
+    if (value < 10ull) {
         LESS10;
         str[1] = '\0';
         return 1;
@@ -613,58 +613,66 @@ int DataConvert::ulltoa(uint64_t value, char str[21])
 
 #else //linux
 
-int DataConvert::uitoa(uint32_t value, char str[12])
-{
-    int len  = digits10(value);
-    int next = len - 1;
-    uint32_t i, temp;
-    while (value >= 100) {
-        temp    = value / 100;
-        i       = (value - temp * 100) << 1;
-        value   = temp;
+int DataConvert::uitoa(uint32_t value, char str[max_digits10_int32], int str_len) {
+    int need_len = digits10(value);
+    if (str_len >= need_len) {
+        int next = need_len - 1;
+        uint32_t i, temp;
+        while (value >= 100) {
+            temp = value / 100;
+            i = (value - temp * 100) << 1;
+            value = temp;
 
-        str[next]       = digits_[i + 1];
-        str[next - 1]   = digits_[i];
-        next -= 2;
-    }
+            str[next] = digits_[i + 1];
+            str[next - 1] = digits_[i];
+            next -= 2;
+        }
 
-    if (value < 10) {
-        str[next] = '0' + value;
+        if (value < 10) {
+            str[next] = '0' + value;
+        }
+        else {
+            i = value << 1;
+            str[next] = digits_[i + 1];
+            str[next - 1] = digits_[i];
+        }
+        str[len] = '\0';
+        return len;
     }
     else {
-        i = value << 1;
-        str[next]       = digits_[i + 1];
-        str[next - 1]   = digits_[i];
+        return 0;
     }
-    str[len] = '\0';
-    return len;
 }
 
-int DataConvert::ulltoa(uint64_t value, char str[21])
-{
-    int len  = digits10(value);
-    int next = len - 1;
-    uint64_t i, temp;
-    while (value >= 100) {
-        temp    = value / 100;
-        i       = (value - temp * 100) << 1;
-        value   = temp;
+int DataConvert::ulltoa(uint64_t value, char str[max_digits10_int64], int str_len) {
+    int need_len = digits10(value);
+    if (str_len >= need_len) {
+        int next = need_len - 1;
+        uint64_t i, temp;
+        while (value >= 100) {
+            temp = value / 100;
+            i = (value - temp * 100) << 1;
+            value = temp;
 
-        str[next]       = digits_[i + 1];
-        str[next - 1]   = digits_[i];
-        next -= 2;
-    }
+            str[next] = digits_[i + 1];
+            str[next - 1] = digits_[i];
+            next -= 2;
+        }
 
-    if (value < 10) {
-        str[next] = '0' + value;
+        if (value < 10) {
+            str[next] = '0' + value;
+        }
+        else {
+            i = value << 1;
+            str[next] = digits_[i + 1];
+            str[next - 1] = digits_[i];
+        }
+        str[len] = '\0';
+        return len;
     }
     else {
-        i = value << 1;
-        str[next]       = digits_[i + 1];
-        str[next - 1]   = digits_[i];
+        return 0;
     }
-    str[len] = '\0';
-    return len;
 }
 
 #endif //linux

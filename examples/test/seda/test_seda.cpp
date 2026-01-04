@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
 
         scc.update_start_counter();
         for (int i = 0; i < LOG_TIMES; ++i) {
-            zrsocket::DataConvert::itoa(i, vs);
+            zrsocket::DataConvert::itoa(i, vs, 50);
         }
         scc.update_end_counter();
         printf("DataConvert::itoa:%ld diff %lld ns\n", LOG_TIMES, scc.diff());

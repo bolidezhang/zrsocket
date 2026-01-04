@@ -312,13 +312,13 @@ public:
         //output line
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
-        int len = DataConvert::uitoa(line_, buf_.buffer() + end);
+        int len = DataConvert::uitoa(line_, buf_.buffer() + end, DataConvert::max_digits10_int32);
         buf_.data_end(end + len);
         buf_.write(' ');
 
         //output thread id
         end = buf_.data_end();
-        len = DataConvert::ulltoa(OSApi::this_thread_id(), buf_.buffer() + end);
+        len = DataConvert::ulltoa(OSApi::this_thread_id(), buf_.buffer() + end, DataConvert::max_digits10_int64);
         buf_.data_end(end + len);
 
         //加换行符
@@ -372,7 +372,7 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int16_t>::digits10 + 50);
-        int len = DataConvert::itoa(i, buf_.buffer() + end);
+        int len = DataConvert::itoa(i, buf_.buffer() + end, DataConvert::max_digits10_int32);
         buf_.data_end(end + len);
         return *this;
     }
@@ -381,7 +381,7 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint16_t>::digits10 + 50);
-        int len = DataConvert::itoa(i, buf_.buffer() + end);
+        int len = DataConvert::itoa(i, buf_.buffer() + end, DataConvert::max_digits10_int32);
         buf_.data_end(end + len);
         return *this;
     }
@@ -393,7 +393,7 @@ public:
 
 #if 1
         //方案1
-        int len = DataConvert::itoa(i, buf_.buffer() + end);
+        int len = DataConvert::itoa(i, buf_.buffer() + end, DataConvert::max_digits10_int32);
         buf_.data_end(end + len);
 #else
         //方案2
@@ -411,7 +411,7 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint32_t>::digits10 + 50);
-        int len = DataConvert::uitoa(i, buf_.buffer() + end);
+        int len = DataConvert::uitoa(i, buf_.buffer() + end, DataConvert::max_digits10_int32);
         buf_.data_end(end + len);
         return *this;
     }
@@ -420,7 +420,7 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<int64_t>::digits10 + 50);
-        int len = DataConvert::lltoa(i, buf_.buffer() + end);
+        int len = DataConvert::lltoa(i, buf_.buffer() + end, DataConvert::max_digits10_int64);
         buf_.data_end(end + len);
 
         return *this;
@@ -430,7 +430,7 @@ public:
     {
         uint_t end = buf_.data_end();
         buf_.reserve(end + std::numeric_limits<uint64_t>::digits10 + 50);
-        int len = DataConvert::ulltoa(i, buf_.buffer() + end);
+        int len = DataConvert::ulltoa(i, buf_.buffer() + end, DataConvert::max_digits10_int64);
         buf_.data_end(end + len);
         return *this;
     }
@@ -545,10 +545,10 @@ public:
 private:
     static int worker_thread_proc(void *arg)
     {
-        //static constexpr const uint_t WRITE_BLOCK_SIZE = 8192;        //8k
-        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 *  64;  //64k
-        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 128;  //128k
-        //static constexpr const uint_t WRITE_BLOCK_SIZE = 1024 * 256;  //经验值
+        //static constexpr uint_t WRITE_BLOCK_SIZE = 8192;        //8k
+        //static constexpr uint_t WRITE_BLOCK_SIZE = 1024 *  64;  //64k
+        //static constexpr uint_t WRITE_BLOCK_SIZE = 1024 * 128;  //128k
+        //static constexpr uint_t WRITE_BLOCK_SIZE = 1024 * 256;  //经验值
 
         AsyncLogWorker<TMutex> *worker = static_cast<AsyncLogWorker<TMutex> *>(arg);
         LogConfig &conf = worker->logger_->config();

@@ -686,7 +686,7 @@ public:
     static inline void i64toa(int64_t i, char *str, int len)
     {
         //方法1
-        DataConvert::lltoa(i, str);
+        DataConvert::lltoa(i, str, len);
 
         //方法2
         //#ifdef ZRSOCKET_OS_WINDOWS
@@ -700,7 +700,7 @@ public:
     static inline void ui64toa(uint64_t i, char *str, int len)
     {
         //方法1
-        DataConvert::ulltoa(i, str);
+        DataConvert::ulltoa(i, str, len);
 
         //方法2
         //#ifdef ZRSOCKET_OS_WINDOWS
@@ -714,7 +714,7 @@ public:
     static inline void lltoa(int64_t i, char *str, int len)
     {
         //方法1
-        DataConvert::lltoa(i, str);
+        DataConvert::lltoa(i, str, len);
 
         //方法2
         //#ifdef ZRSOCKET_OS_WINDOWS
@@ -728,7 +728,7 @@ public:
     static inline void ulltoa(uint64_t i, char *str, int len)
     {
         //方法1
-        DataConvert::ulltoa(i, str);
+        DataConvert::ulltoa(i, str, len);
 
         //方法2
         //#ifdef ZRSOCKET_OS_WINDOWS
