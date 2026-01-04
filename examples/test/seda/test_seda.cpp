@@ -170,6 +170,12 @@ int send_to_remote(void *context, const char *log, zrsocket::uint_t len)
 
 int main(int argc, char* argv[])
 {
+#if 1    
+    ZRSOCKET_NANOLOG_BODY(zrsocket::LogLevel::kDEBUG, "{},{}", "name", 100);
+
+    return 0;
+#endif
+
 #if 1
     {
         zrsocket::TscClock::instance();

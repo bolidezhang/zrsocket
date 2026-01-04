@@ -16,6 +16,8 @@
 #include "time.h"
 #include "os_api.h"
 #include "os_constant.h"
+#include "logging.h"
+#include "logging_nano.h"
 
 ZRSOCKET_NAMESPACE_BEGIN
 
@@ -102,6 +104,7 @@ protected:
         Time::instance();
         Global::instance();
         Logger::instance();
+        NanoLogger::instance();
         stop_flag_.store(false, std::memory_order_relaxed);
         ::signal(SIGTERM, Application<TApp, TMutex>::signal);
         ::signal(SIGINT,  Application<TApp, TMutex>::signal);

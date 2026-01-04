@@ -989,7 +989,7 @@ public:
         return 1;
     }
 
-    inline bool is_logged(LogLevel level) const
+    inline bool check_level(LogLevel level) const
     {
         return level >= config_.obj_.active_ptr()->log_level_;
     }
@@ -1032,7 +1032,7 @@ ZRSOCKET_NAMESPACE_END
 
 #define ZRSOCKET_LOG_BODY(logger,logEvent,logLevel)                     \
     do {                                                                \
-        if (logger.is_logged(logLevel)) {                               \
+        if (logger.check_level(logLevel)) {                             \
             zrsocket::LogStream &stream = zrsocket::stream_;            \
             stream.init(logLevel,__FILE__,__LINE__,__func__, &logger);  \
             stream << logEvent;                                         \

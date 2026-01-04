@@ -17,17 +17,17 @@ public:
     static constexpr int max_digits10_int64 = 21;
 
     //字符串转4字节整数
-    static int32_t   atoi(const char* str);
-    static int32_t   atoi(const char* str, uint_t len, char** endptr);
+    static int32_t   atoi(const char *str);
+    static int32_t   atoi(const char *str, uint_t len, char** endptr);
     //字符串转4字节无符号整数
-    static uint32_t  atoui(const char* str);
-    static uint32_t  atoui(const char* str, uint_t len, char** endptr);
+    static uint32_t  atoui(const char *str);
+    static uint32_t  atoui(const char *str, uint_t len, char** endptr);
     //字符串转8字节整数
-    static int64_t   atoll(const char* str);
-    static int64_t   atoll(const char* str, uint_t len, char** endptr);
+    static int64_t   atoll(const char *str);
+    static int64_t   atoll(const char *str, uint_t len, char** endptr);
     //字符串转8字节无符号整数
-    static uint64_t  atoull(const char* str);
-    static uint64_t  atoull(const char* str, uint_t len, char** endptr);
+    static uint64_t  atoull(const char *str);
+    static uint64_t  atoull(const char *str, uint_t len, char** endptr);
 
 
     //整数字符串itoa()比std::to_chars()快
