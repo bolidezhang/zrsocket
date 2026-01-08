@@ -29,69 +29,89 @@ public:
     }
 
 
-    inline LogConfig & config()
-    {
+    inline LogConfig & config() {
         return config_;
     }
 
-    inline bool check_level(LogLevel level) const
-    {
+    inline bool check_level(LogLevel level) const {
         return level >= config_.obj_.active_ptr()->log_level_;
     }
 
     template<typename... Args>
     inline void log(uint32_t log_id, LogLevel level, const char *file, uint_t line, const char *function, 
         const char *format, Args&&... args) {
-        if (nullptr == stream_) {
-            stream_ = new Stream();
-            if (nullptr != stream_) {
-                std::lock_guard<SpinMutex> lock(thread_streams_mutex_);
-                thread_streams_.push_back(stream_);
-            }
+        if (nullptr == thread_buffer_) {
+            thread_buffer_ = new ThreadBuffer();
+#if 1
+            thread_buffers_mutex_.lock();
+            thread_buffers_.push_back(thread_buffer_);
+            thread_buffers_mutex_.unlock();
+#else
+            std::lock_guard<SpinMutex> lock(thread_buffers_mutex_);
+            thread_buffers_.push_back(log_buffer_);
+#endif
         }
 
-        if (nullptr != stream_) {
+        if (nullptr != thread_buffer_) {
 
         }
 
         return;
     }
 
-    // Forward Declarations
-    class Stream;
-    class StreamDestroyer;
+    //日志id信息(静态日志信息)
+    struct LogId {
+        uint32_t    log_id;
+        uint32_t    line;
+        const char *file;
+        const char *format;
+        uint8_t     log_level;
+    };
 
-    class Stream {
+    //日志条目
+    struct LogEntry {
+        uint32_t  entry_size;
+        uint32_t  log_id;
+        uint64_t  timestamp;
+        uint64_t  thread_id;
+        char      arg_data[0];
+    };
+
+    // Forward Declarations
+    class ThreadBuffer;
+    class ThreadBufferDestroyer;
+
+    class ThreadBuffer {
     public:
-        Stream() {
+        ThreadBuffer() {
 
             // Empty function, but causes the C++ runtime to instantiate the
-            // stream_destroyer_ thread_local (see documentation in function).
-            stream_destroyer_.init();
+            // ThreadBufferDestroyer thread_local (see documentation in function).
+            thread_buffer_destroyer_.init();
         }
 
-        ~Stream() {
+        ~ThreadBuffer() {
         }
         bool should_deallocated_ = false; //将要释放标识
 
-        friend StreamDestroyer;
+        friend ThreadBufferDestroyer;
         friend NanoLogger;
     };
 
-    class StreamDestroyer {
+    class ThreadBufferDestroyer {
     public:
-        explicit StreamDestroyer() {
+        explicit ThreadBufferDestroyer() {
         }
 
-        virtual ~StreamDestroyer() {
-            if (nullptr != stream_) {
-                stream_->should_deallocated_ = true;
-                stream_ = nullptr;
+        virtual ~ThreadBufferDestroyer() {
+            if (nullptr != thread_buffer_) {
+                thread_buffer_->should_deallocated_ = true;
+                thread_buffer_ = nullptr;
             }
         }
 
         // Weird C++ hack; C++ thread_local are instantiated upon first use
-        // thus the Stream has to invoke this function in order
+        // thus the LogBuffer has to invoke this function in order
         // to instantiate this object.
         void init() {
         }
@@ -99,23 +119,28 @@ public:
 
 private:
     NanoLogger() {
-        thread_streams_.reserve(10);
-        thread_streams_bg_.reserve(10);
+        thread_buffers_.reserve(10);
+        thread_buffers_bg_.reserve(10);
     }
 
     ~NanoLogger() {
     }
 
-    // Storage NanoLogStream
-    static zrsocket_fast_thread_local Stream *stream_;
+    // Storage LogBuffer
+    static zrsocket_fast_thread_local ThreadBuffer *thread_buffer_;
 
-    // Destroys the __thread Stream upon its own destruction, which
+    // Destroys the __thread LogBuffer upon its own destruction, which
     // is synchronized with thread death
-    static thread_local StreamDestroyer stream_destroyer_;
+    static thread_local ThreadBufferDestroyer thread_buffer_destroyer_;
 
-    SpinMutex thread_streams_mutex_;
-    std::vector<Stream *> thread_streams_;
-    std::vector<Stream *> thread_streams_bg_;
+
+    SpinMutex log_ids_mutex_;
+    std::vector<LogId> log_ids_;
+    std::vector<LogId> log_ids_bg_;
+
+    SpinMutex thread_buffers_mutex_;
+    std::vector<ThreadBuffer *> thread_buffers_;
+    std::vector<ThreadBuffer *> thread_buffers_bg_;
 
     LogConfig config_;
     bool init_flag_ = false;
