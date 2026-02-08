@@ -13,9 +13,11 @@
 #include "base_type.h"
 #include "os_api.h"
 
+// 平台相关的头文件引入
 #ifdef _MSC_VER
-    #include <intrin.h>         // 必须包含此头文件才能使用 _umul128
-    #include <immintrin.h>
+#include <intrin.h>
+#else
+#include <x86intrin.h>
 #endif
 
 ZRSOCKET_NAMESPACE_BEGIN
@@ -38,133 +40,130 @@ public:
         return t;
     }
 
+    // 获取当前时间（纳秒）
     static inline uint64_t now() {
         return OSApi::tsc_clock_counter();
     }
 
     static inline uint64_t now_ns() {
-        return instance().tsc2ns(now());
+        return instance().current_time_ns();
     }
 
-    //纯整数高精度转换
-    //  使用定点整数转换逻辑
-    inline uint64_t tsc2ns(uint64_t tsc) const {
-#if defined(_MSC_VER) && defined(_M_X64)
-        // MSVC 不支持 __int128，使用 _umul128 获取 128 位乘积
-        unsigned __int64 high;
-        unsigned __int64 low = _umul128(tsc, multiplier_, &high);
-        // 右移 32 位：等同于 (high << 32) | (low >> 32)
-        return (high << (64 - shift_)) | (low >> shift_);
-#else
-        // GCC/Clang 支持 __int128
-        return (uint64_t)((unsigned __int128)tsc * multiplier_ >> shift_);
-#endif
-    }
-
-    //获取系统当前精确的纳秒时间
+    // 核心函数：获取高精度时间
     inline uint64_t current_time_ns() const {
-        Anchor current_anchor = anchor_.load(std::memory_order_acquire);
-        uint64_t current_tsc  = OSApi::tsc_clock_counter();
-        int64_t  diff_tsc     = current_tsc - current_anchor.base_tsc;
-        if (diff_tsc > 0) {
-            return current_anchor.base_ns + tsc2ns(diff_tsc);
-        }
+        uint64_t tsc = OSApi::tsc_clock_counter();
+        uint32_t seq;
+        Anchor anc;
 
-        return current_anchor.base_ns;
-    }
-
-    //初始化时计算multiplier
-    // rounds: odd so median is well-defined
-    // interval_ms: 
-    // 返回值: 0:校准失败; !=0: 校准成功
-    int calibrate(int rounds = 3, int interval_ms = 50) {
-        if (rounds < 1) {
-            rounds = 1;
-        }
-        if (interval_ms < 10) {
-            interval_ms = 10;
-        }
-
-        const std::chrono::milliseconds sleep_ms(interval_ms); // 50 ms between samples
-        std::vector<uint64_t> multipliers;
-        multipliers.reserve(rounds);
-
-        int retry = 0;
+        // SeqLock 读操作：无锁，通过版本号重试保证一致性
         do {
-            // 进行多次采样取中位数以提高校准精度
-            for (int i = 0; i < rounds; ++i) {
-                // Make sure to yield to OS before sampling to reduce scheduled-jitter correlation
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            seq = seq_.load(std::memory_order_acquire);
+            anc = anchor_;
+            std::atomic_thread_fence(std::memory_order_acquire); // 保证读取 anchor 在读取 seq 之后
+        } while (seq != seq_.load(std::memory_order_relaxed) || (seq & 1));
 
-                uint64_t start_ns  = OSApi::steady_clock_counter();
-                uint64_t start_tsc = OSApi::tsc_clock_counter();
+        return anc.base_ns + tsc2ns(tsc - anc.base_tsc);
+    }
 
-                // sleep a little to get measurable delta (not too long to avoid drift)
-                std::this_thread::sleep_for(sleep_ms);
-
-                uint64_t end_tsc  = OSApi::tsc_clock_counter();
-                uint64_t end_ns   = OSApi::steady_clock_counter();
-                int64_t  diff_ns  = end_ns  - start_ns;
-                int64_t  diff_tsc = end_tsc - start_tsc;
-                if ((diff_tsc <= 0) || (diff_ns <= 0)) {
-                    continue;
-                }
-
-                // 计算 multiplier: (ns << 32) / tsc
-#if defined(_MSC_VER)
-    #if defined(_M_X64)
-                //写法1
-                unsigned __int64 high;
-                unsigned __int64 low = _umul128(diff_ns, 1ULL << 32, &high);
-                unsigned __int64 rem;
-                uint64_t multiplier  = _udiv128(high, low, diff_tsc, &rem);
-    #else
-                //写法2
-                //MSVC 兼容写法：
-                // 虽然是用 double 计算，但仅在初始化使用，不影响性能
-                // 2^32 = 4294967296.0
-                uint64_t multiplier = static_cast<uint64_t>((static_cast<double>(diff_ns * 4294967296.0) / static_cast<double>(diff_tsc)));
-    #endif
+    // 将 TSC 差值转换为纳秒
+    inline uint64_t tsc2ns(uint64_t tsc_diff) const {
+#if defined(_MSC_VER) && defined(_M_X64)
+        // MSVC x64 优化路径
+        unsigned __int64 high;
+        unsigned __int64 low = _umul128(tsc_diff, multiplier_, &high);
+        return (high << (64 - shift_)) | (low >> shift_);
+#elif defined(__SIZEOF_INT128__)
+        // GCC/Clang 128位整数路径
+        return (uint64_t)((unsigned __int128)tsc_diff * multiplier_ >> shift_);
 #else
-                // 这里必须使用 __int128 防止左移 32 位时溢出
-                uint64_t multiplier = (uint64_t)(((unsigned __int128)diff_ns << shift_) / diff_tsc);
+        // 32位系统或旧编译器回退路径：使用浮点数（会有性能损失，但在32位机上通常可接受）
+        // 或者拆分乘法。这里为了代码简洁使用 double，如果需要极致性能需手写32位拆分乘法
+        return static_cast<uint64_t>(tsc_diff * multiplier_d_);
 #endif
-                if (multiplier > 0) {
-                    multipliers.push_back(multiplier);
-                }
+    }
+
+    // 重新校准（通常不需要频繁调用）
+    bool calibrate(int rounds = 5, int interval_ms = 20) {
+        std::vector<double> rates;
+        rates.reserve(rounds);
+
+        for (int i = 0; i < rounds; ++i) {
+            auto t1     = OSApi::steady_clock_counter();
+            uint64_t c1 = OSApi::tsc_clock_counter();
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(interval_ms));
+
+            uint64_t c2 = OSApi::tsc_clock_counter();
+            auto t2 = OSApi::steady_clock_counter();
+
+            double ns = (double)(t2 - t1);
+            double tsc = (double)(c2 - c1);
+
+            if (tsc > 0) {
+                rates.push_back(ns / tsc);
             }
-
-        } while ((multipliers.size() < 3) && (++retry < 10));
-
-        //取中位值
-        if (!multipliers.empty()) {
-            std::sort(multipliers.begin(), multipliers.end());
-            multiplier_ = multipliers[multipliers.size() / 2];
-            return 1;
         }
 
-        return 0;
+        if (rates.empty()) {
+            return false;
+        }
+
+        // 取中位数
+        std::sort(rates.begin(), rates.end());
+        double rate = rates[rates.size() / 2];
+
+        // 写入保护
+        uint32_t seq = seq_.load(std::memory_order_relaxed);
+        seq_.store(seq + 1, std::memory_order_release); // 变为奇数，阻塞读者
+
+        multiplier_ = static_cast<uint64_t>(rate * (1ULL << shift_));
+#if !defined(_MSC_VER) || !defined(_M_X64)
+#if !defined(__SIZEOF_INT128__)
+        multiplier_d_ = rate; // 32位环境备用
+#endif
+#endif
+
+        // 更新基准点
+        sync_anchor_unlocked();
+        seq_.store(seq + 2, std::memory_order_release); // 变为偶数，释放读者
+
+        return true;
     }
 
-    //更新锚点，消除与系统时间的长期累计误差
-    inline void update_anchor(uint64_t current_ns, uint64_t current_tsc) {
-        anchor_.store({ current_ns, current_tsc }, std::memory_order_release);
-    }
-    inline void update_anchor() {
-        uint64_t current_ns  = OSApi::system_clock_counter();
-        uint64_t current_tsc = OSApi::tsc_clock_counter();
-        update_anchor(current_ns, current_tsc);
+    // 同步系统时间锚点
+    void sync_system_time() {
+        uint32_t seq = seq_.load(std::memory_order_relaxed);
+        seq_.store(seq + 1, std::memory_order_release);
+        sync_anchor_unlocked();
+        seq_.store(seq + 2, std::memory_order_release);
     }
 
 private:
     TscClock() {
-        calibrate();
-        update_anchor();
+        if (!calibrate()) {
+            // 如果校准彻底失败，设置一个保底值（假设 1GHz）
+            multiplier_ = 1ULL << shift_;
+        }
+    }
+
+    void sync_anchor_unlocked() {
+        // 获取高精度的系统时间作为基准        
+        anchor_.base_ns  = OSApi::system_clock_counter();
+        anchor_.base_tsc = OSApi::tsc_clock_counter();
     }
 
     static constexpr int shift_ = 32;
-    uint64_t multiplier_ = 2147483648;  //(2^31) 适配 2~4GHz 主流CPU
-    std::atomic<Anchor> anchor_;
+    uint64_t multiplier_ = 0;
+#if !defined(_MSC_VER) || !defined(_M_X64)
+#if !defined(__SIZEOF_INT128__)
+    double multiplier_d_ = 1.0;
+#endif
+#endif
+
+    // 使用 SeqLock 替代 atomic<Anchor>
+    // seq_ 为偶数时表示数据稳定，奇数时表示正在写入
+    std::atomic<uint32_t> seq_{ 0 };
+    Anchor anchor_{ 0, 0 };
 };
 
 ZRSOCKET_NAMESPACE_END

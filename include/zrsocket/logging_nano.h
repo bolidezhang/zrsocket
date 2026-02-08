@@ -6,6 +6,7 @@
 #include "config.h"
 #include "logging.h"
 #include "mutex.h"
+#include "thread.h"
 #include <vector>
 #include <list>
 
@@ -20,12 +21,34 @@ public:
         return logger;
     }
 
-    int init() {
-        return 0;
+    int init() {       
+        if (!log_thread_running_) {
+            if (log_file_.open(config_.obj_.active_ptr()->filename_, O_WRONLY | O_APPEND | O_CREAT, S_IWRITE | S_IREAD) != 0) {
+                return -1;
+            }
+
+            log_thread_running_ = true;
+            log_thread_ = std::thread([this]() {
+                while (log_thread_running_) {
+                    this->log_thread_poll();
+                }
+                this->log_thread_poll();
+            });
+        }
+
+        return 1;
     }
 
     int fini() {
-        return 0;
+        if (!log_thread_running_) {
+            return 0;
+        }
+        log_thread_running_ = false;
+        if (log_thread_.joinable()) {
+            log_thread_.join();
+        }
+        log_file_.close();
+        return 1;
     }
 
 
@@ -38,22 +61,18 @@ public:
     }
 
     template<typename... Args>
-    inline void log(uint32_t log_id, LogLevel level, const char *file, uint_t line, const char *function, 
+    inline void log(uint32_t &log_id, LogLevel level, const char *file, uint_t line, const char *function, 
         const char *format, Args&&... args) {
-        if (nullptr == thread_buffer_) {
-            thread_buffer_ = new ThreadBuffer();
-#if 1
-            thread_buffers_mutex_.lock();
-            thread_buffers_.push_back(thread_buffer_);
-            thread_buffers_mutex_.unlock();
-#else
-            std::lock_guard<SpinMutex> lock(thread_buffers_mutex_);
-            thread_buffers_.push_back(log_buffer_);
-#endif
+
+        // 1. 注册日志ID (Double-Checked Locking的变体，利用static变量)
+        if (log_id == 0) {
+            //log_id = register_log_id<Args...>(level, file, line, func, format);
         }
 
-        if (nullptr != thread_buffer_) {
-
+        // 2. 获取当前线程的Buffer
+        ThreadBuffer *buffer = get_thread_buffer();
+        if (!buffer) {
+            return;
         }
 
         return;
@@ -92,7 +111,32 @@ public:
 
         ~ThreadBuffer() {
         }
+        
+        //在缓冲区中分配
+        char* alloc_free(size_t size) {
+            //todo...
+
+            return nullptr;
+        }
+
+        //取得logEntry指针和所占大小
+        char* log_entry(size_t &size) {
+            //todo...
+
+            return nullptr;
+        }
+
+        bool should_deallocated() {
+            return should_deallocated_;
+        }
+
+        void mark_deallocate() { 
+            should_deallocated_ = true; 
+        }
+
+    private:
         bool should_deallocated_ = false; //将要释放标识
+        ByteBuffer buffer_;  //缓冲
 
         friend ThreadBufferDestroyer;
         friend NanoLogger;
@@ -103,9 +147,9 @@ public:
         explicit ThreadBufferDestroyer() {
         }
 
-        virtual ~ThreadBufferDestroyer() {
+        ~ThreadBufferDestroyer() {
             if (nullptr != thread_buffer_) {
-                thread_buffer_->should_deallocated_ = true;
+                thread_buffer_->mark_deallocate();
                 thread_buffer_ = nullptr;
             }
         }
@@ -126,13 +170,57 @@ private:
     ~NanoLogger() {
     }
 
+    ThreadBuffer * get_thread_buffer() {
+        if (!thread_buffer_) {
+            thread_buffer_ = new ThreadBuffer();
+            std::lock_guard<SpinMutex> lock(thread_buffers_mutex_);
+            thread_buffers_.push_back(thread_buffer_);
+        }
+        return thread_buffer_;
+    }
+
+    int log_thread_poll() {
+        {
+            std::lock_guard<SpinMutex> lock(log_ids_mutex_);
+            if (!log_ids_.empty()) {
+                log_ids_bg_.insert(log_ids_bg_.end(), log_ids_.begin(), log_ids_.end());
+                log_ids_.clear();
+            }
+        }
+
+        {
+            std::lock_guard<SpinMutex> lock(thread_buffers_mutex_);
+            if (!thread_buffers_.empty()) {                
+                thread_buffers_bg_.insert(thread_buffers_bg_.end(), thread_buffers_.begin(), thread_buffers_.end());
+                thread_buffers_.clear();
+            }
+        }
+
+        auto iter = thread_buffers_bg_.begin();
+        while (iter != thread_buffers_bg_.end()) {
+            ThreadBuffer *tb = *iter;
+
+            //处理log
+            //...
+
+            if (tb->should_deallocated_) {
+                delete tb;
+                iter = thread_buffers_bg_.erase(iter);
+            }
+            else {
+                ++iter;
+            }
+        }
+
+        return 1;
+    }
+
     // Storage LogBuffer
     static zrsocket_fast_thread_local ThreadBuffer *thread_buffer_;
 
     // Destroys the __thread LogBuffer upon its own destruction, which
     // is synchronized with thread death
     static thread_local ThreadBufferDestroyer thread_buffer_destroyer_;
-
 
     SpinMutex log_ids_mutex_;
     std::vector<LogId> log_ids_;
@@ -141,9 +229,16 @@ private:
     SpinMutex thread_buffers_mutex_;
     std::vector<ThreadBuffer *> thread_buffers_;
     std::vector<ThreadBuffer *> thread_buffers_bg_;
+    
+    OSApiFile     log_file_;
+    ByteBuffer    log_format_buffer_;  //日志格式缓冲
+    std::thread   log_thread_;
+    volatile bool log_thread_running_ = false;
+    Mutex         timedwait_mutex_;
+    Condition     timedwait_condition_;
+    AtomicInt     timedwait_flag_ = ATOMIC_VAR_INIT(0);   //条件触发标识
 
-    LogConfig config_;
-    bool init_flag_ = false;
+    LogConfig     config_;
 };
 
 ZRSOCKET_NAMESPACE_END

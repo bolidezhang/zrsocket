@@ -25,7 +25,7 @@ public:
         current_time_ns_        = OSApi::system_clock_counter();
         current_timestamp_ns_   = OSApi::steady_clock_counter();
         current_tsc_timestamp_  = OSApi::tsc_clock_counter();
-        TscClock::instance().update_anchor(current_time_ns_, current_tsc_timestamp_);
+        TscClock::instance().sync_system_time();
     }
 
     inline uint64_t current_time_ns() const

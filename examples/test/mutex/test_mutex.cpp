@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 
     auto f = 6.522544;
     char fa[100] = {};
-    zrsocket::DataConvert::ftoa(f, 10, fa);
+    zrsocket::DataConvert::ftoa(f, 10, fa, 100);
     
     char fa2[100] = {};
     std::to_chars_result res = std::to_chars(fa2, fa2+100, f);
