@@ -40,11 +40,12 @@ public:
         return t;
     }
 
-    // 获取当前时间（纳秒）
-    static inline uint64_t now() {
+    // 当前rdtsc
+    static inline uint64_t rdtsc() {
         return OSApi::tsc_clock_counter();
     }
 
+    // 获取当前时间（纳秒）
     static inline uint64_t now_ns() {
         return instance().current_time_ns();
     }
@@ -96,11 +97,11 @@ public:
             uint64_t c2 = OSApi::tsc_clock_counter();
             auto t2 = OSApi::steady_clock_counter();
 
-            double ns = (double)(t2 - t1);
-            double tsc = (double)(c2 - c1);
+            double ns_delta = (double)(t2 - t1);
+            double tsc_delta = (double)(c2 - c1);
 
-            if (tsc > 0) {
-                rates.push_back(ns / tsc);
+            if (tsc_delta > 0) {
+                rates.push_back(ns_delta / tsc_delta);
             }
         }
 

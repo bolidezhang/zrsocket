@@ -60,7 +60,7 @@ private:
 
 using SystemClockCounter   = ClockCounter<OSApi::system_clock_counter>;
 using SteadyClockCounter   = ClockCounter<OSApi::steady_clock_counter>;
-using TscClockCounter      = ClockCounter<TscClock::now>;
+using TscClockCounter      = ClockCounter<TscClock::rdtsc>;
 using TscNsClockCounter    = ClockCounter<TscClock::now_ns>;
 
 template <typename TMeasureCounter, bool owner = true>

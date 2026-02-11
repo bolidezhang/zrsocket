@@ -26,9 +26,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "http_client", "examples\htt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_mutex", "examples\test\mutex\test_mutex.vcxproj", "{1ED92F5D-688D-48C6-B2A1-01F0861AAC0E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{93930916-DB1A-4B37-BF1D-B64D67D5F52A} = {93930916-DB1A-4B37-BF1D-B64D67D5F52A}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_seda", "examples\test\seda\test_seda.vcxproj", "{DA284901-8147-44CC-A0BC-8B40DF793C3E}"
 	ProjectSection(ProjectDependencies) = postProject
