@@ -385,8 +385,7 @@ public:
 
     int loop_wakeup()
     {
-        if (wakeup_flag_.load()) {
-            wakeup_flag_.store(false);
+        if (wakeup_flag_.exchange(false)) {
             return wakeup_handler_.notify();
         }
         return 0;
