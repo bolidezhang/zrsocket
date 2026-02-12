@@ -345,7 +345,7 @@ public:
         int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
 
-        wakeup_flag_.store(false, std::memory_order_relaxed);
+        wakeup_flag_.store(false);
         if (ready > 0) {
             EventHandler *handler;
             EventSource  *source;
@@ -378,14 +378,15 @@ public:
         }
         event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
-        wakeup_flag_.store(true, std::memory_order_relaxed);
+        wakeup_flag_.store(true);
 
         return ready;
     }
 
     int loop_wakeup()
     {
-        if (wakeup_flag_.exchange(false, std::memory_order_relaxed)) {
+        if (wakeup_flag_.load()) {
+            wakeup_flag_.store(false);
             return wakeup_handler_.notify();
         }
         return 0;
@@ -723,7 +724,7 @@ public:
         int timeout_ms = (timeout_us >= 0) ? (timeout_us / 1000) : (-1);
         int ready = epoll_wait(epoll_fd_, events_, max_events_, timeout_ms);
 
-        wakeup_flag_.store(false, std::memory_order_relaxed);
+        wakeup_flag_.store(false);
         if (ready > 0) {
             EventHandler *handler;
             EventSource  *source;
@@ -756,14 +757,15 @@ public:
         }
         event_queue_.loop(event_queue_.capacity());
         timer_queue_.loop(Time::instance().current_timestamp_us());
-        wakeup_flag_.store(true, std::memory_order_relaxed);
+        wakeup_flag_.store(true);
 
         return ready;
     }
 
     int loop_wakeup()
     {
-        if (wakeup_flag_.exchange(false, std::memory_order_relaxed)) {
+        if (wakeup_flag_.load()) {
+            wakeup_flag_.store(false);
             return wakeup_handler_.notify();
         }
         return 0;

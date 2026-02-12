@@ -11,10 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="zrlog.h" />
+    <ClCompile Include="test_mutex.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="zrlog.cpp" />
+    <ClInclude Include="test_mutex.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -526,8 +526,8 @@ public:
     inline int push(ByteBuffer &log) override
     {
         if (dfbuf_.write(log.data(), log.data_size(), true) > 0) {
-            if (timedwait_flag_.load(std::memory_order_relaxed)) {
-                timedwait_flag_.store(0, std::memory_order_relaxed);
+            if (timedwait_flag_.load()) {
+                timedwait_flag_.store(false);
                 timedwait_condition_.notify_one();
             }
             return 1;
@@ -553,7 +553,7 @@ private:
         AsyncLogWorker<TMutex> *worker = static_cast<AsyncLogWorker<TMutex> *>(arg);
         LogConfig &conf = worker->logger_->config();
         Thread &thread = worker->worker_thread_;
-        AtomicInt &timedwait_flag = worker->timedwait_flag_;
+        AtomicBool &timedwait_flag = worker->timedwait_flag_;
         DoubleFixedLengthBuffer<TMutex> &dfbuf = worker->dfbuf_;
         Mutex &timedwait_mutex = worker->timedwait_mutex_;
         Condition &timedwait_condition = worker->timedwait_condition_;
@@ -588,13 +588,13 @@ private:
                 if (0 == data_size) {
                     buf->reset();
                     if (!dfbuf.swap_buffer()) {
-                        timedwait_flag.store(1, std::memory_order_relaxed);
+                        timedwait_flag.store(true);
                         {
                             timedwait_interval_us = conf.timedwait_interval_us();
                             std::unique_lock<std::mutex> lock(timedwait_mutex);
                             timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                         }
-                        timedwait_flag.store(0, std::memory_order_relaxed);
+                        timedwait_flag.store(false);
                         dfbuf.swap_buffer();
                     }
                 }
@@ -628,7 +628,7 @@ private:
                 if (0 == data_size) {
                     buf->reset();
                     if (!dfbuf.swap_buffer()) {
-                        timedwait_flag.store(1, std::memory_order_relaxed);
+                        timedwait_flag.store(true);
                         {
                             if (update_framework_time_flag) {
                                 time.update_time();
@@ -638,7 +638,7 @@ private:
                             std::unique_lock<std::mutex> lock(timedwait_mutex);
                             timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                         }
-                        timedwait_flag.store(0, std::memory_order_relaxed);
+                        timedwait_flag.store(false);
                         dfbuf.swap_buffer();
                     }
                 }
@@ -656,7 +656,7 @@ public:
     Thread      worker_thread_;
     Mutex       timedwait_mutex_;
     Condition   timedwait_condition_;
-    AtomicInt   timedwait_flag_ = ATOMIC_VAR_INIT(0);   //条件触发标识
+    AtomicBool  timedwait_flag_ = false;    //条件触发标识
 };
 
 template<typename TMutex>

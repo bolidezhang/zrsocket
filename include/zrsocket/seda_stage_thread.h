@@ -26,7 +26,7 @@ public:
         , timer_event_flag_(false)
         , timer_min_interval_ms_(ZRSOCKET_SEDA_DEFAULT_IDLE_INTERVAL)
         , timedwait_interval_us_(timedwait_interval_us)
-        , timedwait_flag_(0)
+        , timedwait_flag_(false)
         , timedwait_signal_(timedwait_signal)
     {
         stage_handler_.set_stage_thread(this);
@@ -57,8 +57,8 @@ public:
     {
         int ret = event_queue_.push(event);
         if ((ret > 0) && timedwait_signal_) {
-            if (timedwait_flag_.load(std::memory_order_relaxed)) {
-                timedwait_flag_.store(0, std::memory_order_relaxed);
+            if (timedwait_flag_.load()) {
+                timedwait_flag_.store(false);
                 timedwait_condition_.notify_one();
             }
         }
@@ -208,12 +208,12 @@ private:
                     timer_event_count = 0;
 
                     if (!event_queue.swap_buffer()) {
-                        timedwait_flag.store(1, std::memory_order_relaxed);
+                        timedwait_flag.store(true);
                         {
                             std::unique_lock<std::mutex> lock(stage_thread->timedwait_mutex_);
                             timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                         }
-                        timedwait_flag.store(0, std::memory_order_relaxed);
+                        timedwait_flag.store(false);
                         event_queue.swap_buffer();
                     }
                 }
@@ -228,12 +228,12 @@ private:
                     }
                 }
                 else if (!event_queue.swap_buffer()) {
-                    timedwait_flag.store(1, std::memory_order_relaxed);
+                    timedwait_flag.store(true);
                     {
                         std::unique_lock<std::mutex> lock(timedwait_mutex);
                         timedwait_condition.wait_for(lock, std::chrono::microseconds(timedwait_interval_us));
                     }
-                    timedwait_flag.store(0, std::memory_order_relaxed);
+                    timedwait_flag.store(false);
                     event_queue.swap_buffer();
                 }
             }
@@ -257,7 +257,7 @@ private:
     Mutex                           timedwait_mutex_;
     Condition                       timedwait_condition_;
     uint_t                          timedwait_interval_us_;
-    AtomicInt                       timedwait_flag_;        //条件触发标识
+    AtomicBool                      timedwait_flag_;        //条件触发标识
     bool                            timedwait_signal_;      //用于控制是否触发条件信号(因触发条件信号比较耗时)
 
     TQueue                          event_queue_;
